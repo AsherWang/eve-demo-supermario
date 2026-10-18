@@ -4,6 +4,9 @@ Personal-study, ROM-data-driven reconstruction of NES World 1-1 in EVEngine.
 The repository does not include a ROM. Runtime assets were extracted locally
 from a user-provided ROM for this study build.
 
+This is a vibe coding project, developed through AI-assisted, iterative
+experimentation and verification against the original game.
+
 This is an unofficial, non-commercial study project and is not affiliated with
 or endorsed by Nintendo.
 
