@@ -1,0 +1,35 @@
+# EVEngine/runtime output
+*.log
+/build/
+/dist/
+/local-parity/
+/*-preview.png
+
+# User-provided ROMs and emulator state
+*.nes
+*.fds
+*.unf
+*.unif
+*.sav
+*.mss
+
+# Python caches and virtual environments
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+
+# Editor and operating-system files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Local environment and secrets
+.env
+.env.*
+!.env.example

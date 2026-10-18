@@ -1,0 +1,16 @@
+{
+  "schema": "smb-parity-movie-v1",
+  "name": "first-goomba-death-lifecycle",
+  "description": "Hold Right into the first Goomba and observe the complete ROM death/respawn state machine.",
+  "frames": 700,
+  "reference_bootstrap": {
+    "frames": 600,
+    "inputs": [
+      { "port": 0, "start": 40, "end": 46, "buttons": ["start"] }
+    ]
+  },
+  "inputs": [
+    { "port": 0, "start": 0, "end": 699, "buttons": ["right"] }
+  ],
+  "capture_frames": [0, 96, 180, 191, 207, 240, 273, 300, 360, 399, 402, 450, 500, 550, 600, 650, 699]
+}

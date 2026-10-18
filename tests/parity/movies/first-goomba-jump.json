@@ -1,0 +1,17 @@
+{
+  "schema": "smb-parity-movie-v1",
+  "name": "first-goomba-jump",
+  "description": "Hold Right and perform a long jump at the first Goomba encounter.",
+  "frames": 300,
+  "reference_bootstrap": {
+    "frames": 600,
+    "inputs": [
+      { "port": 0, "start": 40, "end": 46, "buttons": ["start"] }
+    ]
+  },
+  "inputs": [
+    { "port": 0, "start": 0, "end": 299, "buttons": ["right"] },
+    { "port": 0, "start": 155, "end": 175, "buttons": ["a"] }
+  ],
+  "capture_frames": [0, 60, 120, 150, 160, 170, 180, 190, 210, 240, 270, 299]
+}

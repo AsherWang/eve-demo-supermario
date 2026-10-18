@@ -1,0 +1,262 @@
+{
+  "generator": "tools/render_smb_rom_music.py",
+  "generator_sha256": "0161453c6067b76a166d4f467680e92eb61b3291987b0d9c9d646003e3d7193d",
+  "rom_sha256": "f61548fdf1670cffefcc4f0b7bdcdd9eaba0c226e3b74f8666071496988248de",
+  "timing": {
+    "region": "NTSC",
+    "cpu_hz": 1789773.0,
+    "frame_hz": 60.0988,
+    "sample_rate": 44100
+  },
+  "rom_offsets": {
+    "frequency_table": 32512,
+    "length_table": 32614,
+    "music_header_data": 30989,
+    "area_envelope_table": 32666,
+    "sections": {
+      "star": {
+        "header": 31043,
+        "data": 31160,
+        "length_offset": 32,
+        "triangle_offset": 46,
+        "square1_offset": 26,
+        "noise_offset": 64,
+        "header_bytes": "20b8f92e1a40",
+        "data_prefix": "842c2c2c82042c04852c842c2c2a2a2a"
+      },
+      "ground_p1": {
+        "header": 31094,
+        "data": 31233,
+        "length_offset": 24,
+        "triangle_offset": 45,
+        "square1_offset": 28,
+        "noise_offset": 184,
+        "header_bytes": "1801fa2d1cb8",
+        "data_prefix": "852c221c84262a822826048722343a82"
+      },
+      "ground_p2a": {
+        "header": 31100,
+        "data": 31305,
+        "length_offset": 24,
+        "triangle_offset": 32,
+        "square1_offset": 18,
+        "noise_offset": 112,
+        "header_bytes": "1849fa201270",
+        "data_prefix": "8404823a38363204340424262c04262c"
+      },
+      "ground_p2b": {
+        "header": 31106,
+        "data": 31349,
+        "length_offset": 24,
+        "triangle_offset": 27,
+        "square1_offset": 16,
+        "noise_offset": 68,
+        "header_bytes": "1875fa1b1044",
+        "data_prefix": "8404823a383632043404640464866400"
+      },
+      "ground_p2c": {
+        "header": 31112,
+        "data": 31389,
+        "length_offset": 24,
+        "triangle_offset": 17,
+        "square1_offset": 10,
+        "noise_offset": 28,
+        "header_bytes": "189dfa110a1c",
+        "data_prefix": "840485328530862c040005a4059e059d"
+      },
+      "ground_p3a": {
+        "header": 31118,
+        "data": 31426,
+        "length_offset": 24,
+        "triangle_offset": 45,
+        "square1_offset": 16,
+        "noise_offset": 88,
+        "header_bytes": "18c2fa2d1058",
+        "data_prefix": "822c842c2c822c3004342c0426862200"
+      },
+      "ground_p3b": {
+        "header": 31124,
+        "data": 31451,
+        "length_offset": 24,
+        "triangle_offset": 20,
+        "square1_offset": 13,
+        "noise_offset": 63,
+        "header_bytes": "18dbfa140d3f",
+        "data_prefix": "822c2c042c042c308534040400a42525"
+      },
+      "ground_lead": {
+        "header": 31130,
+        "data": 31481,
+        "length_offset": 24,
+        "triangle_offset": 21,
+        "square1_offset": 13,
+        "noise_offset": 33,
+        "header_bytes": "18f9fa150d21",
+        "data_prefix": "8234843434822c8434863a0400a02121"
+      },
+      "ground_p4a": {
+        "header": 31136,
+        "data": 31525,
+        "length_offset": 24,
+        "triangle_offset": 24,
+        "square1_offset": 16,
+        "noise_offset": 122,
+        "header_bytes": "1825fb18107a",
+        "data_prefix": "8234842c852284248226360436862600"
+      },
+      "ground_p4b": {
+        "header": 31142,
+        "data": 31563,
+        "length_offset": 24,
+        "triangle_offset": 25,
+        "square1_offset": 15,
+        "noise_offset": 84,
+        "header_bytes": "184bfb190f54",
+        "data_prefix": "872a4040403a3682342c0426862200e3"
+      },
+      "ground_p4c": {
+        "header": 31148,
+        "data": 31604,
+        "length_offset": 24,
+        "triangle_offset": 30,
+        "square1_offset": 18,
+        "noise_offset": 43,
+        "header_bytes": "1874fb1e122b",
+        "data_prefix": "822a36043687363430862c040000686a"
+      },
+      "death": {
+        "header": 31154,
+        "data": 31602,
+        "length_offset": 24,
+        "triangle_offset": 30,
+        "square1_offset": 15,
+        "noise_offset": 0,
+        "header_bytes": "1872fb1e0f",
+        "data_prefix": "8604822a36043687363430862c040000"
+      },
+      "game_over": {
+        "header": 31078,
+        "data": 31813,
+        "length_offset": 24,
+        "triangle_offset": 30,
+        "square1_offset": 20,
+        "noise_offset": 0,
+        "header_bytes": "1845fc1e14",
+        "data_prefix": "822c0404220404841c87262a26842428"
+      },
+      "time_running_out": {
+        "header": 31038,
+        "data": 31858,
+        "length_offset": 8,
+        "triangle_offset": 39,
+        "square1_offset": 24,
+        "noise_offset": 0,
+        "header_bytes": "0872fc2718",
+        "data_prefix": "811c30043030041e3204323204203404"
+      },
+      "course_clear": {
+        "header": 31049,
+        "data": 31920,
+        "length_offset": 32,
+        "triangle_offset": 61,
+        "square1_offset": 33,
+        "noise_offset": 0,
+        "header_bytes": "20b0fc3d21",
+        "data_prefix": "8704060c141c22862c228704600e141a"
+      }
+    }
+  },
+  "tracks": {
+    "overworld_intro": {
+      "frames": 144,
+      "samples": 105666,
+      "duration_seconds": 2.3960544217687074,
+      "repeat": false,
+      "sections": [
+        "ground_lead"
+      ],
+      "wav_sha256": "4eb9900ccca96b74268d08242e1e38c7505d49f9b4e5b3fab7e55b1d42433d26"
+    },
+    "overworld": {
+      "frames": 5184,
+      "samples": 3803976,
+      "duration_seconds": 86.25795918367346,
+      "repeat": true,
+      "sections": [
+        "ground_p1",
+        "ground_p1",
+        "ground_p2a",
+        "ground_p2b",
+        "ground_p2a",
+        "ground_p2c",
+        "ground_p2a",
+        "ground_p2b",
+        "ground_p2a",
+        "ground_p2c",
+        "ground_p3a",
+        "ground_p3b",
+        "ground_p3a",
+        "ground_lead",
+        "ground_p1",
+        "ground_p1",
+        "ground_p4a",
+        "ground_p4b",
+        "ground_p4a",
+        "ground_p4c",
+        "ground_p4a",
+        "ground_p4b",
+        "ground_p4a",
+        "ground_p4c",
+        "ground_p3a",
+        "ground_p3b",
+        "ground_p3a",
+        "ground_lead",
+        "ground_p4a",
+        "ground_p4b",
+        "ground_p4a",
+        "ground_p4c"
+      ],
+      "wav_sha256": "b294e38fba7517c91aa710ee53ea3eab66a926f1b856bffbf09196012ae78c1d"
+    },
+    "star": {
+      "frames": 192,
+      "samples": 140888,
+      "duration_seconds": 3.1947392290249432,
+      "repeat": true,
+      "sections": [
+        "star"
+      ],
+      "wav_sha256": "5dea89251ee17d76cc1e5d2a51c0cc25756d0a838c651a4f51ba3c1cade36962"
+    },
+    "death": {
+      "frames": 180,
+      "samples": 132083,
+      "duration_seconds": 2.995079365079365,
+      "repeat": false,
+      "sections": [
+        "death"
+      ],
+      "wav_sha256": "698923306e6cd50eac8dc3ea1ae7df685119ccaec8c1623490ece1caab9a426a"
+    },
+    "course_clear": {
+      "frames": 324,
+      "samples": 237749,
+      "duration_seconds": 5.391133786848073,
+      "repeat": false,
+      "sections": [
+        "course_clear"
+      ],
+      "wav_sha256": "1b62440e92d32fea3380f900770f05ab356f334f6c5f4b38a6ae8be2ef9bff49"
+    },
+    "game_over": {
+      "frames": 216,
+      "samples": 158499,
+      "duration_seconds": 3.594081632653061,
+      "repeat": false,
+      "sections": [
+        "game_over"
+      ],
+      "wav_sha256": "c0bfbaf653efc2443f30d2ca41e972d03a8262de27f4bc851c1ac02aafae4cf3"
+    }
+  }
+}

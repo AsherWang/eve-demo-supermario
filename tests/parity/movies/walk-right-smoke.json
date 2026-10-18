@@ -1,0 +1,16 @@
+{
+  "schema": "smb-parity-movie-v1",
+  "name": "walk-right-smoke",
+  "description": "Reference bootstraps through the title screen, then both implementations hold Right.",
+  "frames": 240,
+  "reference_bootstrap": {
+    "frames": 600,
+    "inputs": [
+      { "port": 0, "start": 40, "end": 46, "buttons": ["start"] }
+    ]
+  },
+  "inputs": [
+    { "port": 0, "start": 0, "end": 239, "buttons": ["right"] }
+  ],
+  "capture_frames": [0, 30, 60, 90, 120, 150, 180, 210, 239]
+}

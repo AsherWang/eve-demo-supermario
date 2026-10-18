@@ -1,0 +1,18 @@
+* text=auto
+
+.gitattributes text eol=lf
+.gitignore text eol=lf
+.evengine-version text eol=lf
+
+*.nut text eol=lf
+*.py text eol=lf
+*.md text eol=lf
+*.json text eol=lf
+*.toml text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+
+*.png binary
+*.wav binary
+*.zip binary
+*.eve binary
