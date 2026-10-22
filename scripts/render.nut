@@ -654,7 +654,7 @@ function drawFireballs(g) {
 }
 
 function drawEnemy(g, e) {
-    if (!e.alive) return;
+    if (!e.alive && e.erasedDisplayFrames <= 0) return;
     // EnemyGfxHandler suppresses the object once its origin is in the left
     // offscreen region (EnemyOffscrBitsMasked bit 2).  Letting the host clip
     // the corrected 16px texture would leak a one-pixel sliver that the NES
@@ -709,7 +709,8 @@ function drawEnemy(g, e) {
     // the one-pixel lead during the death sequence would move the frozen
     // Goomba one pixel to the right of the ROM image.
     local goombaMotionLead = g.player.dead ? 0.0 :
-        (e.vx > 0.0 ? -1.0 : 1.0);
+        (e.state == "defeated" ? e.stompDisplayLead :
+            (e.vx > 0.0 ? -1.0 : 1.0));
     local defeatedGoomba = e.kind == "goomba" && visualState == "defeated";
     // State $04 uses only the bottom OAM row ($ef).  Its stored X is the
     // unadjusted relative coordinate and the 24px extracted canvas therefore
@@ -940,7 +941,9 @@ function renderGame(g) {
     // higher enemy slots first so slot 0 is composited last by the host.
     for (local slot = 5; slot >= 0; slot -= 1)
         foreach (e in g.goombas)
-            if (e.slot == slot) drawEnemy(g, e);
+            if (e.slot == slot || (!e.alive &&
+                e.erasedDisplayFrames > 0 && e.erasedSlot == slot))
+                drawEnemy(g, e);
     drawEffects(g);
     if (!playerBehindBackground) drawPlayer(g);
     drawHud(g);

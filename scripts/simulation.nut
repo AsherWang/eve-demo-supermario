@@ -1442,11 +1442,12 @@ function moveEnemyBody(g, e, dt) {
 
 function stompGoomba(e) {
     e.state = "defeated";
-    // InjureEnemy leaves a stomped Goomba allocated until the enemy
-    // interval timer has expired.  In the reference trace this is 38 full
-    // updates after the stomp frame (active through frame 968, erased at 969).
-    e.defeatedFrames = 38;
-    e.stateTimer = e.defeatedFrames * FIXED_DT;
+    // HandleStompedShellE writes $10 to EnemyIntervalTimer. ChkKillGoomba
+    // erases a Goomba when the 21-frame interval bank reaches $0e, so the
+    // visible lifetime depends on the current interval phase rather than a
+    // fixed number of ordinary frames.
+    e.intervalTimer = 0x10;
+    e.stateTimer = 2.0 * 21.0 * FIXED_DT;
     // State $04 suppresses movement but does not clear Enemy_X_Speed.  It
     // can consequently still be reversed by enemy-to-enemy collision.
 }
@@ -1516,6 +1517,10 @@ function awardScoreControl(g, control) {
     }
     if (control < 0) control = 0;
     g.score += scores[control];
+    // FloateyNumbersRoutine runs before PrintStatusBarNumbers in the same
+    // game-engine pass, so this score is eligible for the immediately queued
+    // status-bar update rather than waiting for the next pass.
+    g.queuedScore = g.score;
 }
 
 function awardStomp(g, enemy) {
@@ -1672,9 +1677,12 @@ function updateGoombas(g, dt) {
             if (e.collisionCooldown < 0.0) e.collisionCooldown = 0.0;
         }
         if (e.state == "defeated") {
-            e.defeatedFrames -= 1;
-            e.stateTimer = e.defeatedFrames * FIXED_DT;
-            if (e.defeatedFrames <= 0) {
+            if (e.intervalTimer == 0x0E) {
+                // EnemyGfxHandler has already written this slot's flattened
+                // sprite to OAM for the current pass. Preserve that prepared
+                // OAM image while removing the gameplay object immediately.
+                e.erasedDisplayFrames = 1;
+                e.erasedSlot = e.slot;
                 e.alive = false;
                 releaseEnemySlot(e);
             }
@@ -1716,6 +1724,7 @@ function updateGoombas(g, dt) {
         local playerBoxHeight = p.big && !p.crouching ? 24.0 : 12.0;
         local enemyBoxY = e.kind == "goomba" ? e.y + 4.0 : e.y + 9.0;
         local enemyBoxHeight = e.kind == "goomba" ? 6.0 : 12.0;
+        local stompedThisFrame = false;
         if ((g.nesFrameCounter & 1) == 0 && !p.dead &&
             overlaps(p.x + 3.0, playerBoxY, 10.0, playerBoxHeight,
                      e.x + 3.0, enemyBoxY, 10.0, enemyBoxHeight)) {
@@ -1742,7 +1751,9 @@ function updateGoombas(g, dt) {
                 emitSound(g, "stomp");
                 p.vy = -4.0 * NES_FRAME_RATE;
                 p.nesYSpeed = -4;
-                p.nesYMoveForce = 0;
+                // SBnce writes only Player_Y_Speed. Preserve the fractional
+                // force left by the downward movement pass (typically $fe),
+                // which advances the bounce to -3 on the following frame.
                 p.grounded = false;
                 // SetupFloateyNumber copies Enemy_Rel_XPos, which has already
                 // incorporated the pending ScrollHandler result for this pass.
@@ -1750,6 +1761,15 @@ function updateGoombas(g, dt) {
                 g.cameraX = projectedCameraX;
                 awardStomp(g, e);
                 g.cameraX = savedCameraX;
+                // HandleStompedShellE changes the state before
+                // EnemyMovementSubs is dispatched, so a stomped enemy does
+                // not receive its pending half-pixel movement. Keep the ROM's
+                // integer Enemy_X_Position as the stopped coordinate. The
+                // relative-X value already prepared for OAM can nevertheless
+                // carry the preceding half-pixel phase for one more image.
+                e.stompDisplayLead = e.x > floor(e.x) ? 1.0 : 0.0;
+                e.x = floor(e.x).tofloat();
+                stompedThisFrame = true;
             } else if (e.kind == "koopa" && e.state == "shell" &&
                        e.collisionCooldown <= 0.0) {
                 kickKoopaShell(g, e);
@@ -1764,6 +1784,7 @@ function updateGoombas(g, dt) {
         // A lethal collision raises TimerControl, so that same frame must not
         // advance the enemy another half pixel.
         if (!playerWasDead && p.dead) continue;
+        if (stompedThisFrame) continue;
         moveEnemyBody(g, e, dt);
         // OffscreenBoundsCheck reaches `SBC #$48` with carry clear for a
         // normal Goomba: the preceding `CPY #con_piranha_plant` fails with
@@ -2308,6 +2329,12 @@ function updateDeathReload(g) {
 
 function simulateFixed(g, dt) {
     g.simTime += dt;
+    // A sprite retained from the preceding pass is consumed by this pass's
+    // render. Values set later below therefore survive until the next call.
+    foreach (enemy in g.goombas) {
+        if (enemy.erasedDisplayFrames > 0)
+            enemy.erasedDisplayFrames -= 1;
+    }
     // NMI consumes exactly one selected VRAM buffer.  Preserve the selection
     // made by the preceding gameplay pass before preparing this pass's state.
     local secondaryBufferWasSelected = g.vramBufferAddrCtrl == 6;
@@ -2368,6 +2395,23 @@ function simulateFixed(g, dt) {
     // subroutine runs.  It continues through pipe/entrance transitions, while
     // RunGameTimer itself is gated by the final subroutine state below.
     if (g.gameTimerControl > 0) g.gameTimerControl -= 1;
+    // IntervalTimerControl is a 21-frame divider shared by the enemy interval
+    // timers. ScreenRoutineTask leaves TimerControl at one for the first area
+    // loading pass, freezing both timer banks for exactly that frame.
+    local freezeIntervalTimers = g.state == "areaReload" &&
+        g.areaReloadFrames == 1;
+    if (!freezeIntervalTimers) {
+        g.intervalTimerControl -= 1;
+        if (g.intervalTimerControl < 0) {
+            g.intervalTimerControl = 0x14;
+            foreach (enemy in g.goombas) {
+                if (enemy.awake && enemy.alive && enemy.slot >= 0 &&
+                    enemy.intervalTimer > 0) {
+                    enemy.intervalTimer -= 1;
+                }
+            }
+        }
+    }
 
     if (g.state == "playing") {
         if (g.respawnPrimeDirection != 0) {
@@ -2430,10 +2474,12 @@ function simulateFixed(g, dt) {
         updatePlayerAnimationState(g);
     }
     // The ROM builds enemy OAM before PlayerEnemyCollision mutates state.
-    // Delay the visible state by one gameplay pass to reproduce that ordering.
+    // Together with the capture adapter's one-frame presentation latency, the
+    // three-stage queue reproduces the state visible in the prepared OAM.
     foreach (enemy in g.goombas) {
         enemy.displayState = enemy.preparedState;
-        enemy.preparedState = enemy.state;
+        enemy.preparedState = enemy.queuedState;
+        enemy.queuedState = enemy.state;
     }
     updateCamera(g);
     // sub_game_core_routine reaches UpdateScrollVariables for every gameplay

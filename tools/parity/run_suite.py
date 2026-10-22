@@ -13,6 +13,7 @@ from common import load_movie
 DEFAULT_CASES = (
     "walk-right-smoke",
     "first-goomba-jump",
+    "first-goomba-stomp",
     "first-goomba-death-lifecycle",
     "first-powerup-mushroom",
     "world-1-1-tas",

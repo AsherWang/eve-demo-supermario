@@ -14,10 +14,15 @@ function makeEnemyAt(x, supportRow, kind) {
         state = "walking",
         // EnemyGfxHandler runs before player/enemy collision.  Preserve the
         // state it saw separately from the state mutated later in the pass.
+        queuedState = "walking",
         preparedState = "walking",
         displayState = "walking",
+        erasedDisplayFrames = 0,
+        erasedSlot = -1,
+        stompDisplayLead = 0.0,
         stateTimer = 0.0,
         defeatedFrames = 0,
+        intervalTimer = 0,
         enemyCollisionMask = 0,
         shellFrames = 0,
         collisionCooldown = 0.0,
@@ -427,6 +432,10 @@ function createGame() {
         // FrameCounter at the first controllable frame of the verified ROM
         // origin state.  Player/enemy collision runs only on even values.
         nesFrameCounter = 0x99,
+        // UpdateScreen begins the comparison at interval phase zero. The
+        // counter reloads to $14 after underflow and controls the slower
+        // EnemyIntervalTimer bank used by stomped Goombas and shells.
+        intervalTimerControl = 0,
         // RAM $06d4 points to the next ColorRotatePalette entry.  The first
         // controllable reference frame has already displayed entry zero.
         colorRotateOffset = 1,

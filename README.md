@@ -70,8 +70,8 @@ python tools\parity\run_suite.py `
 ```
 
 Open `local-parity/reports/index.html` for artifact, frame, state, event, APU
-and audio results. The current six movies pass the artifact contract, all
-4,020 compared semantic-state frames, all semantic events, every sampled RGB
+and audio results. The current seven movies pass the artifact contract, all
+4,260 compared semantic-state frames, all semantic events, every sampled RGB
 frame, and the complete per-frame `$4000-$4017` APU write stream (controller
 and DMA registers excluded). The APU model is seeded from reference frame 0,
 then driven only by the remake's events and state. Strict comparison PCM is

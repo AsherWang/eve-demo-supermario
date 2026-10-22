@@ -1,0 +1,21 @@
+{
+  "schema": "smb-parity-movie-v1",
+  "name": "first-goomba-stomp",
+  "description": "Hold Right and use a one-frame jump to stomp the first Goomba, then observe the bounce and interval-timer erase.",
+  "frames": 240,
+  "reference_bootstrap": {
+    "frames": 600,
+    "inputs": [
+      { "port": 0, "start": 40, "end": 46, "buttons": ["start"] }
+    ]
+  },
+  "inputs": [
+    { "port": 0, "start": 0, "end": 239, "buttons": ["right"] },
+    { "port": 0, "start": 170, "end": 170, "buttons": ["a"] }
+  ],
+  "capture_frames": [
+    0, 60, 120, 160, 169, 170, 180, 188, 189, 190, 191, 192, 193,
+    194, 195, 196, 197, 198, 199, 200, 205, 210, 211, 220, 228, 229,
+    230, 231, 232, 233, 239
+  ]
+}
