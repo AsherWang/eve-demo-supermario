@@ -73,11 +73,36 @@ def main() -> int:
         summary = json.loads(summary_path.read_text(encoding="utf-8"))
         summaries.append(summary)
 
-    passed = all(summary["passed"] for summary in summaries)
+    runtime_audio_quality = None
+    if "walk-right-smoke" in args.cases:
+        runtime_audio = artifacts / "actual" / "walk-right-smoke" / "runtime-audio.wav"
+        run([
+            python, str(tools / "render_actual_audio.py"),
+            "--events", str(artifacts / "actual" / "walk-right-smoke" / "events.jsonl"),
+            "--assets", str(project / "assets" / "audio"),
+            "--frames", "240",
+            "--output", str(runtime_audio),
+        ])
+        quality_output = artifacts / "reports" / "runtime-audio-quality"
+        run([
+            python, str(tools / "check_runtime_audio_quality.py"),
+            "--reference", str(artifacts / "reference" / "walk-right-smoke" / "audio.wav"),
+            "--actual", str(runtime_audio),
+            "--assets", str(project / "assets" / "audio"),
+            "--output", str(quality_output),
+        ], {0, 1})
+        runtime_audio_quality = json.loads(
+            (quality_output / "runtime-audio-quality.json").read_text(encoding="utf-8")
+        )
+
+    passed = all(summary["passed"] for summary in summaries) and (
+        runtime_audio_quality is None or runtime_audio_quality["passed"]
+    )
     report = {
         "schema": "smb-parity-suite-summary-v1",
         "passed": passed,
         "cases": summaries,
+        "runtime_audio_quality": runtime_audio_quality,
     }
     reports = artifacts / "reports"
     reports.mkdir(parents=True, exist_ok=True)
@@ -94,6 +119,12 @@ def main() -> int:
         rows.append(
             f'<tr><td><a href="{html.escape(case)}/index.html">{html.escape(case)}</a></td>'
             f"<td>{'通过' if summary['passed'] else '失败'}</td><td>{checks}</td></tr>"
+        )
+    if runtime_audio_quality is not None:
+        rows.append(
+            '<tr><td><a href="runtime-audio-quality/index.html">运行时 WAV / Mesen 音质门禁</a></td>'
+            f"<td>{'通过' if runtime_audio_quality['passed'] else '失败'}</td>"
+            '<td>48 kHz 格式、连续流、响度、高频残差、削波</td></tr>'
         )
     (reports / "index.html").write_text(
         "<!doctype html><meta charset=\"utf-8\"><title>SMB parity suite</title>"

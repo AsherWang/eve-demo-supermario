@@ -3,6 +3,7 @@
 /build/
 /dist/
 /local-parity/
+/native/bin/
 /*-preview.png
 
 # User-provided ROMs and emulator state

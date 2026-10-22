@@ -1,12 +1,14 @@
 {
   "generator": "tools/render_smb_rom_music.py",
-  "generator_sha256": "0161453c6067b76a166d4f467680e92eb61b3291987b0d9c9d646003e3d7193d",
+  "generator_sha256": "a010def88f6c6252fbf08c4420835aa3f26ca4a961a5f05bdee08af8d59a86cf",
   "rom_sha256": "f61548fdf1670cffefcc4f0b7bdcdd9eaba0c226e3b74f8666071496988248de",
   "timing": {
     "region": "NTSC",
     "cpu_hz": 1789773.0,
     "frame_hz": 60.0988,
-    "sample_rate": 44100
+    "sample_rate": 48000,
+    "runtime_lowpass_hz": 7200.0,
+    "startup_ramp_seconds": 0.002
   },
   "rom_offsets": {
     "frequency_table": 32512,
@@ -167,22 +169,76 @@
     }
   },
   "tracks": {
-    "overworld_intro": {
-      "frames": 144,
-      "samples": 105666,
-      "duration_seconds": 2.3960544217687074,
+    "death": {
+      "frames": 180,
+      "samples": 143763,
+      "duration_seconds": 2.9950625,
       "repeat": false,
       "sections": [
-        "ground_lead"
+        "death"
       ],
-      "wav_sha256": "4eb9900ccca96b74268d08242e1e38c7505d49f9b4e5b3fab7e55b1d42433d26"
+      "wav_sha256": "859edeeaff4dc9620e8881581b060dd80f9e778e2f2b6af134ac5a3c2b8af58b"
+    },
+    "course_clear": {
+      "frames": 324,
+      "samples": 258774,
+      "duration_seconds": 5.391125,
+      "repeat": false,
+      "sections": [
+        "course_clear"
+      ],
+      "wav_sha256": "cac148c34e12ce1acfa63431073b068be23d8ee2ef0042034e1b7b2e0912beeb"
+    },
+    "game_over": {
+      "frames": 216,
+      "samples": 172516,
+      "duration_seconds": 3.5940833333333333,
+      "repeat": false,
+      "sections": [
+        "game_over"
+      ],
+      "wav_sha256": "3316a887d5546b7fa0458838b2eb87a1bc724291d33c8ef651ae820fde728e18"
     },
     "overworld": {
-      "frames": 5184,
-      "samples": 3803976,
-      "duration_seconds": 86.25795918367346,
-      "repeat": true,
+      "frames": 9600,
+      "samples": 7667374,
+      "duration_seconds": 159.73695833333332,
+      "repeat": false,
+      "continuous_runtime_stream": true,
       "sections": [
+        "ground_lead",
+        "ground_p1",
+        "ground_p1",
+        "ground_p2a",
+        "ground_p2b",
+        "ground_p2a",
+        "ground_p2c",
+        "ground_p2a",
+        "ground_p2b",
+        "ground_p2a",
+        "ground_p2c",
+        "ground_p3a",
+        "ground_p3b",
+        "ground_p3a",
+        "ground_lead",
+        "ground_p1",
+        "ground_p1",
+        "ground_p4a",
+        "ground_p4b",
+        "ground_p4a",
+        "ground_p4c",
+        "ground_p4a",
+        "ground_p4b",
+        "ground_p4a",
+        "ground_p4c",
+        "ground_p3a",
+        "ground_p3b",
+        "ground_p3a",
+        "ground_lead",
+        "ground_p4a",
+        "ground_p4b",
+        "ground_p4a",
+        "ground_p4c",
         "ground_p1",
         "ground_p1",
         "ground_p2a",
@@ -216,47 +272,33 @@
         "ground_p4a",
         "ground_p4c"
       ],
-      "wav_sha256": "b294e38fba7517c91aa710ee53ea3eab66a926f1b856bffbf09196012ae78c1d"
+      "wav_sha256": "9dbfc6f51126d349d3ee9210f5664cc1061bc1447d9e71871b6575e1a63f310c"
     },
     "star": {
-      "frames": 192,
-      "samples": 140888,
-      "duration_seconds": 3.1947392290249432,
-      "repeat": true,
+      "frames": 768,
+      "samples": 613390,
+      "duration_seconds": 12.778958333333334,
+      "repeat": false,
+      "continuous_runtime_stream": true,
       "sections": [
+        "star",
+        "star",
+        "star",
+        "star",
         "star"
       ],
-      "wav_sha256": "5dea89251ee17d76cc1e5d2a51c0cc25756d0a838c651a4f51ba3c1cade36962"
+      "wav_sha256": "0232b149da700f7182be5d5bbf08d836c8e84a1cf63a9a9ba9702a6b155efe0c"
     },
-    "death": {
-      "frames": 180,
-      "samples": 132083,
-      "duration_seconds": 2.995079365079365,
+    "overworld_intro": {
+      "frames": 144,
+      "samples": 115011,
+      "duration_seconds": 2.3960625,
       "repeat": false,
+      "runtime_asset": false,
       "sections": [
-        "death"
+        "ground_lead"
       ],
-      "wav_sha256": "698923306e6cd50eac8dc3ea1ae7df685119ccaec8c1623490ece1caab9a426a"
-    },
-    "course_clear": {
-      "frames": 324,
-      "samples": 237749,
-      "duration_seconds": 5.391133786848073,
-      "repeat": false,
-      "sections": [
-        "course_clear"
-      ],
-      "wav_sha256": "1b62440e92d32fea3380f900770f05ab356f334f6c5f4b38a6ae8be2ef9bff49"
-    },
-    "game_over": {
-      "frames": 216,
-      "samples": 158499,
-      "duration_seconds": 3.594081632653061,
-      "repeat": false,
-      "sections": [
-        "game_over"
-      ],
-      "wav_sha256": "c0bfbaf653efc2443f30d2ca41e972d03a8262de27f4bc851c1ac02aafae4cf3"
+      "wav_sha256": "9e5112786c834f069545bfe55dd9c77e8e8bd549bcd85ad2b10f1cc81faaceae"
     }
   }
 }

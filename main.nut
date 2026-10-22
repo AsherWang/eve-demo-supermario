@@ -1,6 +1,7 @@
 persist game = null
 persist assets = null
-persist soundSources = null
+persist nativeAudio = null
+persist nativeAudioCaptureTime = 0.0
 persist musicState = null
 
 dofile("scripts/core.nut");
@@ -94,7 +95,7 @@ eve_update = function(dt) {
     if (parityIsEnabled()) {
         parityAdvanceOneFrame(game);
         flushSoundEvents(game);
-        updateMusic();
+        updateMusic(dt);
         return;
     }
 
@@ -116,7 +117,7 @@ eve_update = function(dt) {
     }
 
     flushSoundEvents(game);
-    updateMusic();
+    updateMusic(frameDt);
 
     if (steps == MAX_STEPS_PER_FRAME && game.accumulator >= FIXED_DT)
         game.accumulator = 0.0;
@@ -132,3 +133,7 @@ eve_render = function() {
 };
 
 eve_reload <- function() { eve_init(); };
+
+eve_quit = function() {
+    if (nativeAudio != null) nativeAudio.close();
+};

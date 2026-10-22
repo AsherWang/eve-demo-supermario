@@ -11,8 +11,8 @@ from pathlib import Path
 
 NES_FPS = 60.0988
 TARGET_RATE = 48_000
-MUSIC_VOLUME = 0.42
-SFX_VOLUME = 0.58
+MUSIC_VOLUME = 1.0
+SFX_VOLUME = 1.0
 
 
 def read_mono(path: Path) -> tuple[int, list[float]]:
@@ -73,12 +73,7 @@ def mix_samples(destination: list[float], source: list[float], start: int, volum
 
 
 def render_ground(destination: list[float], assets: dict[str, list[float]], start: int, stop: int) -> None:
-    intro = assets["overworld_intro"]
-    loop = assets["overworld"]
-    intro_stop = min(start + len(intro), stop)
-    mix_samples(destination, intro, start, MUSIC_VOLUME, intro_stop)
-    if intro_stop < stop:
-        mix_samples(destination, loop, intro_stop, MUSIC_VOLUME, stop, loop=True)
+    mix_samples(destination, assets["overworld"], start, MUSIC_VOLUME, stop)
 
 
 def main() -> int:
@@ -120,7 +115,7 @@ def main() -> int:
         if mode == "ground":
             render_ground(music, assets, start, stop)
         elif mode == "star":
-            mix_samples(music, assets["star"], start, MUSIC_VOLUME, stop, loop=True)
+            mix_samples(music, assets["star"], start, MUSIC_VOLUME, stop)
 
     controls_only = {"star_music", "resume_music"}
     for event in events:
@@ -135,7 +130,7 @@ def main() -> int:
     output_values = []
     for music_sample, effect_sample in zip(music, effects):
         value = max(-1.0, min(1.0, music_sample + effect_sample))
-        integer = max(-32768, min(32767, round(value * 32767.0)))
+        integer = max(-32768, min(32767, round(value * 32768.0)))
         output_values.extend((integer, integer))
     raw = struct.pack(f"<{len(output_values)}h", *output_values)
     args.output.parent.mkdir(parents=True, exist_ok=True)
@@ -154,6 +149,7 @@ def main() -> int:
         "music_volume": MUSIC_VOLUME,
         "sfx_volume": SFX_VOLUME,
         "resampler": "deterministic linear interpolation",
+        "boundary": "offline event approximation; use tools/check_native_audio.py for actual native output",
     }
     args.output.with_suffix(".manifest.json").write_text(
         json.dumps(manifest, indent=2) + "\n", encoding="utf-8"

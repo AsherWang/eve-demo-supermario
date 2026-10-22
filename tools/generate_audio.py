@@ -13,15 +13,32 @@ import struct
 import wave
 from pathlib import Path
 
-RATE = 44100
+RATE = 48000
 NTSC_FRAME_HZ = 60.0988
 OUT = Path(__file__).resolve().parents[1] / "assets" / "audio"
+ATTACK_SECONDS = 0.002
+
+
+def poly_blep(phase: float, step: float) -> float:
+    if phase < step:
+        value = phase / step
+        return value + value - value * value - 1.0
+    if phase > 1.0 - step:
+        value = (phase - 1.0) / step
+        return value * value + value + value + 1.0
+    return 0.0
 
 
 def write(name: str, samples: list[float]) -> None:
     OUT.mkdir(parents=True, exist_ok=True)
     peak = max(1.0, max(abs(v) for v in samples))
-    pcm = b"".join(struct.pack("<h", int(max(-1, min(1, v / peak)) * 15000)) for v in samples)
+    attack = min(len(samples), round(RATE * ATTACK_SECONDS))
+    pcm_values = []
+    for index, value in enumerate(samples):
+        if index < attack:
+            value *= index / max(1, attack - 1)
+        pcm_values.append(struct.pack("<h", int(max(-1, min(1, value / peak)) * 15000)))
+    pcm = b"".join(pcm_values)
     with wave.open(str(OUT / f"{name}.wav"), "wb") as wav:
         wav.setparams((1, 2, RATE, len(samples), "NONE", "not compressed"))
         wav.writeframes(pcm)
@@ -32,8 +49,12 @@ def pulse(freq: float, duration: float, duty: float = 0.5, fade: bool = True) ->
     result = []
     for i in range(count):
         phase = (i * freq / RATE) % 1.0
+        step = min(freq / RATE, 0.5)
+        value = 1.0 if phase < duty else -1.0
+        value += poly_blep(phase, step)
+        value -= poly_blep((phase - duty) % 1.0, step)
         env = (1.0 - i / count) if fade else 1.0
-        result.append((1.0 if phase < duty else -1.0) * env)
+        result.append(value * env)
     return result
 
 
@@ -43,8 +64,12 @@ def sweep(start: float, end: float, duration: float, duty: float = 0.5) -> list[
     result = []
     for i in range(count):
         t = i / max(1, count - 1)
-        phase = (phase + (start + (end - start) * t) / RATE) % 1.0
-        result.append((1.0 if phase < duty else -1.0) * (1.0 - t))
+        step = min((start + (end - start) * t) / RATE, 0.5)
+        phase = (phase + step) % 1.0
+        value = 1.0 if phase < duty else -1.0
+        value += poly_blep(phase, step)
+        value -= poly_blep((phase - duty) % 1.0, step)
+        result.append(value * (1.0 - t))
     return result
 
 

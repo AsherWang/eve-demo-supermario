@@ -523,11 +523,11 @@ function hitBlock(g, tx, ty) {
     if (tile == TILE_HIDDEN_ONEUP) {
         setTile(g, tx, ty, TILE_USED);
         spawnPowerUp(g, tx, ty, "oneup");
-        emitSound(g, "powerup");
+        emitSound(g, "powerup", "reveal");
     } else if (tile == TILE_BRICK_STAR) {
         setTile(g, tx, ty, TILE_USED);
         spawnPowerUp(g, tx, ty, "star");
-        emitSound(g, "powerup");
+        emitSound(g, "powerup", "reveal");
     } else if (tile == TILE_BRICK_COIN) {
         startJumpingCoin(g, tx, ty);
         awardCoin(g);
@@ -541,7 +541,7 @@ function hitBlock(g, tx, ty) {
         setTile(g, tx, ty, TILE_USED);
         if (tile == TILE_POWERUP_BLOCK) {
             spawnPowerUp(g, tx, ty, g.player.big ? "flower" : "mushroom");
-            emitSound(g, "powerup");
+            emitSound(g, "powerup", "reveal");
         } else {
             startJumpingCoin(g, tx, ty);
             awardCoin(g);

@@ -9,5 +9,5 @@ config <- {
     capturePreview = false
     previewCameraX = 0.0
     previewScenario = "main"
-    modules = ["gfx", "keyboard", "sound", "audio"]
+    modules = ["gfx", "keyboard"]
 }

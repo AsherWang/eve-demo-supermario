@@ -23,7 +23,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 
-RATE = 44_100
+RATE = 48_000
 NTSC_CPU_HZ = 1_789_773.0
 NTSC_FRAME_HZ = 60.0988
 NOISE_PERIODS = [
@@ -31,6 +31,22 @@ NOISE_PERIODS = [
     202, 254, 380, 508, 762, 1016, 2034, 4068,
 ]
 PULSE_DUTIES = [0.125, 0.25, 0.5, 0.75]
+STARTUP_RAMP_SECONDS = 0.002
+# Calibrated against the Mesen 48 kHz World 1-1 capture.  The first-order
+# 14 kHz NES analogue approximation alone leaves too much folded high-band
+# energy when this frame-level renderer is sampled directly.
+RUNTIME_LOWPASS_HZ = 7_200.0
+
+
+def poly_blep(phase: float, step: float) -> float:
+    """Band-limit a discontinuity without changing its pitch or duty cycle."""
+    if phase < step:
+        value = phase / step
+        return value + value - value * value - 1.0
+    if phase > 1.0 - step:
+        value = (phase - 1.0) / step
+        return value * value + value + value + 1.0
+    return 0.0
 
 
 def find_once(data: bytes, signature: bytes, label: str) -> int:
@@ -151,8 +167,13 @@ class Pulse:
         if not self.active or self.volume == 0:
             return 0.0
         frequency = NTSC_CPU_HZ / (16.0 * (self.timer + 1))
-        self.phase = (self.phase + frequency / RATE) % 1.0
-        return float(self.volume) if self.phase < PULSE_DUTIES[self.duty] else 0.0
+        step = min(frequency / RATE, 0.5)
+        self.phase = (self.phase + step) % 1.0
+        duty = PULSE_DUTIES[self.duty]
+        value = 1.0 if self.phase < duty else -1.0
+        value += poly_blep(self.phase, step)
+        value -= poly_blep((self.phase - duty) % 1.0, step)
+        return float(self.volume) * (value + 1.0) * 0.5
 
 
 class Triangle:
@@ -209,6 +230,7 @@ class FilterChain:
         self.hp90 = [0.0, 0.0]
         self.hp440 = [0.0, 0.0]
         self.lp14k = 0.0
+        self.lp_runtime = 0.0
 
     @staticmethod
     def high_pass(value: float, state: list[float], cutoff: float) -> float:
@@ -226,7 +248,10 @@ class FilterChain:
         rc = 1.0 / (2.0 * math.pi * 14_000.0)
         alpha = dt / (rc + dt)
         self.lp14k += alpha * (value - self.lp14k)
-        return self.lp14k
+        rc_runtime = 1.0 / (2.0 * math.pi * RUNTIME_LOWPASS_HZ)
+        alpha_runtime = dt / (rc_runtime + dt)
+        self.lp_runtime += alpha_runtime * (self.lp14k - self.lp_runtime)
+        return self.lp_runtime
 
 
 class MusicSequencer:
@@ -448,10 +473,32 @@ def render_track(
     return output, renderer.frame
 
 
+def render_fixed_frames(
+    prg: bytes,
+    headers: list[MusicHeader],
+    tables: tuple[bytes, bytes, bytes, bytes],
+    frames: int,
+) -> list[float]:
+    """Render one continuous source while preserving oscillator/filter state."""
+    renderer = MusicSequencer(prg, headers, *tables, repeat=False)
+    output: list[float] = []
+    for frame_index in range(frames):
+        frame = renderer.step_frame()
+        if frame is None:
+            raise RuntimeError(
+                f"music data ended at frame {frame_index}, before requested frame {frames}"
+            )
+        output.extend(frame)
+    return output
+
+
 def write_wav(path: Path, samples: list[float]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     pcm = bytearray()
-    for sample in samples:
+    ramp_samples = min(len(samples), round(RATE * STARTUP_RAMP_SECONDS))
+    for index, sample in enumerate(samples):
+        if index < ramp_samples:
+            sample *= index / max(1, ramp_samples - 1)
         value = max(-1.0, min(1.0, sample))
         pcm.extend(struct.pack("<h", int(value * 30_000)))
     with wave.open(str(path), "wb") as wav:
@@ -512,11 +559,6 @@ def main() -> None:
     )
 
     tracks = {
-        # Initial GroundMusic starts at table entry $11 (array index 16).
-        "overworld_intro": ([ground_layout[0]], False),
-        # Loopback stores $11 and then increments, so it resumes at index 17.
-        "overworld": (ground_layout[1:], True),
-        "star": ([headers["star"]], True),
         "death": ([headers["death"]], False),
         "course_clear": ([headers["course_clear"]], False),
         "game_over": ([headers["game_over"]], False),
@@ -535,6 +577,45 @@ def main() -> None:
             "wav_sha256": hashlib.sha256(wav_path.read_bytes()).hexdigest(),
         }
 
+    # The interactive runtime uses finite, continuous streams rather than
+    # joining separately rendered intro/loop WAV files.  This preserves pulse
+    # phase and analogue-filter state across the original ground-music loopback.
+    # 9,600 frames cover the complete World 1-1 timer window; two copies of the
+    # ROM layout provide enough source data without wrapping the renderer.
+    continuous_tracks = {
+        "overworld": (9600, [ground_layout[0], *ground_layout[1:], *ground_layout[1:]]),
+        # The star timer is 35 * 21 = 735 frames; four full ROM sections cover it.
+        "star": (768, [headers["star"]] * 5),
+    }
+    for name, (frames, track_headers) in continuous_tracks.items():
+        samples = render_fixed_frames(prg, track_headers, tables, frames)
+        wav_path = args.output / f"{name}.wav"
+        write_wav(wav_path, samples)
+        manifest_tracks[name] = {
+            "frames": frames,
+            "samples": len(samples),
+            "duration_seconds": len(samples) / RATE,
+            "repeat": False,
+            "continuous_runtime_stream": True,
+            "sections": [header.name for header in track_headers],
+            "wav_sha256": hashlib.sha256(wav_path.read_bytes()).hexdigest(),
+        }
+
+    # Retain the intro as a provenance/debug artifact; runtime playback no
+    # longer joins this file to overworld.wav.
+    intro_samples, intro_frames = render_track(prg, [ground_layout[0]], tables, False)
+    intro_path = args.output / "overworld_intro.wav"
+    write_wav(intro_path, intro_samples)
+    manifest_tracks["overworld_intro"] = {
+        "frames": intro_frames,
+        "samples": len(intro_samples),
+        "duration_seconds": len(intro_samples) / RATE,
+        "repeat": False,
+        "runtime_asset": False,
+        "sections": [ground_layout[0].name],
+        "wav_sha256": hashlib.sha256(intro_path.read_bytes()).hexdigest(),
+    }
+
     manifest = {
         "generator": "tools/render_smb_rom_music.py",
         "generator_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
@@ -544,6 +625,8 @@ def main() -> None:
             "cpu_hz": NTSC_CPU_HZ,
             "frame_hz": NTSC_FRAME_HZ,
             "sample_rate": RATE,
+            "runtime_lowpass_hz": RUNTIME_LOWPASS_HZ,
+            "startup_ramp_seconds": STARTUP_RAMP_SECONDS,
         },
         "rom_offsets": {
             "frequency_table": freq_offset,
