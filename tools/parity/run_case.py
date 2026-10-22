@@ -50,9 +50,19 @@ def main() -> int:
          "--queues", str(reference / "audio-queues.jsonl"),
          "--ram-trace", str(reference / "ram-trace.jsonl"),
          "--output", str(reference / "events-semantic.jsonl")])
-    run([python, str(tools / "render_actual_audio.py"),
-         "--events", str(actual / "events.jsonl"), "--assets", str(project / "assets" / "audio"),
-         "--frames", str(movie["frames"]), "--output", str(actual / "audio.wav")])
+    run([python, str(tools / "model_apu_writes.py"),
+         "--rom", str(args.rom.resolve()),
+         "--initial-ram-trace", str(reference / "ram-trace.jsonl"),
+         "--events", str(actual / "events.jsonl"),
+         "--state", str(actual / "state.jsonl"),
+         "--frames", str(movie["frames"]),
+         "--output", str(actual / "apu-writes.jsonl")])
+    run([python, str(tools / "render_actual_apu_audio.py"),
+         "--rom", str(args.rom.resolve()),
+         "--movie", str(movie_path),
+         "--origin-state", str(reference / "origin.mss"),
+         "--apu-writes", str(actual / "apu-writes.jsonl"),
+         "--output", str(actual / "audio.wav")])
 
     checks = {}
     checks["artifacts"] = run([
@@ -71,6 +81,12 @@ def main() -> int:
         python, str(tools / "compare_events.py"), "--reference", str(reference / "events-semantic.jsonl"),
         "--actual", str(actual / "events.jsonl"), "--output", str(reports),
     ], {0, 1})
+    checks["apu"] = run([
+        python, str(tools / "compare_apu_writes.py"),
+        "--reference", str(reference / "apu-writes.jsonl"),
+        "--actual", str(actual / "apu-writes.jsonl"),
+        "--frames", str(movie["frames"]), "--output", str(reports),
+    ], {0, 1})
     checks["audio"] = run([
         python, str(tools / "compare_audio.py"), "--reference", str(reference / "audio.wav"),
         "--actual", str(actual / "audio.wav"), "--output", str(reports),
@@ -86,6 +102,7 @@ def main() -> int:
             "frames": "report.html",
             "states": "state-report.html",
             "events": "event-report.html",
+            "apu": "apu-report.html",
             "audio": "audio-report.html",
         },
     }

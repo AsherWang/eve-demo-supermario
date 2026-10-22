@@ -1,0 +1,735 @@
+{
+  "schema": "smb-parity-movie-v1",
+  "name": "world-1-1-high-flag",
+  "description": "ROM-verified World 1-1 route derived from the attributed TAS, with a delayed approach that exercises high flagpole slide, side switch, fall and automatic walk.",
+  "frames": 1280,
+  "reference_bootstrap": {
+    "frames": 600,
+    "inputs": [
+      {
+        "port": 0,
+        "start": 40,
+        "end": 46,
+        "buttons": [
+          "start"
+        ]
+      }
+    ]
+  },
+  "inputs": [
+    {
+      "port": 0,
+      "start": 0,
+      "end": 31,
+      "buttons": [
+        "right",
+        "b"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 32,
+      "end": 32,
+      "buttons": [
+        "right",
+        "b",
+        "a"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 33,
+      "end": 52,
+      "buttons": [
+        "right",
+        "b"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 53,
+      "end": 53,
+      "buttons": [
+        "right",
+        "b",
+        "a"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 54,
+      "end": 74,
+      "buttons": [
+        "right",
+        "b"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 75,
+      "end": 77,
+      "buttons": [
+        "right",
+        "b",
+        "a"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 78,
+      "end": 100,
+      "buttons": [
+        "right",
+        "b"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 101,
+      "end": 111,
+      "buttons": [
+        "right",
+        "b",
+        "a"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 112,
+      "end": 122,
+      "buttons": [
+        "right",
+        "b"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 123,
+      "end": 133,
+      "buttons": [
+        "right",
+        "b",
+        "a"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 134,
+      "end": 145,
+      "buttons": [
+        "right",
+        "b"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 146,
+      "end": 157,
+      "buttons": [
+        "right",
+        "b",
+        "a"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 158,
+      "end": 167,
+      "buttons": [
+        "right",
+        "b"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 168,
+      "end": 169,
+      "buttons": [
+        "right",
+        "b",
+        "a"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 170,
+      "end": 172,
+      "buttons": [
+        "right",
+        "b"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 173,
+      "end": 174,
+      "buttons": [
+        "right",
+        "b",
+        "a"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 175,
+      "end": 177,
+      "buttons": [
+        "right",
+        "b"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 178,
+      "end": 180,
+      "buttons": [
+        "right",
+        "b",
+        "a"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 181,
+      "end": 182,
+      "buttons": [
+        "right",
+        "b"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 183,
+      "end": 184,
+      "buttons": [
+        "right",
+        "b",
+        "a"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 185,
+      "end": 186,
+      "buttons": [
+        "right",
+        "b"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 187,
+      "end": 189,
+      "buttons": [
+        "right",
+        "b",
+        "a"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 190,
+      "end": 191,
+      "buttons": [
+        "right",
+        "b"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 192,
+      "end": 194,
+      "buttons": [
+        "right",
+        "b",
+        "a"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 195,
+      "end": 226,
+      "buttons": [
+        "right",
+        "b"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 227,
+      "end": 237,
+      "buttons": [
+        "right",
+        "b",
+        "a"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 238,
+      "end": 252,
+      "buttons": [
+        "right",
+        "b"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 253,
+      "end": 281,
+      "buttons": [
+        "right",
+        "b",
+        "a"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 282,
+      "end": 307,
+      "buttons": [
+        "right",
+        "b"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 308,
+      "end": 309,
+      "buttons": [
+        "right",
+        "b",
+        "a"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 310,
+      "end": 348,
+      "buttons": [
+        "right",
+        "b"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 349,
+      "end": 361,
+      "buttons": [
+        "right",
+        "b",
+        "a"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 362,
+      "end": 363,
+      "buttons": [
+        "right",
+        "b"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 364,
+      "end": 396,
+      "buttons": [
+        "down",
+        "b"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 397,
+      "end": 403,
+      "buttons": [
+        "b"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 436,
+      "end": 474,
+      "buttons": [
+        "b"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 475,
+      "end": 498,
+      "buttons": [
+        "right",
+        "b"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 499,
+      "end": 508,
+      "buttons": [
+        "right",
+        "b",
+        "a"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 509,
+      "end": 542,
+      "buttons": [
+        "right",
+        "b"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 543,
+      "end": 544,
+      "buttons": [
+        "right",
+        "b",
+        "a"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 545,
+      "end": 564,
+      "buttons": [
+        "right",
+        "b"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 565,
+      "end": 592,
+      "buttons": [
+        "left",
+        "b"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 593,
+      "end": 598,
+      "buttons": [
+        "b"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 599,
+      "end": 600,
+      "buttons": [
+        "left",
+        "b"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 601,
+      "end": 658,
+      "buttons": [
+        "b"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 851,
+      "end": 911,
+      "buttons": [
+        "right",
+        "b"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 912,
+      "end": 915,
+      "buttons": [
+        "right",
+        "b",
+        "a"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 916,
+      "end": 921,
+      "buttons": [
+        "right",
+        "b"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 922,
+      "end": 926,
+      "buttons": [
+        "right",
+        "b",
+        "a"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 927,
+      "end": 961,
+      "buttons": [
+        "right",
+        "b"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 962,
+      "end": 965,
+      "buttons": [
+        "right",
+        "b",
+        "a"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 966,
+      "end": 981,
+      "buttons": [
+        "right",
+        "b"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 982,
+      "end": 1016,
+      "buttons": [
+        "right",
+        "b",
+        "a"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 1017,
+      "end": 1017,
+      "buttons": [
+        "right",
+        "a"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 1018,
+      "end": 1023,
+      "buttons": [
+        "right"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 1024,
+      "end": 1024,
+      "buttons": [
+        "right",
+        "b"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 1025,
+      "end": 1069,
+      "buttons": [
+        "right",
+        "b",
+        "a"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 1070,
+      "end": 1077,
+      "buttons": [
+        "left"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 1078,
+      "end": 1102,
+      "buttons": [
+        "left"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 1103,
+      "end": 1105,
+      "buttons": [
+        "left"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 1106,
+      "end": 1150,
+      "buttons": [
+        "right",
+        "b",
+        "a"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 1193,
+      "end": 1193,
+      "buttons": [
+        "up",
+        "b",
+        "a"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 1194,
+      "end": 1194,
+      "buttons": [
+        "up"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 1195,
+      "end": 1195,
+      "buttons": [
+        "up",
+        "b",
+        "a"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 1196,
+      "end": 1196,
+      "buttons": [
+        "up"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 1197,
+      "end": 1197,
+      "buttons": [
+        "up",
+        "b",
+        "a"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 1198,
+      "end": 1198,
+      "buttons": [
+        "up"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 1199,
+      "end": 1199,
+      "buttons": [
+        "up",
+        "b",
+        "a"
+      ]
+    }
+  ],
+  "capture_frames": [
+    0,
+    7,
+    33,
+    60,
+    109,
+    120,
+    180,
+    240,
+    300,
+    360,
+    375,
+    420,
+    480,
+    540,
+    579,
+    600,
+    660,
+    720,
+    780,
+    840,
+    900,
+    932,
+    960,
+    1020,
+    1080,
+    1109,
+    1110,
+    1111,
+    1112,
+    1113,
+    1114,
+    1115,
+    1116,
+    1117,
+    1118,
+    1119,
+    1120,
+    1121,
+    1122,
+    1123,
+    1124,
+    1125,
+    1126,
+    1127,
+    1128,
+    1129,
+    1130,
+    1131,
+    1132,
+    1133,
+    1134,
+    1135,
+    1136,
+    1137,
+    1138,
+    1139,
+    1140,
+    1144,
+    1148,
+    1188,
+    1189,
+    1190,
+    1191,
+    1199,
+    1213,
+    1214,
+    1215,
+    1217,
+    1218,
+    1221,
+    1231,
+    1232,
+    1240,
+    1279
+  ],
+  "provenance": {
+    "format": "FCEUX FM2 controller input with documented local input edits after frame 1069",
+    "source_sha1": "fbbb675af9b85146015713b8ca5c488d6c0053ab",
+    "source_url": "https://tasvideos.org/UserFiles/Info/68410246126700593",
+    "author": "DJ_Incendration",
+    "local_edit": "Frames 1070-1105 delay the approach; frames 1106-1150 hold right+B+A to produce a high flagpole grab.",
+    "comparison_start_frame": 195,
+    "bootstrap_mode": "canonical"
+  }
+}

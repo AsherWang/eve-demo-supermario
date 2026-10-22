@@ -178,6 +178,16 @@ def main() -> int:
                 "name": "coin_award",
                 "source": "coin queue after gameplay queue-clear phase",
             })
+        if (event["type"] == "audio" and event["name"] == "powerup"
+                and event.get("address") == 0xFE
+                and event.get("raw_bit") == 0x02):
+            synthesized.append({
+                "frame": event["frame"],
+                "sequence": event["sequence"],
+                "type": "gameplay",
+                "name": "powerup_spawn",
+                "source": "GrowPowerUp queue transition",
+            })
         if event["type"] == "audio" and event["name"] == "stomp":
             synthesized.append({
                 "frame": event["frame"],

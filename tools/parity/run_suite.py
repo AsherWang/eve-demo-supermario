@@ -14,7 +14,9 @@ DEFAULT_CASES = (
     "walk-right-smoke",
     "first-goomba-jump",
     "first-goomba-death-lifecycle",
+    "first-powerup-mushroom",
     "world-1-1-tas",
+    "world-1-1-high-flag",
 )
 
 

@@ -24,6 +24,10 @@ FIELD_SPECS = (
     {"field": "player.fire"},
     {"field": "player.grounded"},
     {"field": "camera_x"},
+    {"field": "color_rotation_offset"},
+    {"field": "vram_scheduler.scroll_thirty_two"},
+    {"field": "vram_scheduler.area_parser_task"},
+    {"field": "vram_scheduler.buffer_addr_ctrl"},
     {"field": "lives"},
     {"field": "score"},
     {"field": "coins"},
@@ -35,6 +39,13 @@ FIELD_SPECS = (
     {"field": "enemy0.id", "requires_active_enemy0": True},
     {"field": "enemy0.state_raw", "requires_active_enemy0": True},
     {"field": "enemy0.x", "requires_active_enemy0": True},
+    {"field": "powerup.active"},
+    {"field": "powerup.kind", "requires_active_powerup": True},
+    {"field": "powerup.state_raw", "requires_active_powerup": True},
+    {"field": "powerup.x", "requires_active_powerup": True},
+    {"field": "powerup.y", "requires_active_powerup": True},
+    {"field": "powerup.x_speed_raw", "requires_active_powerup": True},
+    {"field": "powerup.visible", "requires_active_powerup": True},
 )
 
 
@@ -101,6 +112,12 @@ def main() -> int:
             actual_enemy0 = actual[frame].get("enemy0") or {"active": False}
             if spec.get("requires_active_enemy0") and not (
                 reference_enemy0.get("active", False) and actual_enemy0.get("active", False)
+            ):
+                continue
+            reference_powerup = reference[frame].get("powerup") or {"active": False}
+            actual_powerup = actual[frame].get("powerup") or {"active": False}
+            if spec.get("requires_active_powerup") and not (
+                reference_powerup.get("active", False) and actual_powerup.get("active", False)
             ):
                 continue
             compared_field_frames += 1

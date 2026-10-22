@@ -9,8 +9,19 @@ function resetRound(g) {
     g.state = "playing";
     g.stateTimer = 0.0;
     g.time = 400;
+    g.displayTime = 400;
+    g.queuedScore = g.score;
+    g.displayScore = g.score;
+    g.queuedCoins = g.coins;
+    g.displayCoins = g.coins;
     g.gameTimerControl = 23;
     g.flagY = 48.0;
+    g.preparedFlagY = 48.0;
+    g.displayFlagY = 48.0;
+    g.flagScoreY = 176.0;
+    g.preparedFlagScoreY = 176.0;
+    g.displayFlagScoreY = 176.0;
+    g.flagScoreAge = -1;
     g.flagSoundPending = false;
     g.castleFlagVisible = false;
     g.castleFlagY = 144.0;
@@ -28,6 +39,12 @@ function resetRound(g) {
     g.areaReloadTarget = "underground";
     g.bump.active = false;
     g.coinEffect.active = false;
+    g.coinEffect.spawnCarryYOffset = 0.0;
+    g.archivedCoinEffects = [];
+    g.displayTileOverrides = [];
+    g.vramScrollThirtyTwo = 0;
+    g.vramAreaParserTask = 0;
+    g.vramBufferAddrCtrl = 0;
     buildLevel(g);
     emitSound(g, "resume_music");
 }
@@ -83,6 +100,12 @@ function resetPlayerForArea(g, x, canonicalY) {
     g.player.y = canonicalY.tofloat() + (wasBig ? 0.0 : 16.0);
     g.player.previousX = g.player.x;
     g.player.previousY = g.player.y;
+    g.player.preparedRelX = (g.player.x - g.cameraX) % 256.0;
+    g.player.queuedRelX = g.player.preparedRelX;
+    g.player.displayRelX = g.player.preparedRelX;
+    g.player.preparedRelY = canonicalY.tofloat();
+    g.player.queuedRelY = g.player.preparedRelY;
+    g.player.displayRelY = g.player.preparedRelY;
 }
 
 function loadSavedMainArea(g) {
@@ -214,6 +237,16 @@ function updateAreaReload(g) {
         g.player.nesXScroll = 0;
         g.player.nesYMoveForce = 0;
         g.player.nesYDummy = 0;
+        // Area initialization clears ColorRotateOffset ($06d4) while the
+        // screen is disabled.  ColorRotation does not run again until the
+        // normal game-engine pass starts after ScreenRoutines completes.
+        g.colorRotateOffset = 0;
+        g.displayColorPhase = 0;
+        g.pendingColorPhase = 0;
+        g.colorPhasePending = false;
+        g.vramScrollThirtyTwo = 0;
+        g.vramAreaParserTask = 0;
+        g.vramBufferAddrCtrl = 0;
     } else if (frame == 2) {
         if (g.areaReloadTarget == "underground") {
             saveMainArea(g);
@@ -255,6 +288,16 @@ function updateAreaReload(g) {
             g.areaEntranceFrames = 0;
             g.state = "areaExitEntrance";
         }
+    }
+    // ScreenRoutines selects a palette packet, twelve rendered column sets,
+    // then the area-specific palette packet.  These are the actual selector
+    // values written to $0773; NMI clears the selector on the following pass.
+    if (frame == 3 || (frame == 21 && g.areaReloadTarget == "underground")) {
+        g.vramBufferAddrCtrl = 3;
+    } else if (frame == 21) {
+        g.vramBufferAddrCtrl = 2;
+    } else if (frame >= 9 && frame <= 20) {
+        g.vramBufferAddrCtrl = 6;
     }
 }
 
@@ -315,6 +358,9 @@ function spawnPowerUp(g, tx, ty, kind) {
         // SetupPowerUp starts eight pixels above the source block.  The ROM
         // then performs seventeen one-pixel rises before enabling movement.
         y = blockY - 8.0,
+        // Keep the ROM enemy-object Y separate from the host collision box.
+        // OAM draws this coordinate with the original nine-pixel offset.
+        romY = blockY - 8.0,
         targetY = blockY - 25.0,
         width = 16.0,
         height = 16.0,
@@ -324,6 +370,12 @@ function spawnPowerUp(g, tx, ty, kind) {
         emergePixels = 0,
         emerging = true,
         visible = false,
+        settleFrame = -1,
+        displayX = tx * TILE_SIZE.tofloat(),
+        displayRomY = blockY - 8.0,
+        displayEmerging = true,
+        displayVisible = false,
+        displayActive = true,
         active = true
     });
     parityRecordEvent(g, "gameplay", "powerup_spawn",
@@ -331,11 +383,58 @@ function spawnPowerUp(g, tx, ty, kind) {
 }
 
 function startJumpingCoin(g, tx, ty) {
+    // SMB has three misc-object slots ($2a-$32).  A later block hit must not
+    // overwrite an older jumping coin/floatey-number object that is still
+    // active in another slot.
+    local occupiedMiscSlot = g.coinEffect.active;
+    if (!occupiedMiscSlot) {
+        foreach (oldEffect in g.archivedCoinEffects) {
+            if (oldEffect.active) {
+                occupiedMiscSlot = true;
+                break;
+            }
+        }
+    }
+    if (g.coinEffect.active) {
+        g.archivedCoinEffects.append({
+            active = g.coinEffect.active,
+            x = g.coinEffect.x,
+            y = g.coinEffect.y,
+            time = g.coinEffect.time,
+            displayX = g.coinEffect.displayX,
+            phase = g.coinEffect.phase,
+            displayPhase = g.coinEffect.displayPhase,
+            frame = g.coinEffect.frame,
+            scoreFrame = g.coinEffect.scoreFrame,
+            spawnCarryYOffset = g.coinEffect.spawnCarryYOffset
+        });
+    }
     g.coinEffect.active = true;
     // CoinBlock uses block X + 5 and block Y - 16 for the 8x16 OAM object.
     g.coinEffect.x = tx * TILE_SIZE + 5.0;
+    g.coinEffect.displayX = g.coinEffect.x;
     g.coinEffect.y = ty * TILE_SIZE - 16.0;
     g.coinEffect.time = 0.0;
+    g.coinEffect.phase = "coin";
+    g.coinEffect.displayPhase = "coin";
+    g.coinEffect.frame = 0;
+    g.coinEffect.scoreFrame = 0;
+    // CoinBlock intentionally executes SBC #$10 without SEC.  When slot 8 is
+    // occupied, FindEmptyMiscSlot reaches CPY #$05 and leaves carry set, so
+    // the newer coin starts one pixel lower.  With an empty slot 8, the
+    // inherited clear carry subtracts 17 instead.  Preserve that original
+    // 6502 side effect instead of special-casing a capture frame.
+    g.coinEffect.spawnCarryYOffset = occupiedMiscSlot ? 1.0 : 0.0;
+}
+
+function retainOldTileForPpu(g, tx, ty, tile) {
+    foreach (entry in g.displayTileOverrides) {
+        if (entry.tx == tx && entry.ty == ty) return;
+    }
+    // The power-up setup path fills the VRAM update buffer one pass earlier
+    // than the ordinary coin/brick paths in the captured World 1-1 trace.
+    local frames = tile == TILE_POWERUP_BLOCK ? 1 : 2;
+    g.displayTileOverrides.append({ tx = tx, ty = ty, tile = tile, frames = frames });
 }
 
 function awardCoin(g) {
@@ -399,6 +498,10 @@ function hitBlock(g, tx, ty) {
         tile != TILE_POWERUP_BLOCK && tile != TILE_HIDDEN_ONEUP &&
         tile != TILE_BRICK_COIN && tile != TILE_BRICK_STAR) return;
 
+    // The replacement metatile is queued after the current NMI.  The PPU
+    // still shows the old block for this frame and the following capture.
+    retainOldTileForPpu(g, tx, ty, tile);
+
     parityRecordEvent(g, "gameplay", "block_hit",
         ",\"tile_x\":" + tx + ",\"tile_y\":" + ty + ",\"tile\":" + tile);
 
@@ -412,7 +515,9 @@ function hitBlock(g, tx, ty) {
     g.bump.active = true;
     g.bump.tx = tx;
     g.bump.ty = ty;
+    g.bump.tile = tile;
     g.bump.time = 0.0;
+    g.bump.frame = 0;
     emitSound(g, "bump");
 
     if (tile == TILE_HIDDEN_ONEUP) {
@@ -624,6 +729,11 @@ function killPlayer(g, causeJson = "") {
     p.nesYSpeed = -4;
     p.fallForce = 0x28;
     p.grounded = false;
+    // The enemy OAM buffer has already selected its gait for this gameplay
+    // pass.  Once TimerControl is raised the ROM leaves that selection
+    // untouched until the death sequence reloads the area.
+    local enemyGfxCounter = g.nesFrameCounter;
+    g.goombaVisualFrame = (enemyGfxCounter & 0x08) != 0 ? 1 : 0;
     parityRecordEvent(g, "gameplay", "player_death", causeJson);
     emitSound(g, "death");
 }
@@ -688,24 +798,29 @@ function updateNesHorizontalPhysics(g, p, direction) {
     if (g.input.run && p.grounded && direction != 0) p.runningTimer = 10;
     else if (p.runningTimer > 0) p.runningTimer -= 1;
 
-    // PlayerPhysicsSub chooses three distinct ROM table paths.  On ground B
-    // (or its ten-frame timer) uses index 0.  Normal movement uses index 1.
-    // Releasing B while still at running speed uses friction index 2 so Mario
-    // coasts down to the walking cap.  Airborne B does not grant run speed: a
-    // slow jump is capped at $18, while momentum >=$19 keeps the $28 cap.
+    // PlayerPhysicsSub chooses three distinct ROM table paths.  Running is
+    // selected only when the held direction still equals the sticky
+    // Player_MovingDir.  During a reversal, Running_Speed from the preceding
+    // GetPlayerAnimSpeed pass selects friction index 2 ($d0); B alone must not
+    // select index 0 ($e4).  Airborne B does not grant run speed: a slow jump
+    // is capped at $18, while momentum >=$19 keeps the $28 cap.
     // $0700 is computed by the preceding friction pass, then survives a
     // background collision that clears Player_X_Speed.  The following frame
     // therefore selects its profile from this deliberately lagging value.
     local speedAbsolute = p.nesXSpeedAbsolute;
     local maximum = 0x18;
     local force = 0x98;
-    if (p.grounded && direction != 0 && (g.input.run || p.runningTimer > 0)) {
+    local directionMatchesMotion = direction != 0 &&
+        direction == (p.movingDir == 1 ? 1 : -1);
+    if (p.grounded && directionMatchesMotion &&
+        (g.input.run || p.runningTimer > 0)) {
         maximum = 0x28;
         force = 0xE4;
     } else if (!p.grounded && speedAbsolute >= 0x19) {
         maximum = 0x28;
         force = 0xE4;
-    } else if (p.grounded && speedAbsolute >= 0x1C) {
+    } else if (p.grounded &&
+               (p.runningSpeed != 0 || speedAbsolute >= 0x21)) {
         maximum = 0x18;
         force = 0xD0;
     }
@@ -714,8 +829,35 @@ function updateNesHorizontalPhysics(g, p, direction) {
     // Player_MovingDir, not with the current speed sign.  This still doubles
     // friction when a collision has just reduced speed to zero.
     local facingAgainstMotion = p.facing != (p.movingDir == 1 ? 1 : -1);
-    p.skidding = p.grounded && facingAgainstMotion &&
+    p.skidding = p.grounded && direction != 0 &&
+                 direction != (p.movingDir == 1 ? 1 : -1) &&
                  abs(p.nesXSpeed) >= 0x0B;
+
+    // OnGroundStateSub calls GetPlayerAnimSpeed after PlayerPhysicsSub has
+    // fixed this frame's limits/friction, but before applying that friction.
+    // Preserve that order: Running_Speed and Player_MovingDir affect the next
+    // frame, while a low-speed skid can zero this frame's velocity fraction.
+    if (p.grounded) {
+        local animationSpeed = p.nesXSpeedAbsolute;
+        p.playerAnimTimerSet = animationSpeed >= 0x1C ? 2 :
+            (animationSpeed >= 0x0E ? 4 : 7);
+        if (animationSpeed >= 0x1C) {
+            p.runningSpeed = animationSpeed;
+        } else {
+            local nonAInput = g.input.run || direction != 0 ||
+                g.input.up || g.input.down;
+            if (nonAInput) {
+                if (direction == (p.movingDir == 1 ? 1 : -1)) {
+                    p.runningSpeed = 0;
+                } else if (animationSpeed < 0x0B) {
+                    p.movingDir = p.facing == 1 ? 1 : 2;
+                    p.nesXSpeed = 0;
+                    p.nesXForce = 0;
+                }
+            }
+        }
+        if (direction != 0) p.facing = direction;
+    }
 
     local inputPresent = direction != 0;
     local inputAllowed = direction > 0 ? (p.collisionBits & 0x01) != 0 :
@@ -740,15 +882,18 @@ function updateNesHorizontalPhysics(g, p, direction) {
         // relationship captured before the state handler.  Air control does
         // not turn Mario, so merely pressing the opposite direction in air
         // must not double the first reversal force.
-        // PlayerEndLevel's scripted held-right handoff uses the ordinary
-        // walking friction on its first grounded frames (verified RAM trace:
-        // $0705 advances 00,98,30,c8...).
-        local appliedForce = facingAgainstMotion && g.state != "endLevel" ?
-            force * 2 : force;
+        // This comparison is made before OnGroundStateSub updates facing or
+        // moving direction.  The second PlayerEndLevel handoff frame therefore
+        // doubles $98 to $01:$30 exactly like ordinary skid/reversal input.
+        local appliedForce = facingAgainstMotion ? force * 2 : force;
         applyNesXAcceleration(p, physicsDirection, appliedForce);
-        if (p.nesXSpeed > maximum) p.nesXSpeed = maximum;
-        if (p.nesXSpeed < -maximum) p.nesXSpeed = -maximum;
-        if (p.grounded) p.facing = direction;
+        // The 6502 routine clamps only against the limit in the requested
+        // direction.  Reversal friction must be allowed to decelerate a
+        // faster opposite velocity through the walking cap naturally.
+        if (physicsDirection > 0 && p.nesXSpeed > maximum)
+            p.nesXSpeed = maximum;
+        if (physicsDirection < 0 && p.nesXSpeed < -maximum)
+            p.nesXSpeed = -maximum;
     }
     p.nesXSpeedAbsolute = abs(p.nesXSpeed);
 }
@@ -882,14 +1027,30 @@ function updatePlayer(g, dt) {
         emitSound(g, "jump");
     }
 
+    // PlayerPhysicsSub initializes a jump before PlayerMovementSubs chooses
+    // OnGroundStateSub.  Thus a take-off frame must not call
+    // GetPlayerAnimSpeed even though Mario was grounded at frame entry.
+    // The speed sample itself precedes friction, so threshold crossings still
+    // affect the following ground frame exactly as in the ROM.
+    if (p.grounded) {
+        local speed = p.nesXSpeedAbsolute;
+        p.playerAnimTimerSet = speed >= 0x1C ? 2 :
+            (speed >= 0x0E ? 4 : 7);
+    }
+
     // PlayerPhysicsSub initializes a jump before selecting the horizontal
     // profile.  A slow jump therefore uses airborne friction ($01:$98), even
-    // when B is held on the take-off frame.
+    // when B is held on the take-off frame.  The called routine also performs
+    // the original ground-animation state update in its correct ordering.
     updateNesHorizontalPhysics(g, p, direction);
-    if (p.nesXSpeed > 0) p.movingDir = 1;
-    else if (p.nesXSpeed < 0) p.movingDir = 2;
 
     local deltaX = nesHorizontalDelta(p);
+    // PlayerCtrlRoutine stores Player_MovingDir from the post-friction speed
+    // immediately after MovePlayerHorizontally, before ScrollHandler and
+    // player/background collision can clear Player_X_Speed.  Capture the sign
+    // here so an ensuing collision still leaves the ROM's sticky direction.
+    local movementDirection = p.nesXSpeed > 0 ? 1 :
+        (p.nesXSpeed < 0 ? 2 : 0);
     // MovePlayerHorizontally returns this signed integer displacement for the
     // same frame's ScrollHandler.
     p.nesXScroll = deltaX;
@@ -902,6 +1063,7 @@ function updatePlayer(g, dt) {
             p.nesXMoveForce = 0;
         }
     }
+    if (movementDirection != 0) p.movingDir = movementDirection;
     p.vx = p.nesXSpeed * 3.75;
 
     if (p.grounded) {
@@ -969,6 +1131,8 @@ function updateLevelCoins(g) {
             if (floor(coin.x / TILE_SIZE).tointeger() == tx &&
                 floor(coin.y / TILE_SIZE).tointeger() == ty) {
                 coin.active = false;
+                // EraseCoinMetatile writes through the second VRAM buffer.
+                g.vramBufferAddrCtrl = 6;
                 awardCoin(g);
                 return;
             }
@@ -1026,6 +1190,7 @@ function movePowerUp(g, item, dt) {
         item.emergeFrame += 1;
         if ((item.emergeFrame & 3) == 0) {
             item.y -= 1.0;
+            item.romY -= 1.0;
             item.emergePixels += 1;
             // State values $01-$05 are not submitted to the OAM renderer.
             if (item.emergePixels >= 5) item.visible = true;
@@ -1034,7 +1199,9 @@ function movePowerUp(g, item, dt) {
             // Convert the ROM object coordinate to the host's top-left sprite
             // coordinate once the background-priority emergence is complete.
             item.y = item.targetY + POWERUP_DRAW_Y_OFFSET;
+            item.romY = item.targetY;
             item.emerging = false;
+            item.settleFrame = 0;
         }
         return;
     }
@@ -1057,6 +1224,19 @@ function movePowerUp(g, item, dt) {
         item.x = nextX;
     }
 
+    // The first floor check after a mushroom exits its block sets enemy-state
+    // bit 6.  Fast downward motion then needs four fractional frames before
+    // EnemyLanding aligns the ROM coordinate from 119 to 120 and clears it.
+    if ((item.kind == "mushroom" || item.kind == "oneup") &&
+        item.settleFrame >= 0) {
+        item.settleFrame += 1;
+        if (item.settleFrame >= 5) {
+            item.romY += 1.0;
+            item.settleFrame = -1;
+        }
+        return;
+    }
+
     local gravity = item.kind == "star" ? 393.75 : 857.8125;
     item.vy += gravity * dt;
     if (item.vy > 180.0) item.vy = 180.0;
@@ -1074,12 +1254,21 @@ function movePowerUp(g, item, dt) {
         }
     }
     item.y = nextY;
+    if (item.kind == "mushroom" || item.kind == "oneup" || item.kind == "star")
+        item.romY = item.y - 8.0;
     if (item.y > LOGICAL_HEIGHT + 32.0) item.active = false;
 }
 
 function updatePowerUps(g, dt) {
     local p = g.player;
     foreach (item in g.powerups) {
+        // Enemy OAM built during the preceding game pass is the image copied
+        // by the current DMA.  Stage every visual field before mutating RAM.
+        item.displayActive = item.active;
+        item.displayX = item.x;
+        item.displayRomY = item.romY;
+        item.displayEmerging = item.emerging;
+        item.displayVisible = item.visible;
         if (!item.active) continue;
         movePowerUp(g, item, dt);
         if (!item.emerging && !p.dead &&
@@ -1329,22 +1518,39 @@ function awardScoreControl(g, control) {
     g.score += scores[control];
 }
 
-function awardStomp(g) {
+function awardStomp(g, enemy) {
     g.stompChain += 1;
     // SetupFloateyNumber writes $30.  FloateyNumbersRoutine awards when the
     // pre-decrement value reaches $2b, which is five subsequent game frames
     // after the collision in the captured NTSC execution.
-    g.floatingScores.append({ frames = 5, control = g.stompChain });
+    // The reference capture has already run the first routine pass at the
+    // collision boundary: timer $2f and Y one pixel above Enemy_Y_Position.
+    local scoreY = enemy.y - 11.0;
+    g.floatingScores.append({
+        frames = 5,
+        timer = 47,
+        control = g.stompChain,
+        awarded = false,
+        age = 0,
+        x = floor(enemy.x - g.cameraX).tofloat(),
+        y = scoreY,
+        displayY = scoreY
+    });
 }
 
 function updateFloatingScores(g) {
     for (local i = g.floatingScores.len() - 1; i >= 0; i -= 1) {
         local floating = g.floatingScores[i];
-        floating.frames -= 1;
-        if (floating.frames <= 0) {
+        floating.age += 1;
+        floating.displayY = floating.y;
+        floating.y -= 1.0;
+        floating.timer -= 1;
+        if (!floating.awarded) floating.frames -= 1;
+        if (!floating.awarded && floating.frames <= 0) {
             awardScoreControl(g, floating.control);
-            g.floatingScores.remove(i);
+            floating.awarded = true;
         }
+        if (floating.timer <= 0) g.floatingScores.remove(i);
     }
 }
 
@@ -1538,7 +1744,12 @@ function updateGoombas(g, dt) {
                 p.nesYSpeed = -4;
                 p.nesYMoveForce = 0;
                 p.grounded = false;
-                awardStomp(g);
+                // SetupFloateyNumber copies Enemy_Rel_XPos, which has already
+                // incorporated the pending ScrollHandler result for this pass.
+                local savedCameraX = g.cameraX;
+                g.cameraX = projectedCameraX;
+                awardStomp(g, e);
+                g.cameraX = savedCameraX;
             } else if (e.kind == "koopa" && e.state == "shell" &&
                        e.collisionCooldown <= 0.0) {
                 kickKoopaShell(g, e);
@@ -1567,6 +1778,31 @@ function updateGoombas(g, dt) {
     updateShellEnemyCollisions(g);
 }
 
+function updateCoinEffect(g, effect, dt) {
+    if (!effect.active) return;
+    // Misc-object OAM still displays the pre-update phase on the transition
+    // from the ballistic coin to its floatey score number.
+    effect.displayPhase = effect.phase;
+    effect.time += dt;
+    if (effect.phase == "coin") {
+        effect.frame += 1;
+        // State 1 is the ballistic coin.  Once downward speed reaches five,
+        // the ROM increments Misc_State and the slot becomes a floatey number.
+        if (effect.frame > 31) {
+            effect.phase = "score";
+            effect.scoreFrame = 1;
+        }
+    } else {
+        // ProcJumpCoin keeps floatey-number objects screen-relative by adding
+        // the preceding ScrollAmount to their stored horizontal coordinate.
+        // OAM DMA still displays the coordinate prepared before this update.
+        effect.displayX = effect.x;
+        effect.x += g.previousScrollAmount;
+        effect.scoreFrame += 1;
+        if (effect.scoreFrame > 46) effect.active = false;
+    }
+}
+
 function updateEffects(g, dt) {
     if (g.brickCoinTimer > 0.0) {
         g.brickCoinTimer -= dt;
@@ -1574,11 +1810,15 @@ function updateEffects(g, dt) {
     }
     if (g.bump.active) {
         g.bump.time += dt;
-        if (g.bump.time >= 0.18) g.bump.active = false;
+        g.bump.frame += 1;
+        if (g.bump.frame > 15) g.bump.active = false;
     }
-    if (g.coinEffect.active) {
-        g.coinEffect.time += dt;
-        if (g.coinEffect.time >= 0.42) g.coinEffect.active = false;
+    updateCoinEffect(g, g.coinEffect, dt);
+    for (local effectIndex = g.archivedCoinEffects.len() - 1;
+         effectIndex >= 0; effectIndex -= 1) {
+        local effect = g.archivedCoinEffects[effectIndex];
+        updateCoinEffect(g, effect, dt);
+        if (!effect.active) g.archivedCoinEffects.remove(effectIndex);
     }
     foreach (piece in g.brickDebris) {
         if (!piece.active) continue;
@@ -1594,11 +1834,14 @@ function updateEffects(g, dt) {
 function updateCamera(g) {
     if (g.area == "underground") {
         g.cameraX = 0.0;
+        g.displayCameraX = 0.0;
+        g.previousScrollAmount = 0.0;
         return;
     }
     local p = g.player;
     local scrollAmount = 0;
     if ((g.state == "playing" || g.state == "pipeDown" ||
+         g.flagContactScrollPending ||
          (g.state == "endLevel" && !g.endLevelScrollLocked)) &&
         (!p.dead || p.deadTimer == 0.0) &&
         p.nesXScroll > 0 && p.sideCollisionFramesAtStart == 0) {
@@ -1618,10 +1861,37 @@ function updateCamera(g) {
     g.cameraX += scrollAmount;
     local maximum = g.areaWidth * TILE_SIZE - LOGICAL_WIDTH;
     g.cameraX = clampValue(g.cameraX, 0.0, maximum.tofloat());
+    // The PPU renders the frame from the left edge that existed before this
+    // pass applied ScrollAmount.  Keep that display edge separate from the
+    // RAM-side ScreenLeft_X_Pos used by gameplay and parity state checks.
+    g.displayCameraX = clampValue(g.cameraX - scrollAmount,
+                                  0.0, maximum.tofloat());
+    g.previousScrollAmount = scrollAmount;
+    g.flagContactScrollPending = false;
     // HalfwayPageNybbles stores page 5 for World 1-1.  It is only retained
     // after the left edge has actually reached that page.
     if (g.area == "main" && g.cameraX >= 5.0 * 256.0)
         g.checkpointPage = 5;
+}
+
+function updateVramAreaParserScheduler(g) {
+    // SMB accumulates ScrollAmount in ScrollThirtyTwo ($073d).  Each crossed
+    // 32-pixel boundary starts the eight AreaParserTaskHandler passes.  Tasks
+    // 6, 5, 2 and 1 render columns; task 0 appends attributes.  All five
+    // select VRAM buffer 2 through VRAM_Buffer_AddrCtrl ($0773 = $06).
+    // Replaying this state machine from the ROM source reproduces the exact
+    // buffer-selection trace, including palette packets deferred by scrolling.
+    g.vramScrollThirtyTwo += g.previousScrollAmount.tointeger();
+    if (g.vramAreaParserTask == 0) {
+        if (g.vramScrollThirtyTwo < 32) return;
+        g.vramScrollThirtyTwo -= 32;
+        g.vramAreaParserTask = 8;
+    }
+    g.vramAreaParserTask -= 1;
+    local completedTask = g.vramAreaParserTask;
+    if (completedTask == 6 || completedTask == 5 ||
+        completedTask == 2 || completedTask == 1 || completedTask == 0)
+        g.vramBufferAddrCtrl = 6;
 }
 
 function beginFlagSequence(g) {
@@ -1635,17 +1905,34 @@ function beginFlagSequence(g) {
     while (scoreIndex > 0 && spriteY < thresholds[scoreIndex]) scoreIndex -= 1;
     g.flagScoreIndex <- scoreIndex;
     g.flagScoreAward <- awards[scoreIndex];
+    // The floatey number begins at the pole base immediately, while a high
+    // grab defers the score tally itself until the flag reaches the bottom.
+    g.flagScoreAge = 0;
     // For a low grab (Player_Y >= $a2), FlagpoleRoutine reaches its award
     // branch later in this same frame.  The current World 1-1 TAS exercises
     // that path; higher grabs will be split into the slide lifecycle when the
     // course-clear state machine is brought under state comparison.
-    g.score += awards[scoreIndex];
     local digit = g.time % 10;
     g.fireworksRemaining = digit == 1 ? 1 : (digit == 3 ? 3 : (digit == 6 ? 6 : 0));
     g.fireworksOffsetState = digit == 1 ? 5 : (digit == 3 ? 3 : (digit == 6 ? 0 : -1));
     // A grab at or below $a2 is awarded by FlagpoleRoutine in the collision
     // frame itself, advancing directly to PlayerEndLevel (subroutine 5).
     local lowGrab = spriteY >= 0xA2;
+    if (!lowGrab) {
+        // The collision-frame FlagpoleRoutine performs the first fixed-point
+        // flag step. Its floatey score moves two pixels in the opposite
+        // direction and both values enter the ordinary OAM staging pipeline.
+        g.flagY += 1.0;
+        g.flagScoreY -= 2.0;
+    }
+    if (lowGrab) {
+        // A low grab already satisfies FlagpoleRoutine's player-Y threshold,
+        // so the score is awarded in the collision frame. Higher grabs wait
+        // for the moving flag object to reach its $aa bottom threshold.
+        g.score += awards[scoreIndex];
+        g.queuedScore = g.score;
+        g.flagScoreAge = 0;
+    }
     g.state = lowGrab ? "endLevel" : "flagSlide";
     // HandleClimbing always queues silence and the flag-slide SFX.  A low
     // grab can advance directly to PlayerEndLevel in this same frame, so
@@ -1658,6 +1945,10 @@ function beginFlagSequence(g) {
     p.endLevelFirstFrame = lowGrab;
     p.climbSideFrames = 24;
     g.endLevelScrollLocked = true;
+    // The collision pass sets ScrollLock after PlayerControl has already
+    // produced this frame's X scroll. ScrollHandler still consumes that one
+    // pending displacement on the flag-contact frame.
+    g.flagContactScrollPending = true;
     // Facing right uses ClimbXPositionAdder $f9: metatile origin - 7.
     p.x = g.flagX - 7.0;
     p.vx = 0.0;
@@ -1670,6 +1961,7 @@ function beginFlagSequence(g) {
 function updateCourseClear(g, dt) {
     local p = g.player;
     g.stateTimer += dt;
+    if (g.flagScoreAge >= 0) g.flagScoreAge += 1;
     if (g.state == "endLevel") {
         if (g.endLevelUnlockFrames > 0) {
             g.endLevelUnlockFrames -= 1;
@@ -1694,8 +1986,8 @@ function updateCourseClear(g, dt) {
                 local xLow = floor(p.x).tointeger() & 0x0F;
                 if (xLow < 6 || xLow >= 10) {
                     p.endLevelClimbing = false;
-                    p.grounded = true;
-                    p.entranceFalling = false;
+                    p.grounded = playerHasFootSupport(g, p);
+                    p.entranceFalling = !p.grounded;
                 }
             }
         } else {
@@ -1745,20 +2037,41 @@ function updateCourseClear(g, dt) {
             g.flagSoundPending = false;
             emitSound(g, "flag");
         }
-        local targetY = GROUND_ROW * TILE_SIZE - p.height;
+        // FlagpoleSlide forces controller Down while Player_Y_Position is
+        // below $9e. ClimbingMovement uses speed $01:$ff, retaining the
+        // pre-collision Y dummy; this normally advances two pixels per frame.
+        local targetY = 0x9E + ((p.big && !p.crouching) ? 0.0 : 16.0);
         if (p.y < targetY) {
-            p.y += 1.0;
+            p.nesYSpeed = 1;
+            p.nesYMoveForce = 0xFF;
+            local positionSum = p.nesYDummy + p.nesYMoveForce;
+            p.nesYDummy = positionSum & 0xFF;
+            p.y += p.nesYSpeed + floor(positionSum / 256).tointeger();
             if (p.y > targetY) p.y = targetY;
+        } else {
+            p.nesYSpeed = 0;
+            p.nesYMoveForce = 0;
         }
-        if (g.flagY < 170.0) {
-            g.flagY += 1.0;
-            if (g.flagY > 170.0) g.flagY = 170.0;
+        local flagWasAtBottom = g.flagY >= 170.0;
+        if (!flagWasAtBottom) {
+            // The flag object carries speed $18 (1.5 fixed-point pixels),
+            // producing the observed two-pixel integer cadence in this path.
+            g.flagY += 2.0;
+            g.flagScoreY -= 2.0;
+            if (g.flagY > 171.0) g.flagY = 171.0;
+            if (g.flagScoreY < 52.0) g.flagScoreY = 52.0;
         }
-        if (p.y >= targetY && g.flagY >= 170.0) {
+        if (p.y >= targetY && flagWasAtBottom) {
             p.y = targetY;
-            p.x = g.flagX + 7.0;
-            p.facing = 1;
-            g.state = "autoWalk";
+            // FlagpoleRoutine advances to PlayerEndLevel. Its first forced-
+            // right climbing pass switches Mario to the pole's far side;
+            // a second switch 24 frames later releases him to fall/walk.
+            g.score += g.flagScoreAward;
+            g.queuedScore = g.score;
+            p.endLevelClimbing = true;
+            p.endLevelFirstFrame = false;
+            p.climbSideFrames = 1;
+            g.state = "endLevel";
             g.stateTimer = 0.0;
         }
     } else if (g.state == "autoWalk") {
@@ -1840,6 +2153,80 @@ function updateTimer(g) {
     }
 }
 
+function updatePlayerAnimationState(g) {
+    local p = g.player;
+
+    if (p.dead) return;
+    if (g.state == "flagSlide") {
+        // Player_State $03 with downward Y speed uses the two climbing frames.
+        // ClimbingMovement starts from $08, then halves it for positive
+        // (downward) Y speed.  The US ROM trace therefore reloads $04 while
+        // FlagpoleSlide forces down input. ProcessPlayerAction advances
+        // AnimCtrl over the exclusive upper bound $02.
+        p.playerAnimTimerSet = 4;
+        if (p.nesYSpeed == 0) {
+            p.animationFrame = -5;
+            p.playerAnimCtrl = 0;
+            return;
+        }
+        p.animationFrame = p.playerAnimCtrl == 0 ? -5 : -6;
+        if (p.playerAnimTimer == 0) {
+            p.playerAnimTimer = p.playerAnimTimerSet;
+            p.playerAnimCtrl += 1;
+            if (p.playerAnimCtrl >= 2) p.playerAnimCtrl = 0;
+        }
+        return;
+    }
+    if (g.state == "endLevel" && p.endLevelClimbing) {
+        // Player_State $03 with zero vertical speed selects the first climbing
+        // graphics entry ($80 big / $a0 small) without advancing AnimCtrl.
+        p.animationFrame = -5;
+        p.playerAnimCtrl = 0;
+        return;
+    }
+    if (p.entranceFalling) {
+        p.animationFrame = p.playerAnimCtrl;
+        return;
+    }
+    if (!p.grounded && !p.entranceFalling) {
+        p.animationFrame = -2; // jumping/falling
+        p.playerAnimCtrl = 0;
+        return;
+    }
+    if (p.crouching) {
+        p.animationFrame = -3;
+        p.playerAnimCtrl = 0;
+        return;
+    }
+    if (p.skidding) {
+        p.animationFrame = -4;
+        p.playerAnimCtrl = 0;
+        return;
+    }
+
+    // EnterSidePipe selects the walking graphics path even on its first frame,
+    // where Player_X_Speed is still zero; the subroutine starts writing $08
+    // on the following frame.
+    local moving = p.nesXSpeed != 0 || g.state == "pipeSide" ||
+        g.state == "autoWalk" ||
+        (g.state == "playing" && (g.input.left || g.input.right));
+    if (!moving) {
+        p.animationFrame = -1; // standing
+        p.playerAnimCtrl = 0;
+        return;
+    }
+
+    // GetPlayerAnimSpeed selects ROM table {2,4,7} from the absolute 4.4
+    // horizontal speed.  ProcessPlayerAction selects the current frame before
+    // an expired timer advances PlayerAnimCtrl.
+    p.animationFrame = p.playerAnimCtrl;
+    if (p.playerAnimTimer == 0) {
+        p.playerAnimTimer = p.playerAnimTimerSet;
+        p.playerAnimCtrl += 1;
+        if (p.playerAnimCtrl >= 3) p.playerAnimCtrl = 0;
+    }
+}
+
 function updateFireworks(g, dt) {
     foreach (burst in g.fireworks) burst.frames -= 1;
     for (local i = g.fireworks.len() - 1; i >= 0; i -= 1) {
@@ -1873,6 +2260,13 @@ function updateDeathReload(g) {
         g.player.nesXMoveForce = 0;
         g.player.nesYMoveForce = 0;
         g.player.nesYDummy = 0;
+        g.colorRotateOffset = 0;
+        g.displayColorPhase = 0;
+        g.pendingColorPhase = 0;
+        g.colorPhasePending = false;
+        g.vramScrollThirtyTwo = 0;
+        g.vramAreaParserTask = 0;
+        g.vramBufferAddrCtrl = 0;
     } else if (frame == 3) {
         parityRecordEvent(g, "music", "silence");
         buildLevel(g);
@@ -1901,10 +2295,58 @@ function updateDeathReload(g) {
         g.respawnPrimeDirection = (g.input.right ? 1 : 0) - (g.input.left ? 1 : 0);
         g.respawnPrimeRun = g.input.run;
     }
+    // The lives screen queues its palette once, waits for the screen timer,
+    // renders twelve area column sets, then queues the player palette packet.
+    if (frame == 4) {
+        g.vramBufferAddrCtrl = 3;
+    } else if (frame >= 149 && frame <= 160) {
+        g.vramBufferAddrCtrl = 6;
+    } else if (frame == 161) {
+        g.vramBufferAddrCtrl = 2;
+    }
 }
 
 function simulateFixed(g, dt) {
     g.simTime += dt;
+    // NMI consumes exactly one selected VRAM buffer.  Preserve the selection
+    // made by the preceding gameplay pass before preparing this pass's state.
+    local secondaryBufferWasSelected = g.vramBufferAddrCtrl == 6;
+    g.vramBufferAddrCtrl = 0;
+    // UpdateScreen consumes the status and metatile VRAM work prepared by the
+    // preceding gameplay pass.  The capture adapter observes one additional
+    // frame of latency between RAM mutation and visible PPU output.
+    g.displayScore = g.queuedScore;
+    g.queuedScore = g.score;
+    g.displayCoins = g.queuedCoins;
+    g.queuedCoins = g.coins;
+    for (local overrideIndex = g.displayTileOverrides.len() - 1;
+         overrideIndex >= 0; overrideIndex -= 1) {
+        local entry = g.displayTileOverrides[overrideIndex];
+        entry.frames -= 1;
+        if (entry.frames <= 0) g.displayTileOverrides.remove(overrideIndex);
+    }
+    // NMI processes only the buffer selected by VRAM_Buffer_AddrCtrl.  A
+    // palette packet queued in buffer 1 remains pending while the preceding
+    // gameplay pass selected area-parser buffer 2.
+    if (g.colorPhasePending) {
+        if (!secondaryBufferWasSelected) {
+            g.displayColorPhase = g.pendingColorPhase;
+            g.colorPhasePending = false;
+        }
+    }
+    // Status-bar VRAM is prepared before RunGameTimer mutates the RAM digits.
+    // The timer digits share primary VRAM buffer 1 with the palette packet.
+    // If NMI selected the area-parser buffer, retain the previous PPU digits
+    // until buffer 1 is consumed on a later frame.
+    if (!secondaryBufferWasSelected) g.displayTime = g.time;
+    local animationState = g.state;
+    local processPlayerAnimation = !g.player.dead &&
+        (animationState == "playing" || animationState == "pipeDown" ||
+         animationState == "pipeSide" || animationState == "areaEntrance" ||
+          animationState == "areaExitEntrance" || animationState == "endLevel" ||
+          animationState == "flagSlide" || animationState == "autoWalk");
+    if (processPlayerAnimation && g.player.playerAnimTimer > 0)
+        g.player.playerAnimTimer -= 1;
     if (g.input.resetQueued) {
         if (g.state == "gameOver") {
             g.score = 0;
@@ -1978,7 +2420,75 @@ function simulateFixed(g, dt) {
     // RunGameTimer therefore observes the expired control slot immediately,
     // as seen at underground-entry, pipe-exit, and death-respawn boundaries.
     if (g.state == "playing" && !g.player.dead) updateTimer(g);
-    updateEffects(g, dt);
+    if (processPlayerAnimation) {
+        if (animationState == "pipeSide") {
+            g.player.nesXSpeedAbsolute = abs(g.player.nesXSpeed);
+            local speed = g.player.nesXSpeedAbsolute;
+            g.player.playerAnimTimerSet = speed >= 0x1C ? 2 :
+                (speed >= 0x0E ? 4 : 7);
+        }
+        updatePlayerAnimationState(g);
+    }
+    // The ROM builds enemy OAM before PlayerEnemyCollision mutates state.
+    // Delay the visible state by one gameplay pass to reproduce that ordering.
+    foreach (enemy in g.goombas) {
+        enemy.displayState = enemy.preparedState;
+        enemy.preparedState = enemy.state;
+    }
     updateCamera(g);
+    // sub_game_core_routine reaches UpdateScrollVariables for every gameplay
+    // subroutine while OperMode_Task is 3, including pipe/entrance and course
+    // clear handlers.  Use the state selected at entry to this pass so a
+    // transition made during gameplay does not suppress the final parser step.
+    local ranGameEngine = animationState == "playing" ||
+        animationState == "pipeDown" || animationState == "pipeSide" ||
+        animationState == "pipeUp" || animationState == "areaEntrance" ||
+        animationState == "areaExitEntrance" ||
+        animationState == "deathEntrance" || animationState == "endLevel" ||
+        animationState == "flagSlide" || animationState == "autoWalk" ||
+        animationState == "timeBonus" || animationState == "raiseFlag" ||
+        animationState == "fireworks" || animationState == "postClearDelay" ||
+        (animationState == "areaReload" &&
+            (g.state == "areaEntrance" || g.state == "areaExitEntrance")) ||
+        (animationState == "deathReload" && g.state == "deathEntrance");
+    if (ranGameEngine) updateVramAreaParserScheduler(g);
+    // Misc object processing consumes this pass's ScrollAmount.  Updating it
+    // after ScrollHandler keeps jumping-coin world X and relative OAM X in
+    // lockstep with the ROM instead of lagging alternating 2/3px scrolls.
+    updateEffects(g, dt);
+    // Player OAM is prepared after gameplay and transferred on the following
+    // NMI.  The captured PPU frame therefore displays the relative position
+    // and graphics selection from two simulation stages earlier.
+    g.player.displayRelX = g.player.preparedRelX;
+    g.player.displayRelY = g.player.preparedRelY;
+    g.player.queuedRelX = g.player.preparedRelX;
+    g.player.queuedRelY = g.player.preparedRelY;
+    g.player.preparedRelX = floor(g.player.x - g.cameraX).tofloat();
+    local canonicalPlayerY = g.player.big && !g.player.crouching ?
+        g.player.y : g.player.y - 16.0;
+    g.player.preparedRelY = floor(canonicalPlayerY).tofloat();
+    g.player.displayAnimationFrame = g.player.preparedAnimationFrame;
+    g.player.queuedAnimationFrame = g.player.preparedAnimationFrame;
+    g.player.preparedAnimationFrame = g.player.animationFrame;
+    // Facing is read while PlayerGfxHandler builds OAM, then traverses the
+    // staging page and DMA page.  A direction flip is therefore visible two
+    // rendered frames after the RAM-facing byte changes.
+    g.player.displayFacing = g.player.preparedFacing;
+    g.player.queuedFacing = g.player.preparedFacing;
+    g.player.preparedFacing = g.player.facing;
+    // Flagpole sprites use the same object-OAM handoff as Mario. Keep the raw
+    // object coordinates separate from the DMA page currently being shown.
+    g.displayFlagY = g.preparedFlagY;
+    g.preparedFlagY = g.flagY;
+    g.displayFlagScoreY = g.preparedFlagScoreY;
+    g.preparedFlagScoreY = g.flagScoreY;
+    // ColorRotation reads FrameCounter before the common end-of-frame
+    // increment.  Area initialization/lives display skip the routine.
+    if (ranGameEngine && (g.nesFrameCounter & 0x07) == 0) {
+        g.pendingColorPhase = g.colorRotateOffset;
+        g.colorPhasePending = true;
+        g.colorRotateOffset += 1;
+        if (g.colorRotateOffset >= 6) g.colorRotateOffset = 0;
+    }
     g.nesFrameCounter = (g.nesFrameCounter + 1) & 0xFF;
 }

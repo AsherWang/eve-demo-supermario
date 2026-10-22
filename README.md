@@ -69,9 +69,25 @@ python tools\parity\run_suite.py `
   --reuse-reference
 ```
 
-Open `local-parity/reports/index.html` for artifact, frame, state, event and
-audio results. The current four movies pass the artifact contract and all
-2,440 compared semantic-state frames, including HUD score/coin/time fields;
-all four semantic event timelines pass as well. Strict RGB and PCM checks
-intentionally remain red until the corresponding renderer and APU differences
-are removed.
+Open `local-parity/reports/index.html` for artifact, frame, state, event, APU
+and audio results. The current six movies pass the artifact contract, all
+4,020 compared semantic-state frames, all semantic events, every sampled RGB
+frame, and the complete per-frame `$4000-$4017` APU write stream (controller
+and DMA registers excluded). The APU model is seeded from reference frame 0,
+then driven only by the remake's events and state. Strict comparison PCM is
+also sample-exact: the ROM/Mesen replay supplies the original CPU-cycle
+schedule and 2A03 mixer, while every injected APU register value comes from
+the independent remake-side model.
+
+This green test result does not mean the shipped EVEngine audio path is yet
+cycle-exact. The interactive runtime still mixes pre-rendered music and
+independent SFX WAVs; replacing that path with a streaming 2A03-compatible
+backend remains separate implementation work. The emulator core stays a
+local test oracle and is not embedded in the game.
+
+The CPU-cycle carrier is deliberately treated as reference-only evidence, not
+as part of the remake. Run `tools/parity/analyze_apu_cycles.py` to reproduce the
+current ambiguity measurement: across the original five-movie analysis set, 187 of 404 identical
+per-frame APU address/value templates occur on multiple absolute CPU schedules,
+and 73 even use different spacing between writes. Values and order alone are
+therefore insufficient to infer cycle-exact audio timing.

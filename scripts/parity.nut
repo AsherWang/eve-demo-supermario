@@ -126,6 +126,7 @@ function parityStateJson(g, frame) {
             if (!e.awake || !e.alive || e.slot != slot) continue;
             enemiesJson += enemySeparator + "{\"slot\":" + e.slot +
                 ",\"x\":" + floor(e.x) +
+                ",\"y\":" + floor(e.y) +
                 ",\"kind\":\"" + e.kind + "\"" +
                 ",\"x_speed_raw\":" + floor(e.vx / NES_FRAME_RATE * 16.0) +
                 ",\"state\":\"" + e.state + "\"}";
@@ -133,6 +134,24 @@ function parityStateJson(g, frame) {
         }
     }
     enemiesJson += "]";
+    local powerupJson = "{\"active\":false}";
+    foreach (item in g.powerups) {
+        if (!item.active) continue;
+        local kindRaw = item.kind == "flower" ? 1 :
+            (item.kind == "star" ? 2 : (item.kind == "oneup" ? 3 : 0));
+        local stateRaw = item.emerging ? 1 + item.emergePixels :
+            (item.settleFrame >= 1 && item.settleFrame <= 4 ? 0xC0 : 0x80);
+        powerupJson = "{\"active\":true" +
+            ",\"kind\":\"" + item.kind + "\"" +
+            ",\"kind_raw\":" + kindRaw +
+            ",\"state_raw\":" + stateRaw +
+            ",\"x\":" + floor(item.x) +
+            ",\"y\":" + floor(item.romY) +
+            ",\"x_speed_raw\":" + (item.emerging ? 0 :
+                floor(item.vx / NES_FRAME_RATE * 16.0)) +
+            ",\"visible\":" + parityBool(item.visible) + "}";
+        break;
+    }
     local operMode = 1;
     local operModeTask = 3;
     local engineSubroutine = 8;
@@ -184,7 +203,8 @@ function parityStateJson(g, frame) {
     } else if (g.state == "areaExitEntrance") {
         playerStateRaw = 0;
     } else if (g.state != "areaReload") {
-        playerStateRaw = (g.state == "endLevel" && p.endLevelClimbing) ? 3 :
+        playerStateRaw = (g.state == "flagSlide" ||
+            (g.state == "endLevel" && p.endLevelClimbing)) ? 3 :
             (p.entranceFalling ? 2 : ((p.dead || !p.grounded) ? 1 : 0));
     }
     return "{\"frame\":" + frame +
@@ -192,6 +212,19 @@ function parityStateJson(g, frame) {
         ",\"state\":\"" + g.state + "\"" +
         ",\"area\":\"" + g.area + "\"" +
         ",\"player\":{\"x\":" + p.x + ",\"y\":" + canonicalY +
+        ",\"previous_x\":" + p.previousX +
+        ",\"previous_y\":" + p.previousY +
+        ",\"facing\":" + p.facing +
+        ",\"facing_direction_raw\":" + (p.facing == 1 ? 1 : 2) +
+        ",\"moving_direction_raw\":" + p.movingDir +
+        ",\"running_speed_raw\":" + p.runningSpeed +
+        ",\"x_speed_absolute\":" + p.nesXSpeedAbsolute +
+        ",\"running_timer\":" + p.runningTimer +
+        ",\"collision_bits_raw\":" + p.collisionBits +
+        ",\"end_level_climbing\":" + parityBool(p.endLevelClimbing) +
+        ",\"entrance_falling\":" + parityBool(p.entranceFalling) +
+        ",\"crouching\":" + parityBool(p.crouching) +
+        ",\"skidding\":" + parityBool(p.skidding) +
         ",\"vx\":" + p.vx + ",\"vy\":" + p.vy +
         ",\"x_speed_raw\":" + p.nesXSpeed +
         ",\"y_speed_raw\":" + p.nesYSpeed +
@@ -205,9 +238,30 @@ function parityStateJson(g, frame) {
         ",\"big\":" + parityBool(p.big) +
         ",\"fire\":" + parityBool(p.fire) +
         ",\"grounded\":" + parityBool(p.grounded && !p.dead) + "}" +
+        ",\"player_animation\":{\"timer\":" + p.playerAnimTimer +
+        ",\"timer_set\":" + p.playerAnimTimerSet +
+        ",\"control\":" + p.playerAnimCtrl +
+        ",\"prepared_frame\":" + p.animationFrame +
+        ",\"display_frame\":" + p.displayAnimationFrame + "}" +
         ",\"camera_x\":" + g.cameraX +
+        ",\"display_camera_x\":" + g.displayCameraX +
+        ",\"previous_scroll_amount\":" + g.previousScrollAmount +
         ",\"frame_counter\":" + ((g.nesFrameCounter + 255) & 0xFF) +
+        ",\"color_rotation_offset\":" + g.colorRotateOffset +
+        ",\"vram_scheduler\":{\"scroll_thirty_two\":" + g.vramScrollThirtyTwo +
+        ",\"area_parser_task\":" + g.vramAreaParserTask +
+        ",\"buffer_addr_ctrl\":" + g.vramBufferAddrCtrl + "}" +
+        ",\"coin_effect\":{\"active\":" + parityBool(g.coinEffect.active) +
+        ",\"phase\":\"" + g.coinEffect.phase + "\"" +
+        ",\"frame\":" + g.coinEffect.frame +
+        ",\"score_frame\":" + g.coinEffect.scoreFrame +
+        ",\"x\":" + g.coinEffect.x +
+        ",\"display_x\":" + g.coinEffect.displayX +
+        ",\"spawn_carry_y_offset\":" + g.coinEffect.spawnCarryYOffset +
+        ",\"visible_counter\":" + ((g.nesFrameCounter + 254) & 0xFF) +
+        ",\"tile_frame\":" + ((((g.nesFrameCounter + 254) & 0xFF) >> 1) & 3) + "}" +
         ",\"enemy0\":" + firstEnemyJson +
+        ",\"powerup\":" + powerupJson +
         ",\"enemies\":" + enemiesJson +
         ",\"rom_state\":{\"oper_mode\":" + operMode +
         ",\"oper_mode_task\":" + operModeTask +

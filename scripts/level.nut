@@ -12,6 +12,10 @@ function makeEnemyAt(x, supportRow, kind) {
         alive = true,
         slot = -1,
         state = "walking",
+        // EnemyGfxHandler runs before player/enemy collision.  Preserve the
+        // state it saw separately from the state mutated later in the pass.
+        preparedState = "walking",
+        displayState = "walking",
         stateTimer = 0.0,
         defeatedFrames = 0,
         enemyCollisionMask = 0,
@@ -194,8 +198,9 @@ function decodeUndergroundBonusRoom(g) {
         // at column 3 visible from column 4, while the restore command at
         // column 10 is already active for column 10.
         local newControl = second & 0x0F;
-        local activationColumn = column;
-        if (terrainControl == 1 && newControl == 6) activationColumn += 1;
+        // AreaParserTaskHandler submits the terrain column before applying a
+        // row-$0e control command, so both transitions begin one column later.
+        local activationColumn = column + 1;
         while (nextColumn < activationColumn && nextColumn < g.areaWidth) {
             terrainAt[nextColumn] = terrainControl;
             nextColumn += 1;
@@ -214,8 +219,14 @@ function decodeUndergroundBonusRoom(g) {
         for (local parserRow = 0; parserRow < 13; parserRow += 1) {
             local mask = parserRow < 8 ? upperMask : lowerMask;
             local bit = 1 << (parserRow < 8 ? parserRow : parserRow - 8);
-            if ((mask & bit) != 0)
-                setTile(g, x, parserRow + 2, TILE_GROUND);
+            if ((mask & bit) != 0) {
+                local screenRow = parserRow + 2;
+                // Underground terrain uses cracked rock only for the two
+                // bottom floor rows.  Ceiling and raised-floor masks use the
+                // regular brick metatile with the underground palette.
+                setTile(g, x, screenRow,
+                        screenRow >= 13 ? TILE_GROUND : TILE_SOLID);
+            }
         }
     }
 
@@ -256,6 +267,10 @@ function decodeUndergroundBonusRoom(g) {
     setTile(g, 13, 12, TILE_SIDE_PIPE_BOTTOM_END);
     setTile(g, 14, 12, TILE_SIDE_PIPE_BOTTOM_SHAFT);
     setTile(g, 15, 12, TILE_SIDE_PIPE_BOTTOM_JOINT);
+    // The right half of the vertical exit pipe lies on the following
+    // nametable.  Column 15 exposes its left shaft for rows 2..10.
+    for (local row = 2; row <= 10; row += 1)
+        setTile(g, 15, row, TILE_PIPE_SHAFT_LEFT);
 }
 
 function clearAreaObjects(g) {
@@ -311,6 +326,30 @@ function createPlayer() {
         jumpGravityActive = false,
         jumpOriginY = 192.0,
         runningTimer = 0,
+        // Mirrors Running_Speed: a sticky copy written by
+        // GetPlayerAnimSpeed, not the current velocity magnitude.
+        runningSpeed = 0,
+        // PlayerAnimTimer/PlayerAnimCtrl ($0781/$070d).  animationFrame is
+        // the CHR frame prepared by gameplay; displayAnimationFrame is the
+        // preceding OAM image currently visible on the PPU.
+        playerAnimTimer = 0,
+        playerAnimTimerSet = 7,
+        playerAnimCtrl = 0,
+        animationFrame = -1,
+        preparedAnimationFrame = -1,
+        queuedAnimationFrame = -1,
+        displayAnimationFrame = -1,
+        preparedFacing = 1,
+        queuedFacing = 1,
+        displayFacing = 1,
+        // OAM DMA exposes the sprite coordinates prepared by the preceding
+        // gameplay pass.  Keep both preparation and display stages explicit.
+        preparedRelX = 40.0,
+        preparedRelY = 176.0,
+        queuedRelX = 40.0,
+        queuedRelY = 176.0,
+        displayRelX = 40.0,
+        displayRelY = 176.0,
         parityOriginFriction = false,
         entranceFalling = false,
         sidePipeCollision = false,
@@ -352,6 +391,11 @@ function createGame() {
         accumulator = 0.0,
         simTime = 0.0,
         cameraX = 0.0,
+        // The PPU consumes the scroll prepared before the current gameplay
+        // pass.  Keep that display position separate from the latest RAM-side
+        // camera value used by collision and state parity.
+        displayCameraX = 0.0,
+        previousScrollAmount = 0.0,
         area = "main",
         areaWidth = LEVEL_WIDTH,
         sidePipeX = -1,
@@ -367,8 +411,15 @@ function createGame() {
         transitionTargetY = 0.0,
         score = 0,
         coins = 0,
+        // Status-bar digit updates are written to a VRAM buffer and become
+        // visible on the second captured frame after gameplay mutates RAM.
+        queuedScore = 0,
+        displayScore = 0,
+        queuedCoins = 0,
+        displayCoins = 0,
         lives = 3,
         time = 400,
+        displayTime = 400,
         // RAM $0787 is 23 at the captured first controllable frame.  The
         // global timer pass decrements it before RunGameTimer tests for zero;
         // RunGameTimer then reloads the NTSC value $18 (24).
@@ -376,12 +427,36 @@ function createGame() {
         // FrameCounter at the first controllable frame of the verified ROM
         // origin state.  Player/enemy collision runs only on even values.
         nesFrameCounter = 0x99,
+        // RAM $06d4 points to the next ColorRotatePalette entry.  The first
+        // controllable reference frame has already displayed entry zero.
+        colorRotateOffset = 1,
+        displayColorPhase = 0,
+        pendingColorPhase = 0,
+        colorPhasePending = false,
+        // The area parser owns VRAM buffer 2 ($0341).  When it selects that
+        // buffer via $0773, NMI leaves a queued palette packet in buffer 1
+        // for one more frame.  These two fields mirror $073d/$071f so the
+        // palette transfer follows the ROM scheduler instead of a guessed
+        // fixed delay.
+        vramScrollThirtyTwo = 0,
+        vramAreaParserTask = 0,
+        vramBufferAddrCtrl = 0,
+        // EnemyGfxHandler renders from the frame counter that entered the
+        // gameplay pass.  TimerControl freezes this selection on death.
+        goombaVisualFrame = 0,
         checkpointPage = 0,
         state = "playing",
         stateTimer = 0.0,
         previewCaptured = false,
         flagX = 198.0 * TILE_SIZE,
         flagY = 48.0,
+        preparedFlagY = 48.0,
+        displayFlagY = 48.0,
+        flagScoreY = 176.0,
+        preparedFlagScoreY = 176.0,
+        displayFlagScoreY = 176.0,
+        flagScoreAge = -1,
+        flagContactScrollPending = false,
         flagSoundPending = false,
         castleX = 205.0 * TILE_SIZE,
         castleFlagVisible = false,
@@ -411,8 +486,19 @@ function createGame() {
         brickCoinTimer = 0.0,
         brickCoinStarted = false,
         stompChain = 0,
-        bump = { active = false, tx = 0, ty = 0, time = 0.0 },
-        coinEffect = { active = false, x = 0.0, y = 0.0, time = 0.0 },
+        bump = { active = false, tx = 0, ty = 0, tile = TILE_EMPTY,
+                 time = 0.0, frame = 0 },
+        // Metatile replacements follow the same buffered PPU path.  Entries
+        // temporarily retain the old visible metatile while collision already
+        // observes the new value in g.tiles.
+        displayTileOverrides = [],
+        archivedCoinEffects = [],
+        coinEffect = {
+            active = false, x = 0.0, y = 0.0, time = 0.0,
+            displayX = 0.0,
+            phase = "coin", displayPhase = "coin", frame = 0, scoreFrame = 0,
+            spawnCarryYOffset = 0.0
+        },
         input = {
             left = false, right = false, up = false, down = false,
             run = false, runDown = false,
@@ -724,6 +810,15 @@ function runSimulationSelfTest() {
                     specialBlockTest.powerups.len() == 1 &&
                     specialBlockTest.powerups[0].kind == "star",
                     "star brick must reveal a star and become used");
+    local starItem = specialBlockTest.powerups[0];
+    for (local i = 0; i < 68; i += 1)
+        movePowerUp(specialBlockTest, starItem, FIXED_DT);
+    movePowerUp(specialBlockTest, starItem, FIXED_DT);
+    local starLandingY = starItem.y;
+    movePowerUp(specialBlockTest, starItem, FIXED_DT);
+    requireSelfTest(starItem.vy < 0.0 && starItem.y < starLandingY &&
+                    starItem.romY == starItem.y - 8.0,
+                    "emerged star must bounce and publish its vertical ROM coordinate");
     collectPowerUp(specialBlockTest, specialBlockTest.powerups[0]);
     requireSelfTest(specialBlockTest.player.starTimer == STAR_INVINCIBLE_TIME,
                     "star collection must start the invincibility timer");
@@ -838,11 +933,11 @@ function runSimulationSelfTest() {
     local scoreControlTest = createGame();
     scoreControlTest.score = 0;
     scoreControlTest.lives = 3;
-    for (local i = 0; i < 10; i += 1) awardStomp(scoreControlTest);
+    for (local i = 0; i < 10; i += 1) awardStomp(scoreControlTest, testGoomba);
     for (local i = 0; i < 5; i += 1) updateFloatingScores(scoreControlTest);
     requireSelfTest(scoreControlTest.score == 22000 && scoreControlTest.stompChain == 10,
                     "airborne stomp chain must follow 100 through 8000 point controls");
-    awardStomp(scoreControlTest);
+    awardStomp(scoreControlTest, testGoomba);
     for (local i = 0; i < 5; i += 1) updateFloatingScores(scoreControlTest);
     requireSelfTest(scoreControlTest.lives == 4,
                     "eleventh chained stomp must award a one-up");
@@ -908,7 +1003,7 @@ function runSimulationSelfTest() {
         local scoreTest = createGame();
         scoreTest.player.y = scoreCase[0];
         beginFlagSequence(scoreTest);
-        requireSelfTest(scoreTest.score == scoreCase[1],
+        requireSelfTest(scoreTest.flagScoreAward == scoreCase[1],
                         "flagpole score must follow FlagpoleYPosData");
     }
 
@@ -921,16 +1016,43 @@ function runSimulationSelfTest() {
                     clearTest.fireworksRemaining == 1 &&
                     clearTest.fireworksOffsetState == 5,
                     "flag sequence must derive fireworks and offset from the timer digit");
+    clearTest.player.playerAnimTimer = 0;
+    clearTest.player.playerAnimCtrl = 0;
+    clearTest.player.nesYSpeed = 1;
+    updatePlayerAnimationState(clearTest);
+    requireSelfTest(clearTest.player.animationFrame == -5 &&
+                    clearTest.player.playerAnimTimer == 4 &&
+                    clearTest.player.playerAnimCtrl == 1,
+                    "flag slide must start ROM climbing frame one with downward timer reload four");
+    clearTest.player.playerAnimTimer = 0;
+    updatePlayerAnimationState(clearTest);
+    requireSelfTest(clearTest.player.animationFrame == -6 &&
+                    clearTest.player.playerAnimCtrl == 0,
+                    "flag slide must alternate both ROM climbing frames");
+    clearTest.state = "endLevel";
+    clearTest.player.endLevelClimbing = false;
+    clearTest.player.grounded = true;
+    clearTest.player.nesXSpeed = 1;
+    clearTest.player.playerAnimTimer = 0;
+    clearTest.player.playerAnimCtrl = 0;
+    updatePlayerAnimationState(clearTest);
+    clearTest.player.playerAnimTimer = 0;
+    updatePlayerAnimationState(clearTest);
+    requireSelfTest(clearTest.player.animationFrame == 1 &&
+                    clearTest.player.playerAnimCtrl == 2,
+                    "PlayerEndLevel automatic walk must advance the ROM walking cycle");
     local lowFlagTest = createGame();
     lowFlagTest.goombas = [];
     lowFlagTest.player.y = 150.0;
     beginFlagSequence(lowFlagTest);
-    for (local i = 0; i < 122; i += 1)
+    for (local i = 0; i < 64; i += 1)
         updateCourseClear(lowFlagTest, FIXED_DT);
-    requireSelfTest(lowFlagTest.flagY == 170.0 &&
-                    lowFlagTest.state == "autoWalk",
-                    "course clear must wait for the flag to reach its bottom stop");
+    requireSelfTest(lowFlagTest.flagY == 171.0 &&
+                    lowFlagTest.state == "endLevel" &&
+                    lowFlagTest.player.endLevelClimbing,
+                    "high flag grab must enter PlayerEndLevel after the flag bottom stop");
     clearTest.state = "autoWalk";
+    clearTest.score = clearTest.flagScoreAward;
     clearTest.player.x = clearTest.castleX + 30.0;
     updateCourseClear(clearTest, FIXED_DT);
     requireSelfTest(clearTest.state == "timeBonus",

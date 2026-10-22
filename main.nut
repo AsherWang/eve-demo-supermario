@@ -13,7 +13,9 @@ dofile("scripts/render.nut");
 dofile("scripts/parity.nut");
 
 eve_init = function() {
-    gfx.setBackgroundColor(0.47, 0.49, 0.93, 1.0);
+    // Ground-area backdrop is palette index $22.  Match the Mesen 2C02
+    // reference palette exactly so frame comparisons measure scene output.
+    gfx.setBackgroundColor(146.0 / 255.0, 144.0 / 255.0, 1.0, 1.0);
     loadAssets();
     loadAudio();
     runSimulationSelfTest();
@@ -81,6 +83,7 @@ eve_init = function() {
     }
     if (config.capturePreview && config.previewCameraX > 0.0) {
         game.cameraX = config.previewCameraX;
+        game.displayCameraX = game.cameraX;
         game.player.x = config.previewCameraX + 32.0;
     }
     if (game.area == "main") validateLevel(game);

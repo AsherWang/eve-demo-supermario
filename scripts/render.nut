@@ -1,5 +1,10 @@
 function loadTexture(path) {
-    return gfx.newTextureFromFile(path);
+    local texture = gfx.newTextureFromFile(path);
+    // NES CHR pixels are discrete samples.  EVEngine textures default to
+    // linear filtering, which blends neighbouring texels and shifts edge
+    // coverage as the camera moves.  Point sampling preserves the PPU image.
+    gfx.setTextureSampler(texture, "nearest", "none", 1.0, 0.0);
+    return texture;
 }
 
 function loadSmallMarioSet(path) {
@@ -18,6 +23,14 @@ function loadSmallMarioSet(path) {
         ],
         jumpRight = loadTexture(path + "/jump-right.png"),
         jumpLeft = loadTexture(path + "/jump-left.png"),
+        climbRight = [
+            loadTexture(path + "/climb-1-right.png"),
+            loadTexture(path + "/climb-2-right.png")
+        ],
+        climbLeft = [
+            loadTexture(path + "/climb-1-left.png"),
+            loadTexture(path + "/climb-2-left.png")
+        ],
         skidRight = loadTexture(path + "/skid-right.png"),
         skidLeft = loadTexture(path + "/skid-left.png")
     };
@@ -53,6 +66,9 @@ function loadAssets() {
             pipeShaftLeft = loadTexture("assets/tiles/pipe-shaft-left.png"),
             pipeShaftRight = loadTexture("assets/tiles/pipe-shaft-right.png"),
             undergroundBrick = loadTexture("assets/tiles/underground-brick.png"),
+            undergroundGround = loadTexture("assets/tiles/underground-ground.png"),
+            undergroundPipeShaftLeft =
+                loadTexture("assets/tiles/underground-pipe-shaft-left.png"),
             sidePipeTopEnd = loadTexture("assets/tiles/side-pipe-top-end.png"),
             sidePipeTopShaft = loadTexture("assets/tiles/side-pipe-top-shaft.png"),
             sidePipeTopJoint = loadTexture("assets/tiles/side-pipe-top-joint.png"),
@@ -75,6 +91,14 @@ function loadAssets() {
             ],
             jumpRight = loadTexture("assets/mario/jump-right.png"),
             jumpLeft = loadTexture("assets/mario/jump-left.png"),
+            climbRight = [
+                loadTexture("assets/mario/climb-1-right.png"),
+                loadTexture("assets/mario/climb-2-right.png")
+            ],
+            climbLeft = [
+                loadTexture("assets/mario/climb-1-left.png"),
+                loadTexture("assets/mario/climb-2-left.png")
+            ],
             skidRight = loadTexture("assets/mario/skid-right.png"),
             skidLeft = loadTexture("assets/mario/skid-left.png"),
             deadRight = loadTexture("assets/mario/dead-right.png"),
@@ -95,6 +119,14 @@ function loadAssets() {
             ],
             jumpRight = loadTexture("assets/mario-big/jump-right.png"),
             jumpLeft = loadTexture("assets/mario-big/jump-left.png"),
+            climbRight = [
+                loadTexture("assets/mario-big/climb-1-right.png"),
+                loadTexture("assets/mario-big/climb-2-right.png")
+            ],
+            climbLeft = [
+                loadTexture("assets/mario-big/climb-1-left.png"),
+                loadTexture("assets/mario-big/climb-2-left.png")
+            ],
             crouchRight = loadTexture("assets/mario-big/crouch-right.png"),
             crouchLeft = loadTexture("assets/mario-big/crouch-left.png"),
             skidRight = loadTexture("assets/mario-big/skid-right.png"),
@@ -115,6 +147,14 @@ function loadAssets() {
             ],
             jumpRight = loadTexture("assets/mario-fire/jump-right.png"),
             jumpLeft = loadTexture("assets/mario-fire/jump-left.png"),
+            climbRight = [
+                loadTexture("assets/mario-fire/climb-1-right.png"),
+                loadTexture("assets/mario-fire/climb-2-right.png")
+            ],
+            climbLeft = [
+                loadTexture("assets/mario-fire/climb-1-left.png"),
+                loadTexture("assets/mario-fire/climb-2-left.png")
+            ],
             crouchRight = loadTexture("assets/mario-fire/crouch-right.png"),
             crouchLeft = loadTexture("assets/mario-fire/crouch-left.png"),
             skidRight = loadTexture("assets/mario-fire/skid-right.png"),
@@ -123,6 +163,10 @@ function loadAssets() {
             throwLeft = loadTexture("assets/mario-fire/fireball-left.png")
         },
         enemies = {
+            goombas = [
+                loadTexture("assets/enemies/goomba-1.png"),
+                loadTexture("assets/enemies/goomba-2.png")
+            ],
             goomba = loadTexture("assets/enemies/goomba.png"),
             goombaDefeated = loadTexture("assets/enemies/goomba-defeated.png"),
             koopaRight = [
@@ -140,11 +184,37 @@ function loadAssets() {
         },
         items = {
             coin = loadTexture("assets/items/coin.png"),
+            hudCoins = [
+                loadTexture("assets/items/hud-coin-0.png"),
+                loadTexture("assets/items/hud-coin-1.png"),
+                loadTexture("assets/items/hud-coin-2.png"),
+                loadTexture("assets/items/hud-coin-3.png"),
+                loadTexture("assets/items/hud-coin-4.png"),
+                loadTexture("assets/items/hud-coin-5.png")
+            ],
+            hudCoinsUnderground = [
+                loadTexture("assets/items/hud-coin-underground-0.png"),
+                loadTexture("assets/items/hud-coin-underground-1.png"),
+                loadTexture("assets/items/hud-coin-underground-2.png"),
+                loadTexture("assets/items/hud-coin-underground-3.png"),
+                loadTexture("assets/items/hud-coin-underground-4.png"),
+                loadTexture("assets/items/hud-coin-underground-5.png")
+            ],
+            hudCoinLives = loadTexture("assets/items/hud-coin-lives.png"),
             jumpCoins = [
                 loadTexture("assets/items/jump-coin-0.png"),
                 loadTexture("assets/items/jump-coin-1.png"),
                 loadTexture("assets/items/jump-coin-2.png"),
                 loadTexture("assets/items/jump-coin-3.png")
+            ],
+            score200 = loadTexture("assets/items/score-200.png"),
+            score100 = loadTexture("assets/items/score-100.png"),
+            flagScores = [
+                loadTexture("assets/items/flag-score-5000.png"),
+                loadTexture("assets/items/flag-score-2000.png"),
+                loadTexture("assets/items/flag-score-800.png"),
+                loadTexture("assets/items/flag-score-400.png"),
+                loadTexture("assets/items/flag-score-100.png")
             ],
             mushroom = loadTexture("assets/items/mushroom.png"),
             flower = loadTexture("assets/items/fire-flower.png"),
@@ -270,8 +340,12 @@ function screenRect(x, y, width, height, r, g, b, a = 1.0) {
                       r, g, b, a);
 }
 
+function visualCameraX(gm) {
+    return ("displayCameraX" in gm) ? gm.displayCameraX : gm.cameraX;
+}
+
 function worldRect(gm, x, y, width, height, r, green, b, a = 1.0) {
-    screenRect(x - gm.cameraX, y, width, height, r, green, b, a);
+    screenRect(x - visualCameraX(gm), y, width, height, r, green, b, a);
 }
 
 function screenTexture(texture, x, y, width, height) {
@@ -289,14 +363,16 @@ function screenTextureTint(texture, x, y, width, height, r, g, b, a = 1.0) {
 }
 
 function worldTexture(gm, texture, x, y, width, height) {
-    if (x + width < gm.cameraX - 16.0 || x > gm.cameraX + LOGICAL_WIDTH + 16.0) return;
-    screenTexture(texture, x - gm.cameraX, y, width, height);
+    local cameraX = visualCameraX(gm);
+    if (x + width < cameraX - 16.0 || x > cameraX + LOGICAL_WIDTH + 16.0) return;
+    screenTexture(texture, x - cameraX, y, width, height);
 }
 
 function worldTextureRotated(gm, texture, x, y, width, height, degrees) {
-    if (x + width < gm.cameraX - 16.0 || x > gm.cameraX + LOGICAL_WIDTH + 16.0) return;
+    local cameraX = visualCameraX(gm);
+    if (x + width < cameraX - 16.0 || x > cameraX + LOGICAL_WIDTH + 16.0) return;
     gfx.drawTexturedRectRotated(texture,
-        floor((x - gm.cameraX + width * 0.5) * PIXEL_SCALE).tofloat(),
+        floor((x - cameraX + width * 0.5) * PIXEL_SCALE).tofloat(),
         floor((y + height * 0.5) * PIXEL_SCALE).tofloat(),
         floor(width * PIXEL_SCALE).tofloat(), floor(height * PIXEL_SCALE).tofloat(),
         degrees, 1.0, 1.0, 1.0, 1.0);
@@ -332,7 +408,7 @@ function drawBackground(g) {
     // nibble is the vertical start row and the lower nibble selects a
     // three-metatile vertical object. The 48-column pattern repeats every
     // three nametable pages, exactly as it does in the ROM.
-    local firstColumn = floor(g.cameraX / TILE_SIZE).tointeger() - 1;
+    local firstColumn = floor(visualCameraX(g) / TILE_SIZE).tointeger() - 1;
     local lastColumn = firstColumn + 19;
     local sceneryOffset = ROM_BACK_SCENERY_OFFSETS[ROM_WORLD_1_1_BACKGROUND_SCENERY - 1];
 
@@ -357,9 +433,13 @@ function drawBackground(g) {
 }
 
 function tileTexture(g, tile) {
+    if (g.area == "underground" && tile == TILE_GROUND)
+        return assets.tiles.undergroundGround;
     if (g.area == "underground" &&
-        (tile == TILE_GROUND || tile == TILE_SOLID || tile == TILE_BRICK))
+        (tile == TILE_SOLID || tile == TILE_BRICK))
         return assets.tiles.undergroundBrick;
+    if (g.area == "underground" && tile == TILE_PIPE_SHAFT_LEFT)
+        return assets.tiles.undergroundPipeShaftLeft;
     if (tile == TILE_GROUND) return assets.tiles.ground;
     if (tile == TILE_SOLID) return assets.tiles.solid;
     if (tile == TILE_BRICK || tile == TILE_BRICK_COIN || tile == TILE_BRICK_STAR)
@@ -380,7 +460,7 @@ function tileTexture(g, tile) {
 }
 
 function drawTiles(g) {
-    local first = floor(g.cameraX / TILE_SIZE).tointeger() - 1;
+    local first = floor(visualCameraX(g) / TILE_SIZE).tointeger() - 1;
     local last = first + 19;
     if (first < 0) first = 0;
     if (last >= g.areaWidth) last = g.areaWidth - 1;
@@ -388,16 +468,40 @@ function drawTiles(g) {
     for (local ty = 0; ty < LEVEL_HEIGHT; ty += 1) {
         for (local tx = first; tx <= last; tx += 1) {
             local tile = getTile(g, tx, ty);
+            foreach (entry in g.displayTileOverrides) {
+                if (entry.tx == tx && entry.ty == ty) {
+                    tile = entry.tile;
+                    break;
+                }
+            }
             if (tile == TILE_EMPTY) continue;
             local texture = tileTexture(g, tile);
             if (texture == null) continue;
             local offsetY = 0.0;
-            if (g.bump.active && g.bump.tx == tx && g.bump.ty == ty)
-                offsetY = -sin((g.bump.time / 0.18) * PI) * 4.0;
+            if (g.bump.active && g.bump.tx == tx && g.bump.ty == ty) {
+                // BlockObjMT_Updater prepares these fourteen OAM offsets.
+                // Use the same buffered-frame relationship as the coin object.
+                // ROM traces expose two carry-dependent block trajectories.
+                // A normal brick uses the full -7 apex; the opening power-up
+                // block reaches a -6 apex and has the adjacent intermediate
+                // values below.  Preserve both observed 14-frame sequences.
+                local bumpOffsets = g.bump.tile == TILE_POWERUP_BLOCK ?
+                    [-1, -3, -4, -5, -6, -6, -6, -6, -6, -5, -4, -2, -1, 1] :
+                    [-1, -3, -5, -6, -6, -7, -7, -7, -6, -5, -4, -3, -1, 1];
+                // The hit frame and its first following capture still show
+                // the nametable metatile; block-object OAM begins at -1 on
+                // the second following capture.
+                if (g.bump.frame > 1) {
+                    local bumpIndex = g.bump.frame - 2;
+                    if (bumpIndex >= bumpOffsets.len())
+                        bumpIndex = bumpOffsets.len() - 1;
+                    offsetY = bumpOffsets[bumpIndex].tofloat();
+                }
+            }
             if (tile == TILE_QUESTION || tile == TILE_POWERUP_BLOCK) {
                 // ColorRotation advances every eighth frame through the six
                 // ROM palette entries; use the pre-rendered exact variants.
-                local phase = floor(g.simTime * NES_FRAME_RATE / 8.0).tointeger() % 6;
+                local phase = g.displayColorPhase;
                 worldTexture(g, assets.tiles.questions[phase], tx * 16.0,
                              ty * 16.0 + offsetY, 16.0, 16.0);
             } else {
@@ -424,26 +528,38 @@ function playerPalettePhase(g) {
 
 function marioTextureFromSet(g, set) {
     local p = g.player;
+    // PlayerGfxOffset is prepared with the same buffered OAM image as the
+    // relative coordinates.  Do not re-decide the action from current RAM
+    // flags here: on a take-off frame the visible image is still the prior
+    // walking frame even though Player_State is already jumping.
+    local visualFrame = p.displayAnimationFrame;
+    local visualFacing = p.displayFacing;
+    if (visualFrame == -5 || visualFrame == -6) {
+        local climbFrame = visualFrame == -5 ? 0 : 1;
+        return visualFacing > 0 ? set.climbRight[climbFrame] : set.climbLeft[climbFrame];
+    }
     if (p.big) {
-        if (p.crouching)
-            return p.facing > 0 ? set.crouchRight : set.crouchLeft;
-        if (!p.grounded)
-            return p.facing > 0 ? set.jumpRight : set.jumpLeft;
-        if (p.skidding)
-            return p.facing > 0 ? set.skidRight : set.skidLeft;
-        if (abs(p.vx) > 8.0) {
-            local bigFrame = floor(g.simTime * 10.0).tointeger() % 3;
-            return p.facing > 0 ? set.walkRight[bigFrame] : set.walkLeft[bigFrame];
+        if (visualFrame == -3)
+            return visualFacing > 0 ? set.crouchRight : set.crouchLeft;
+        if (visualFrame == -2)
+            return visualFacing > 0 ? set.jumpRight : set.jumpLeft;
+        if (visualFrame == -4)
+            return visualFacing > 0 ? set.skidRight : set.skidLeft;
+        if (visualFrame >= 0) {
+            local bigFrame = visualFrame;
+            return visualFacing > 0 ? set.walkRight[bigFrame] : set.walkLeft[bigFrame];
         }
-        return p.facing > 0 ? set.standRight : set.standLeft;
+        return visualFacing > 0 ? set.standRight : set.standLeft;
     }
-    if (!p.grounded) return p.facing > 0 ? set.jumpRight : set.jumpLeft;
-    if (p.skidding) return p.facing > 0 ? set.skidRight : set.skidLeft;
-    if (abs(p.vx) > 8.0) {
-        local frame = floor(g.simTime * 10.0).tointeger() % 3;
-        return p.facing > 0 ? set.walkRight[frame] : set.walkLeft[frame];
+    if (visualFrame == -2)
+        return visualFacing > 0 ? set.jumpRight : set.jumpLeft;
+    if (visualFrame == -4)
+        return visualFacing > 0 ? set.skidRight : set.skidLeft;
+    if (visualFrame >= 0) {
+        local frame = visualFrame;
+        return visualFacing > 0 ? set.walkRight[frame] : set.walkLeft[frame];
     }
-    return p.facing > 0 ? set.standRight : set.standLeft;
+    return visualFacing > 0 ? set.standRight : set.standLeft;
 }
 
 function marioTexture(g) {
@@ -463,11 +579,16 @@ function marioTexture(g) {
 
 function drawPlayer(g) {
     local p = g.player;
+    if (parityIsEnabled() && g.parity.frame == 0) return;
     if (g.state == "timeBonus" || g.state == "raiseFlag" ||
         g.state == "fireworks" || g.state == "postClearDelay" ||
         g.state == "levelComplete" || g.state == "gameOver") return;
     if (p.invulnerable > 0.0 && floor(g.simTime * 14.0).tointeger() % 2 == 0) return;
-    local drawY = p.big && !p.crouching ? p.y : p.y - 16.0;
+    // Player_Rel_YPos is prepared before the current movement integration;
+    // OAM therefore displays the preceding world Y while RAM already holds
+    // the new position (visible during the death jump in particular).
+    local spriteWorldY = p.previousY;
+    local drawY = p.big && !p.crouching ? spriteWorldY : spriteWorldY - 16.0;
     local texture = marioTexture(g);
     if (p.transformFrames > 0 && p.transformKind != "fire") {
         local frame = floor(p.transformFrames / 4).tointeger() % 2;
@@ -479,25 +600,37 @@ function drawPlayer(g) {
             drawY = p.y - 16.0;
         }
     }
-    worldTexture(g, texture, floor(p.x - 2.0), floor(drawY), 16.0, 32.0);
+    // OAM Y stores the scanline before the first visible sprite row.
+    // Player_Rel_XPos is prepared alongside Player_Rel_YPos before movement
+    // and scrolling.  previousX combined with the buffered display camera is
+    // the same relative coordinate, without frame-dependent inset guesses.
+    if (p.dead) {
+        worldTexture(g, texture, floor(p.previousX), floor(drawY) + 1.0,
+                     16.0, 32.0);
+    } else {
+        screenTexture(texture, floor(p.displayRelX),
+                      floor(p.displayRelY) + 1.0,
+                      16.0, 32.0);
+    }
 }
 
 function drawPowerUps(g, behindTiles) {
     foreach (item in g.powerups) {
-        if (!item.active || !item.visible) continue;
-        if (item.emerging != behindTiles) continue;
+        if (!item.displayActive || !item.displayVisible) continue;
+        if (item.displayEmerging != behindTiles) continue;
         local texture = assets.items.mushroom;
         if (item.kind == "flower") texture = assets.items.flower;
         if (item.kind == "oneup") texture = assets.items.oneUp;
         if (item.kind == "star") texture = assets.items.star;
-        worldTexture(g, texture, floor(item.x), floor(powerUpDrawY(item)), 16.0, 16.0);
+        worldTexture(g, texture, floor(item.displayX),
+                     floor(item.displayRomY + POWERUP_DRAW_Y_OFFSET), 16.0, 16.0);
     }
 }
 
 function drawLevelCoins(g) {
     foreach (coin in g.levelCoins) {
         if (!coin.active) continue;
-        local phase = floor(g.simTime * NES_FRAME_RATE / 8.0).tointeger() % 6;
+        local phase = g.displayColorPhase;
         worldTexture(g, assets.items.undergroundCoins[phase],
                      floor(coin.x), floor(coin.y), 16.0, 16.0);
     }
@@ -522,19 +655,25 @@ function drawFireballs(g) {
 
 function drawEnemy(g, e) {
     if (!e.alive) return;
+    // EnemyGfxHandler suppresses the object once its origin is in the left
+    // offscreen region (EnemyOffscrBitsMasked bit 2).  Letting the host clip
+    // the corrected 16px texture would leak a one-pixel sliver that the NES
+    // OAM writer has already hidden.
+    if (e.x < g.cameraX) return;
+    local visualState = e.displayState;
     local texture = null;
     local y = e.y;
     local height = 24.0;
-    if (e.state == "flipped") {
+    if (visualState == "flipped") {
         texture = e.kind == "koopa" ? assets.enemies.greenShell[0] : assets.enemies.goomba;
         local flippedY = e.y - (e.kind == "koopa" ? 10.0 : 8.0);
         worldTextureRotated(g, texture, floor(e.x - 1.0), floor(flippedY),
                             16.0, height, 180.0);
         return;
-    } else if (e.kind == "goomba" && e.state == "defeated") {
+    } else if (e.kind == "goomba" && visualState == "defeated") {
         texture = assets.enemies.goombaDefeated;
     } else if (e.kind == "koopa" &&
-               (e.state == "shell" || e.state == "shellMoving")) {
+               (visualState == "shell" || visualState == "shellMoving")) {
         // EnemyGfxHandler toggles both stationary and moving shell frames on
         // FrameCounter bit 3: eight frames per image.
         local shellFrame = floor(g.simTime * NES_FRAME_RATE / 8.0).tointeger() % 2;
@@ -545,17 +684,54 @@ function drawEnemy(g, e) {
         texture = e.vx < 0.0 ? assets.enemies.koopaLeft[frame] :
                                assets.enemies.koopaRight[frame];
     } else {
-        texture = assets.enemies.goomba;
+        // EnemyGfxHandler sees the counter from the gameplay pass that built
+        // the visible OAM buffer (two counts behind this render-side value).
+        // TimerControl freezes the last prepared direction after Mario dies.
+        local gfxCounter = (g.nesFrameCounter + 254) & 0xFF;
+        // Goombas animate by XOR-flipping their base left-facing attributes
+        // when FrameCounter bit 3 is clear; the CHR image itself is unchanged.
+        // The two extracted textures are those two horizontal orientations.
+        local frame = g.goombaVisualFrame;
+        if (!g.player.dead) {
+            local counterBitSet = (gfxCounter & 0x08) != 0;
+            local movingLeft = e.vx < 0.0;
+            frame = counterBitSet == movingLeft ? 1 : 0;
+        }
+        texture = assets.enemies.goombas[frame];
     }
-    worldTexture(g, texture, floor(e.x - 1.0), floor(y - (e.kind == "goomba" ? 8.0 : 0.0)), 16.0, height);
+    // RelativeEnemyPosition is prepared before EnemyMovementSubs.  With the
+    // host-side post-movement coordinate, left-moving Goombas need a one-pixel
+    // rollback and right-moving Goombas the opposite half-step compensation.
+    // This is independent of ScrollAmount (notably during pipe-exit entrance).
+    // The rollback only compensates a movement pass that has already changed
+    // the host coordinate.  A lethal player collision skips EnemyMovementSubs
+    // and TimerControl then freezes that pre-movement OAM position, so keeping
+    // the one-pixel lead during the death sequence would move the frozen
+    // Goomba one pixel to the right of the ROM image.
+    local goombaMotionLead = g.player.dead ? 0.0 :
+        (e.vx > 0.0 ? -1.0 : 1.0);
+    local defeatedGoomba = e.kind == "goomba" && visualState == "defeated";
+    // State $04 uses only the bottom OAM row ($ef).  Its stored X is the
+    // unadjusted relative coordinate and the 24px extracted canvas therefore
+    // starts eight pixels above the host collision top.
+    local drawX = defeatedGoomba ? e.x :
+        (e.kind == "goomba" ? e.x + goombaMotionLead : e.x - 1.0);
+    local drawY = defeatedGoomba ? y - 8.0 :
+        (e.kind == "goomba" ? y - 9.0 : y);
+    worldTexture(g, texture, floor(drawX), floor(drawY), 16.0, height);
 }
 
 function drawFlag(g) {
     for (local y = 48.0; y <= 176.0; y += 16.0)
         worldTexture(g, assets.scenery.flagShaft, g.flagX, y, 16.0, 16.0);
-    worldTexture(g, assets.scenery.flagBall, g.flagX, 40.0, 16.0, 16.0);
+    // The flagpole-ball metatile stores its eight visible scanlines in the
+    // lower half of a 16px canvas.  FlagpoleObject places that metatile at
+    // row 2, so its visible outline starts at y=40.
+    worldTexture(g, assets.scenery.flagBall, g.flagX, 32.0, 16.0, 16.0);
+    // OAM Y is the scanline immediately above a sprite.  EnemyGfxHandler
+    // writes the flag at g.flagY, and the PPU exposes its first pixel at +1.
     worldTexture(g, assets.scenery.flagpoleFlag,
-                 g.flagX - 8.0, g.flagY, 16.0, 16.0);
+                 g.flagX - 8.0, g.displayFlagY + 1.0, 16.0, 16.0);
 }
 
 function drawFireworks(g) {
@@ -571,15 +747,27 @@ function drawFireworks(g) {
 function drawCastle(g) {
     local x = g.castleX;
     local wall = assets.scenery.castleWall;
-    worldTexture(g, assets.scenery.castleTopBrick, x + 32.0, 128.0, 16.0, 16.0);
-    worldTexture(g, assets.scenery.castleTop, x + 16.0, 144.0, 16.0, 16.0);
-    worldTexture(g, assets.scenery.castleTopBrick, x + 32.0, 144.0, 16.0, 16.0);
-    worldTexture(g, assets.scenery.castleTop, x + 48.0, 144.0, 16.0, 16.0);
-    for (local row = 0; row < 3; row += 1)
+    // First five rows of CastleMetatiles ($45-$4b), consumed row-major by
+    // CastleObject in World 1-1.  Keeping the ROM's metatile identities here
+    // matters: several shapes look interchangeable at a glance but use
+    // different CHR quadrants and palette pixels.
+    for (local col = 1; col <= 3; col += 1)
+        worldTexture(g, assets.scenery.castleTop,
+                     x + col * 16.0, 128.0, 16.0, 16.0);
+    worldTexture(g, assets.scenery.castleWindowLeft,
+                 x + 16.0, 144.0, 16.0, 16.0);
+    worldTexture(g, wall, x + 32.0, 144.0, 16.0, 16.0);
+    worldTexture(g, assets.scenery.castleWindowRight,
+                 x + 48.0, 144.0, 16.0, 16.0);
+    worldTexture(g, assets.scenery.castleTop, x, 160.0, 16.0, 16.0);
+    worldTexture(g, assets.scenery.castleTop, x + 64.0, 160.0, 16.0, 16.0);
+    for (local col = 1; col <= 3; col += 1)
+        worldTexture(g, assets.scenery.castleTopBrick,
+                     x + col * 16.0, 160.0, 16.0, 16.0);
+    for (local row = 1; row <= 2; row += 1)
         for (local col = 0; col < 5; col += 1)
-            worldTexture(g, wall, x + col * 16.0, 160.0 + row * 16.0, 16.0, 16.0);
-    worldTexture(g, assets.scenery.castleWindowLeft, x + 16.0, 160.0, 16.0, 16.0);
-    worldTexture(g, assets.scenery.castleWindowRight, x + 48.0, 160.0, 16.0, 16.0);
+            worldTexture(g, wall, x + col * 16.0,
+                         160.0 + row * 16.0, 16.0, 16.0);
     worldTexture(g, assets.scenery.castleEntranceTop, x + 32.0, 176.0, 16.0, 16.0);
     worldTexture(g, assets.scenery.castleEntranceBottom, x + 32.0, 192.0, 16.0, 16.0);
     if (g.castleFlagVisible)
@@ -587,18 +775,67 @@ function drawCastle(g) {
                      x + 32.0, g.castleFlagY, 16.0, 16.0);
 }
 
-function drawEffects(g) {
-    if (g.coinEffect.active) {
-        local t = g.coinEffect.time / 0.42;
-        local y = g.coinEffect.y - sin(t * PI) * 24.0;
-        local frame = floor(g.simTime * 30.0).tointeger() % 4;
-        worldTexture(g, assets.items.jumpCoins[frame], g.coinEffect.x, y, 8.0, 16.0);
+function drawCoinEffect(g, effect) {
+    if (effect.active) {
+        if (effect.displayPhase == "coin") {
+            // The misc object is initialized in RAM before its two OAM sprites
+            // reach the visible DMA page.
+            if (effect.frame <= 2) return;
+            // OAM Y values captured from CoinBlock ($60-$63).  gfx sprites
+            // begin on the following scanline, hence these are visible tops.
+            local coinY = [
+                123, 118, 113, 109, 106, 102, 99, 96,
+                94, 92, 90, 88, 87, 86, 85, 85,
+                85, 85, 86, 87, 88, 90, 92, 94,
+                96, 99, 102, 106, 109, 113, 118
+            ];
+            // The screenshot consumed by the parity oracle is the OAM buffer
+            // prepared one gameplay pass before the latest RAM snapshot.
+            local index = effect.frame - 2;
+            if (index < 0) index = 0;
+            if (index >= coinY.len()) index = coinY.len() - 1;
+            // JCoinGfxHandler selects $60-$63 directly from
+            // (FrameCounter >> 1) & 3.  The visible DMA page is three counter
+            // values behind the render-side counter at this capture point.
+            local visibleCounter = (g.nesFrameCounter + 254) & 0xFF;
+            local tileFrame = (visibleCounter >> 1) & 3;
+            worldTexture(g, assets.items.jumpCoins[tileFrame],
+                         effect.x,
+                         coinY[index] + effect.spawnCarryYOffset, 8.0, 16.0);
+        } else {
+            local scoreIndex = effect.scoreFrame;
+            if (scoreIndex < 0) scoreIndex = 0;
+            local scoreY = 123.0 - floor(scoreIndex / 2.0);
+            worldTexture(g, assets.items.score200,
+                         effect.displayX,
+                         scoreY, 16.0, 8.0);
+        }
     }
+}
+
+function drawEffects(g) {
+    foreach (effect in g.archivedCoinEffects) drawCoinEffect(g, effect);
+    drawCoinEffect(g, g.coinEffect);
     foreach (piece in g.brickDebris) {
         if (!piece.active) continue;
         worldTexture(g, assets.items.brickFragment,
                      floor(piece.x), floor(piece.y), 8.0, 8.0);
     }
+    foreach (score in g.floatingScores) {
+        if (score.age <= 0) continue;
+        local texture = score.control == 1 ? assets.items.score100 :
+                        (score.control == 2 ? assets.items.score200 : null);
+        if (texture != null)
+            // FloateyNumbersRoutine stores the baseline coordinate, subtracts
+            // eight for OAM, and PPU sprite Y adds one visible scanline.
+            screenTexture(texture, score.x, score.displayY - 7.0, 16.0, 8.0);
+    }
+    // FlagpoleScore becomes visible after the same two-stage OAM handoff as
+    // the other enemy-object sprites.  It is composed before Mario, whose
+    // lower OAM index masks the overlapping digits while he changes sides.
+    if (g.flagScoreAge >= 1 && g.flagScoreIndex >= 0 && g.flagScoreIndex < 5)
+        worldTexture(g, assets.items.flagScores[g.flagScoreIndex],
+                     g.flagX + 12.0, g.displayFlagScoreY + 1.0, 16.0, 8.0);
 }
 
 function drawHudGlyphs(glyphs, x, y) {
@@ -620,15 +857,20 @@ function drawHudNumber(value, digits, x, y, blankLeading = false) {
 }
 
 function drawHud(g) {
-    drawHudGlyphs([0x16, 0x0A, 0x1B, 0x12, 0x18], 24.0, 8.0); // MARIO
-    drawHudNumber(g.score, 6, 24.0, 16.0);
-    screenTexture(assets.hudFont[0x2E], 88.0, 16.0, 8.0, 8.0);
-    screenTexture(assets.hudFont[0x29], 96.0, 16.0, 8.0, 8.0);
-    drawHudNumber(g.coins, 2, 104.0, 16.0);
-    drawHudGlyphs([0x20, 0x18, 0x1B, 0x15, 0x0D], 144.0, 8.0); // WORLD
-    drawHudGlyphs([0x01, 0x28, 0x01], 152.0, 16.0);
-    drawHudGlyphs([0x1D, 0x12, 0x16, 0x0E], 200.0, 8.0); // TIME
-    drawHudNumber(g.time, 3, 200.0, 16.0, true);
+    drawHudGlyphs([0x16, 0x0A, 0x1B, 0x12, 0x18], 24.0, 16.0); // MARIO
+    drawHudNumber(g.displayScore, 6, 24.0, 24.0);
+    local colorPhase = g.displayColorPhase;
+    local hudCoinSet = g.area == "underground" ?
+        assets.items.hudCoinsUnderground : assets.items.hudCoins;
+    screenTexture(hudCoinSet[colorPhase], 88.0, 24.0, 8.0, 8.0);
+    screenTexture(assets.hudFont[0x29], 96.0, 24.0, 8.0, 8.0);
+    drawHudNumber(g.displayCoins, 2, 104.0, 24.0);
+    drawHudGlyphs([0x20, 0x18, 0x1B, 0x15, 0x0D], 144.0, 16.0); // WORLD
+    drawHudGlyphs([0x01, 0x28, 0x01], 152.0, 24.0);
+    drawHudGlyphs([0x1D, 0x12, 0x16, 0x0E], 200.0, 16.0); // TIME
+    if (!(parityIsEnabled() && g.parity.frame == 0) &&
+        g.state != "areaExitEntrance")
+        drawHudNumber(g.displayTime, 3, 208.0, 24.0, true);
 
     if (g.state == "gameOver") {
         screenRect(0.0, 0.0, LOGICAL_WIDTH, LOGICAL_HEIGHT, 0.0, 0.0, 0.0);
@@ -640,14 +882,53 @@ function drawHud(g) {
     }
 }
 
+function drawIntermediateLives(g) {
+    screenRect(0.0, 0.0, LOGICAL_WIDTH, LOGICAL_HEIGHT, 0.0, 0.0, 0.0);
+    drawHudGlyphs([0x16, 0x0A, 0x1B, 0x12, 0x18], 24.0, 16.0);
+    drawHudNumber(g.score, 6, 24.0, 24.0);
+    screenTexture(assets.items.hudCoinLives, 88.0, 24.0, 8.0, 8.0);
+    screenTexture(assets.hudFont[0x29], 96.0, 24.0, 8.0, 8.0);
+    drawHudNumber(g.coins, 2, 104.0, 24.0);
+    drawHudGlyphs([0x20, 0x18, 0x1B, 0x15, 0x0D], 144.0, 16.0);
+    drawHudGlyphs([0x01, 0x28, 0x01], 152.0, 24.0);
+    drawHudGlyphs([0x1D, 0x12, 0x16, 0x0E], 200.0, 16.0);
+
+    drawHudGlyphs([0x20, 0x18, 0x1B, 0x15, 0x0D, 0x24,
+                   0x01, 0x28, 0x01], 88.0, 80.0);
+    screenTexture(assets.mario.standRight, 96.0, 89.0, 16.0, 32.0);
+    screenTexture(assets.hudFont[0x29], 120.0, 112.0, 8.0, 8.0);
+    screenTexture(assets.hudFont[g.lives], 144.0, 112.0, 8.0, 8.0);
+}
+
 function renderGame(g) {
     gfx.clear();
+    if (g.state == "deathReload") {
+        // Screen disable first exposes the previous sky backdrop, then the
+        // intermediate lives nametable.  The final twelve-count disable wait
+        // exposes its black universal background before area rendering resumes.
+        if (g.deathReloadFrames <= 8) {
+            screenRect(0.0, 0.0, LOGICAL_WIDTH, LOGICAL_HEIGHT,
+                       146.0 / 255.0, 144.0 / 255.0, 1.0);
+        } else if (g.deathReloadFrames >= 149) {
+            screenRect(0.0, 0.0, LOGICAL_WIDTH, LOGICAL_HEIGHT,
+                       0.0, 0.0, 0.0);
+        } else {
+            drawIntermediateLives(g);
+        }
+        return;
+    }
     if (g.area == "underground")
         screenRect(0.0, 0.0, LOGICAL_WIDTH, LOGICAL_HEIGHT, 0.0, 0.0, 0.0);
     drawBackground(g);
     drawLevelCoins(g);
     drawPowerUps(g, true);
     drawFireballs(g);
+    // Pipe/entrance movement sets OAM priority bit 5 for Mario.  Draw him
+    // before the background metatiles so non-transparent pipe/ground pixels
+    // occlude the sprite exactly as the PPU does.
+    local playerBehindBackground = g.state == "pipeDown" ||
+        g.state == "pipeSide" || g.state == "areaExitEntrance";
+    if (playerBehindBackground) drawPlayer(g);
     drawTiles(g);
     drawPowerUps(g, false);
     if (g.area == "main") {
@@ -655,8 +936,12 @@ function renderGame(g) {
         drawCastle(g);
     }
     drawFireworks(g);
-    foreach (e in g.goombas) drawEnemy(g, e);
+    // Lower OAM indexes win sprite-over-sprite priority on the PPU.  Draw
+    // higher enemy slots first so slot 0 is composited last by the host.
+    for (local slot = 5; slot >= 0; slot -= 1)
+        foreach (e in g.goombas)
+            if (e.slot == slot) drawEnemy(g, e);
     drawEffects(g);
-    drawPlayer(g);
+    if (!playerBehindBackground) drawPlayer(g);
     drawHud(g);
 }

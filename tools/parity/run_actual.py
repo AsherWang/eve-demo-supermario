@@ -20,6 +20,22 @@ PARITY_CAPTURE_FRAMES <- [];
 """
 
 
+def write_generated_source(path: Path, source: str) -> None:
+    """Write the hot-reloaded parity adapter despite transient Windows locks."""
+    last_error: OSError | None = None
+    for attempt in range(20):
+        try:
+            path.write_text(source, encoding="utf-8", newline="\n")
+            return
+        except OSError as error:
+            last_error = error
+            if attempt == 19:
+                break
+            time.sleep(0.05 * (attempt + 1))
+    assert last_error is not None
+    raise last_error
+
+
 def squirrel_source(movie: dict, output: Path) -> str:
     masks = expand_input_masks(movie)
     output_text = str(output.resolve()).replace("\\", "/").replace('"', '\\"')
@@ -62,7 +78,7 @@ def main() -> int:
         stale.unlink()
 
     generated = args.project.resolve() / "scripts" / "generated" / "parity_movie.nut"
-    generated.write_text(squirrel_source(movie, output), encoding="utf-8", newline="\n")
+    write_generated_source(generated, squirrel_source(movie, output))
     log_path = output / "eve-parity.log"
     command = [str(args.eve.resolve()), "run", "-l", str(log_path), str(args.project.resolve())]
     process = None
@@ -101,7 +117,7 @@ def main() -> int:
             stdout_log.close()
         if stderr_log is not None:
             stderr_log.close()
-        generated.write_text(DISABLED_SOURCE, encoding="utf-8", newline="\n")
+        write_generated_source(generated, DISABLED_SOURCE)
 
     states = []
     events = []

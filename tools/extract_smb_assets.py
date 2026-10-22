@@ -11,24 +11,27 @@ from pathlib import Path
 from PIL import Image
 
 
-# A commonly used NTSC 2C02 palette. The ROM stores indexes into these 64 colours.
+# Mesen 2C02 default palette.  The parity reference core emits screenshots
+# through this table, so using the same RGB values keeps strict comparisons
+# about game rendering rather than emulator palette preferences.  The ROM
+# itself stores indexes into these 64 colours.
 NES_RGB = [
-    (84, 84, 84), (0, 30, 116), (8, 16, 144), (48, 0, 136),
-    (68, 0, 100), (92, 0, 48), (84, 4, 0), (60, 24, 0),
-    (32, 42, 0), (8, 58, 0), (0, 64, 0), (0, 60, 0),
-    (0, 50, 60), (0, 0, 0), (0, 0, 0), (0, 0, 0),
-    (152, 150, 152), (8, 76, 196), (48, 50, 236), (92, 30, 228),
-    (136, 20, 176), (160, 20, 100), (152, 34, 32), (120, 60, 0),
-    (84, 90, 0), (40, 114, 0), (8, 124, 0), (0, 118, 40),
-    (0, 102, 120), (0, 0, 0), (0, 0, 0), (0, 0, 0),
-    (236, 238, 236), (76, 154, 236), (120, 124, 236), (176, 98, 236),
-    (228, 84, 236), (236, 88, 180), (236, 106, 100), (212, 136, 32),
-    (160, 170, 0), (116, 196, 0), (76, 208, 32), (56, 204, 108),
-    (56, 180, 204), (60, 60, 60), (0, 0, 0), (0, 0, 0),
-    (236, 238, 236), (168, 204, 236), (188, 188, 236), (212, 178, 236),
-    (236, 174, 236), (236, 174, 212), (236, 180, 176), (228, 196, 144),
-    (204, 210, 120), (180, 222, 120), (168, 226, 144), (152, 226, 180),
-    (160, 214, 228), (160, 162, 160), (0, 0, 0), (0, 0, 0),
+    (102, 102, 102), (0, 42, 136), (20, 18, 167), (59, 0, 164),
+    (92, 0, 126), (110, 0, 64), (108, 6, 0), (86, 29, 0),
+    (51, 53, 0), (11, 72, 0), (0, 82, 0), (0, 79, 8),
+    (0, 64, 77), (0, 0, 0), (0, 0, 0), (0, 0, 0),
+    (173, 173, 173), (21, 95, 217), (66, 64, 255), (117, 39, 254),
+    (160, 26, 204), (183, 30, 123), (181, 49, 32), (153, 78, 0),
+    (107, 109, 0), (56, 135, 0), (12, 147, 0), (0, 143, 50),
+    (0, 124, 141), (0, 0, 0), (0, 0, 0), (0, 0, 0),
+    (255, 254, 255), (100, 176, 255), (146, 144, 255), (198, 118, 255),
+    (243, 106, 255), (254, 110, 204), (254, 129, 112), (234, 158, 34),
+    (188, 190, 0), (136, 216, 0), (92, 228, 48), (69, 224, 130),
+    (72, 205, 222), (79, 79, 79), (0, 0, 0), (0, 0, 0),
+    (255, 254, 255), (192, 223, 255), (211, 210, 255), (232, 200, 255),
+    (251, 194, 255), (254, 196, 234), (254, 204, 197), (247, 216, 165),
+    (228, 229, 148), (207, 239, 150), (189, 244, 171), (179, 243, 204),
+    (181, 235, 242), (184, 184, 184), (0, 0, 0), (0, 0, 0),
 ]
 
 BIG_MARIO_NAMES = [
@@ -151,14 +154,17 @@ def compose_sprite(
     rows: int,
     mirror_right: bool = False,
     flip_x_indices: set[int] | None = None,
+    flip_y_indices: set[int] | None = None,
 ) -> Image.Image:
     image = Image.new("RGBA", (16, rows * 8), (0, 0, 0, 0))
     flip_x_indices = flip_x_indices or set()
+    flip_y_indices = flip_y_indices or set()
     for index, tile_id in enumerate(tiles):
         column, row = index % 2, index // 2
         tile = tile_image(
             chr_data, tile_id, palette, 0, True,
             flip_x=(mirror_right and column == 1) or index in flip_x_indices,
+            flip_y=index in flip_y_indices,
         )
         image.alpha_composite(tile, (column * 8, row * 8))
     return image
@@ -341,6 +347,10 @@ def main() -> None:
     parser.add_argument("--rom", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--runtime-nut", type=Path)
+    parser.add_argument("--runtime-items", type=Path)
+    parser.add_argument("--runtime-enemies", type=Path)
+    parser.add_argument("--runtime-mario-small", type=Path)
+    parser.add_argument("--runtime-mario-big", type=Path)
     args = parser.parse_args()
 
     rom = args.rom.read_bytes()
@@ -441,6 +451,7 @@ def main() -> None:
     underground_palettes = [
         underground_palette_data[i : i + 4] for i in range(0, 32, 4)
     ]
+    color_rotation = [0x27, 0x27, 0x27, 0x17, 0x07, 0x17]
     # GetPlayerColors uses this ROM-resident palette for both fiery Mario and
     # fiery Luigi.  Keep the transparent entry first for PNG composition.
     fiery_player_palette = [0x22, 0x37, 0x27, 0x16]
@@ -457,6 +468,48 @@ def main() -> None:
             tile_image(chr_data, tile_id, hud_palette, 1, True),
             output / "hud-font" / f"{tile_id:02X}.png",
         )
+
+    # The coin beside the counter combines background tile $2e (palette 3)
+    # with sprite tile $ff (sprite palette 3, priority behind background).
+    # OAM's Y coordinate is one scanline above the first rendered sprite row.
+    for area_name, area_bg_palettes, area_sprite_palettes in (
+        ("ground", bg_palettes, sprite_palettes),
+        ("underground", underground_palettes[:4], underground_palettes[4:]),
+    ):
+        for frame, color in enumerate(color_rotation):
+            hud_coin_palette = list(area_bg_palettes[3])
+            hud_coin_palette[1] = color
+            hud_coin_background = tile_image(
+                chr_data, 0x2E, hud_coin_palette, 1, True
+            )
+            hud_coin = Image.new("RGBA", (8, 8), (0, 0, 0, 0))
+            hud_coin.alpha_composite(
+                tile_image(
+                    chr_data, 0xFF, area_sprite_palettes[3], 0, True
+                ),
+                (0, 1),
+            )
+            hud_coin.alpha_composite(hud_coin_background, (0, 0))
+            suffix = "" if area_name == "ground" else f"-{area_name}"
+            save_1x_and_preview(
+                hud_coin,
+                output / "sprites" / "effects" /
+                f"hud-coin{suffix}-{frame}.png",
+            )
+            save_1x_and_preview(
+                hud_coin_background,
+                output / "sprites" / "effects" /
+                f"hud-coin-bg{suffix}-{frame}.png",
+            )
+
+    # The intermediate-lives nametable keeps tile $2e but installs a
+    # dedicated palette: gold body plus cyan glint, with no companion sprite.
+    lives_coin = tile_image(
+        chr_data, 0x2E, [0x0F, 0x27, 0x00, 0x1C], 1, True
+    )
+    save_1x_and_preview(
+        lives_coin, output / "sprites" / "effects" / "hud-coin-lives.png"
+    )
 
     palette_image = Image.new("RGBA", (64, 128), (0, 0, 0, 255))
     for palette_index, palette in enumerate(palettes):
@@ -501,6 +554,12 @@ def main() -> None:
             left = right.transpose(Image.Transpose.FLIP_LEFT_RIGHT)
             save_1x_and_preview(right, output / "sprites" / f"mario-{size}" / f"{name}-right.png")
             save_1x_and_preview(left, output / "sprites" / f"mario-{size}" / f"{name}-left.png")
+            runtime_mario = (args.runtime_mario_big if size == "big" else
+                             args.runtime_mario_small)
+            if runtime_mario and name.startswith("climb-"):
+                runtime_mario.mkdir(parents=True, exist_ok=True)
+                right.save(runtime_mario / f"{name}-right.png")
+                left.save(runtime_mario / f"{name}-left.png")
             # Star Mario selects sprite palettes 0-3 through the OAM attribute
             # bits.  Emit the three alternate palettes so the host renderer can
             # reproduce that hardware palette cycle without tinting the PNGs.
@@ -598,6 +657,48 @@ def main() -> None:
             output / "sprites" / "effects" / f"jump-coin-{frame}.png",
         )
 
+    # FloateyNumTileData controls 1 and 2: $f6/$fb is "100" and $f7/$fb
+    # is "200".  Preserve the native two-sprite 16x8 composition instead of
+    # rebuilding these from the status-bar font.
+    for score, left_tile in ((100, 0xF6), (200, 0xF7)):
+        score_image = Image.new("RGBA", (16, 8), (0, 0, 0, 0))
+        score_image.alpha_composite(
+            tile_image(chr_data, left_tile, sprite_palettes[2], 0, True), (0, 0)
+        )
+        score_image.alpha_composite(
+            tile_image(chr_data, 0xFB, sprite_palettes[2], 0, True), (8, 0)
+        )
+        save_1x_and_preview(
+            score_image, output / "sprites" / "effects" / f"score-{score}.png"
+        )
+        if args.runtime_items:
+            args.runtime_items.mkdir(parents=True, exist_ok=True)
+            score_image.save(args.runtime_items / f"score-{score}.png")
+
+    # FlagpoleScoreNumTiles is a separate five-entry table.  Its second tile
+    # is not always the ordinary $fb "00" suffix, so retain each exact pair.
+    for score, left_tile, right_tile in (
+        (5000, 0xF9, 0x50),
+        (2000, 0xF7, 0x50),
+        (800, 0xFA, 0xFB),
+        (400, 0xF8, 0xFB),
+        (100, 0xF6, 0xFB),
+    ):
+        score_image = Image.new("RGBA", (16, 8), (0, 0, 0, 0))
+        score_image.alpha_composite(
+            tile_image(chr_data, left_tile, sprite_palettes[1], 0, True), (0, 0)
+        )
+        score_image.alpha_composite(
+            tile_image(chr_data, right_tile, sprite_palettes[1], 0, True), (8, 0)
+        )
+        save_1x_and_preview(
+            score_image,
+            output / "sprites" / "effects" / f"flag-score-{score}.png",
+        )
+        if args.runtime_items:
+            args.runtime_items.mkdir(parents=True, exist_ok=True)
+            score_image.save(args.runtime_items / f"flag-score-{score}.png")
+
     flag = Image.new("RGBA", (16, 16), (0, 0, 0, 0))
     flag.alpha_composite(tile_image(chr_data, 0x7E, sprite_palettes[1], 0, True), (0, 0))
     flag.alpha_composite(tile_image(chr_data, 0x7F, sprite_palettes[1], 0, True), (8, 0))
@@ -631,12 +732,38 @@ def main() -> None:
                 sprite_palettes[ENEMY_PALETTES[index]],
                 right_side_up=not name.startswith("green-shell-up"),
             )
+        elif name == "goomba-defeated":
+            # EnemyGfxHandler emits the $ef bottom row with OAM attributes
+            # $83/$c3: vertical flip on both cells and horizontal flip on the
+            # right cell.  The preceding $fc cells are transparent.
+            image = compose_sprite(
+                chr_data,
+                frame,
+                sprite_palettes[ENEMY_PALETTES[index]],
+                3,
+                flip_x_indices={5},
+                flip_y_indices={4, 5},
+            )
         else:
             image = compose_sprite(
                 chr_data, frame, sprite_palettes[ENEMY_PALETTES[index]], 3,
                 mirror_right=name.startswith(("bloober", "piranha", "podoboo", "jumpspring")),
             )
         save_1x_and_preview(image, output / "sprites" / "enemies" / f"{name}.png")
+        if name == "goomba-defeated" and args.runtime_enemies:
+            args.runtime_enemies.mkdir(parents=True, exist_ok=True)
+            image.save(args.runtime_enemies / "goomba-defeated.png")
+        if name == "goomba":
+            # EnemyGfxHandler alternates the Goomba gait by reversing tile
+            # order and setting horizontal flip on each OAM cell, equivalent
+            # to mirroring the complete assembled sprite.
+            save_1x_and_preview(
+                image, output / "sprites" / "enemies" / "goomba-1.png"
+            )
+            save_1x_and_preview(
+                image.transpose(Image.Transpose.FLIP_LEFT_RIGHT),
+                output / "sprites" / "enemies" / "goomba-2.png",
+            )
         if name.startswith("green-koopa-"):
             # The ROM frame faces right. Emit explicit directional variants so
             # the host renderer can select orientation from enemy velocity.
@@ -693,6 +820,24 @@ def main() -> None:
         compose_metatile(chr_data, underground_brick_tiles, underground_palettes[1]),
         output / "metatiles" / "underground" / "brick.png",
     )
+    underground_ground_tiles = metatile_data[
+        palette_starts[1] + 0x14 * 4 : palette_starts[1] + 0x15 * 4
+    ]
+    save_1x_and_preview(
+        compose_metatile(
+            chr_data, underground_ground_tiles, underground_palettes[1]
+        ),
+        output / "metatiles" / "underground" / "ground.png",
+    )
+    underground_pipe_left_tiles = metatile_data[
+        palette_starts[0] + 0x14 * 4 : palette_starts[0] + 0x15 * 4
+    ]
+    save_1x_and_preview(
+        compose_metatile(
+            chr_data, underground_pipe_left_tiles, underground_palettes[0]
+        ),
+        output / "metatiles" / "underground" / "pipe-shaft-left.png",
+    )
     for index in range(0x1C, 0x22):
         tiles = metatile_data[
             palette_starts[0] + index * 4 : palette_starts[0] + (index + 1) * 4
@@ -702,7 +847,6 @@ def main() -> None:
             output / "metatiles" / "underground" / f"side-pipe-{index:02X}.png",
         )
 
-    color_rotation = [0x27, 0x27, 0x27, 0x17, 0x07, 0x17]
     question_tiles = metatile_data[palette_starts[3] : palette_starts[3] + 4]
     coin_tiles = metatile_data[
         palette_starts[3] + 2 * 4 : palette_starts[3] + 3 * 4
@@ -724,6 +868,11 @@ def main() -> None:
     manifest = {
         "source_rom": str(args.rom.resolve()),
         "native_scale": "1 PNG pixel = 1 NES pixel",
+        "rgb_palette": {
+            "name": "Mesen default 2C02",
+            "source": "SourMesen/Mesen2 Core/NES/NesDefaultVideoFilter.cpp",
+            "entries": [list(colour) for colour in NES_RGB],
+        },
         "prg_offsets": {
             "ground_palette": palette_offset,
             "underground_palette": underground_palette_offset,

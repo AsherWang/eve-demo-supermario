@@ -1,0 +1,46 @@
+{
+  "schema": "smb-parity-movie-v1",
+  "name": "first-powerup-mushroom",
+  "description": "Natural input targeting the first World 1-1 power-up block and mushroom emergence.",
+  "frames": 300,
+  "reference_bootstrap": {
+    "frames": 600,
+    "inputs": [
+      {
+        "port": 0,
+        "start": 40,
+        "end": 46,
+        "buttons": ["start"]
+      }
+    ]
+  },
+  "inputs": [
+    {"port": 0, "start": 0, "end": 31, "buttons": ["right", "b"]},
+    {"port": 0, "start": 32, "end": 32, "buttons": ["right", "b", "a"]},
+    {"port": 0, "start": 33, "end": 52, "buttons": ["right", "b"]},
+    {"port": 0, "start": 53, "end": 53, "buttons": ["right", "b", "a"]},
+    {"port": 0, "start": 54, "end": 74, "buttons": ["right", "b"]},
+    {"port": 0, "start": 75, "end": 77, "buttons": ["right", "b", "a"]},
+    {"port": 0, "start": 78, "end": 100, "buttons": ["right", "b"]},
+    {"port": 0, "start": 101, "end": 111, "buttons": ["right", "b", "a"]},
+    {"port": 0, "start": 112, "end": 128, "buttons": ["right", "b"]},
+    {"port": 0, "start": 129, "end": 139, "buttons": ["right", "b", "a"]},
+    {"port": 0, "start": 140, "end": 183, "buttons": ["left", "b"]},
+    {"port": 0, "start": 211, "end": 221, "buttons": ["a"]}
+  ],
+  "capture_frames": [
+    0, 60, 109, 120, 128, 129, 130, 131, 132, 133, 134, 135, 136,
+    137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149,
+    150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 162,
+    163, 164, 165, 166, 167, 168, 169, 170, 180, 200, 210, 211, 212,
+    213, 214, 215, 216, 217, 218, 219, 220, 221, 222, 223, 224, 225,
+    226, 227, 228, 229, 230, 231, 232, 233, 234, 235, 236, 237, 238,
+    239, 240, 241, 242, 243, 244, 245, 246, 247, 248, 249, 250, 260,
+    280, 299
+  ],
+  "provenance": {
+    "format": "hand-authored NES controller input",
+    "source": "world-1-1-tas early route, then a controlled return jump beneath the first power-up block",
+    "target": "first power-up question block at metatile column 21"
+  }
+}
