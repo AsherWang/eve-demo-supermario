@@ -8,6 +8,8 @@
 
 # User-provided ROMs and emulator state
 *.nes
+# The user supplied this ROM for the local study/parity workflow.
+!/roms/Super Mario Bros. (World).nes
 *.fds
 *.unf
 *.unif

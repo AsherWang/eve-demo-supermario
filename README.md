@@ -1,8 +1,12 @@
 # Super Mario Bros. World 1-1 — EVEngine
 
 Personal-study, ROM-data-driven reconstruction of NES World 1-1 in EVEngine.
-The repository does not include a ROM. Runtime assets were extracted locally
+The packaged game does not include a ROM. Runtime assets were extracted locally
 from a user-provided ROM for this study build.
+
+The user-supplied ROM for local extraction and parity tests is kept at
+`roms/Super Mario Bros. (World).nes`; see [`roms/README.md`](roms/README.md) for
+its SHA-256 and usage. It is not included in packaged game releases.
 
 This is a vibe coding project, developed through AI-assisted, iterative
 experimentation and verification against the original game.
