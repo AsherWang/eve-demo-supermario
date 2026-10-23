@@ -508,6 +508,7 @@ function hitBlock(g, tx, ty) {
     bumpEnemiesAbove(g, tx, ty);
 
     if (tile == TILE_BRICK && g.player.big) {
+        foreach (item in g.powerups) bumpPowerUpAbove(g, item, tx, ty);
         breakBrick(g, tx, ty);
         return;
     }
@@ -518,6 +519,7 @@ function hitBlock(g, tx, ty) {
     g.bump.tile = tile;
     g.bump.time = 0.0;
     g.bump.frame = 0;
+    g.bump.powerupPending = true;
     emitSound(g, "bump");
 
     if (tile == TILE_HIDDEN_ONEUP) {
@@ -1184,6 +1186,25 @@ function powerUpDrawY(item) {
     return item.emerging ? item.y + POWERUP_DRAW_Y_OFFSET : item.y;
 }
 
+function bumpPowerUpAbove(g, item, tx, ty) {
+    // PowerUpObjHandler sends mushrooms/1UPs through EnemyToBGCollisionDet.
+    // Flowers skip it; stars use EnemyJump instead. ChkUnderEnemy samples
+    // (ROM X + $08, ROM Y + $18), not the whole sprite's bounding rectangle.
+    if (!item.active || item.emerging ||
+        (item.kind != "mushroom" && item.kind != "oneup")) return false;
+    if (floor((item.x + 8.0) / TILE_SIZE).tointeger() != tx ||
+        floor((item.romY + 24.0) / TILE_SIZE).tointeger() != ty) return false;
+    // SetStun: Y -= 2, Y speed = $fd; EnemyBGCXSpdData = $10/$f0.
+    // PlayerEnemyDiff selects a direction away from Mario, not unconditional
+    // reversal. Horizontal speeds are 4.4 fixed point: +/-1 pixel per frame.
+    item.y -= 2.0;
+    item.romY -= 2.0;
+    item.vy = -3.0 * NES_FRAME_RATE;
+    item.vx = item.x < g.player.x ? -NES_FRAME_RATE : NES_FRAME_RATE;
+    item.settleFrame = -1;
+    return true;
+}
+
 function movePowerUp(g, item, dt) {
     if (item.emerging) {
         // GrowThePowerUp moves one pixel every four frames.
@@ -1271,6 +1292,12 @@ function updatePowerUps(g, dt) {
         item.displayVisible = item.visible;
         if (!item.active) continue;
         movePowerUp(g, item, dt);
+        // The bumped metatile ($23 in the ROM) remains available until block
+        // restoration, so a mushroom arriving just after the hit can react.
+        // Consuming it once prevents repeated launches during one block bump.
+        if (g.bump.active && g.bump.powerupPending &&
+            bumpPowerUpAbove(g, item, g.bump.tx, g.bump.ty))
+            g.bump.powerupPending = false;
         if (!item.emerging && !p.dead &&
             overlaps(p.x, p.y, p.width, p.height,
                      item.x, item.y, item.width, item.height))

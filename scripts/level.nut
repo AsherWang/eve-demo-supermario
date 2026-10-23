@@ -495,7 +495,7 @@ function createGame() {
         brickCoinTimer = 0.0,
         brickCoinStarted = false,
         stompChain = 0,
-        bump = { active = false, tx = 0, ty = 0, tile = TILE_EMPTY,
+        bump = { active = false, powerupPending = false, tx = 0, ty = 0, tile = TILE_EMPTY,
                  time = 0.0, frame = 0 },
         // Metatile replacements follow the same buffered PPU path.  Entries
         // temporarily retain the old visible metatile while collision already
@@ -669,6 +669,40 @@ function runSimulationSelfTest() {
     requireSelfTest(t.coinEffect.x == 16.0 * TILE_SIZE + 5.0 &&
                     t.coinEffect.y == 9.0 * TILE_SIZE - 16.0,
                     "jumping coin must use the ROM block-relative OAM origin");
+
+    // Exercise the actual renderer's placement, not only the stored spawn Y.
+    // The upper question block at (22,5) is 64 pixels above the lower row.
+    local lowCoinTest = createGame();
+    local highCoinTest = createGame();
+    startJumpingCoin(lowCoinTest, 23, 9);
+    hitBlock(highCoinTest, 22, 5);
+    requireSelfTest(highCoinTest.coinEffect.active &&
+                    getTile(highCoinTest, 22, 5) == TILE_USED,
+                    "upper question block must spawn a coin");
+    for (local tick = 0; tick < 78; tick += 1) {
+        updateCoinEffect(lowCoinTest, lowCoinTest.coinEffect, FIXED_DT);
+        updateCoinEffect(highCoinTest, highCoinTest.coinEffect, FIXED_DT);
+        requireSelfTest(coinEffectDrawY(lowCoinTest.coinEffect) -
+                        coinEffectDrawY(highCoinTest.coinEffect) == 64.0,
+                        "coin and score rendering must follow the source row throughout their lifetime");
+        if (tick == 2)
+            requireSelfTest(coinEffectDrawY(lowCoinTest.coinEffect) == 118.0 &&
+                            coinEffectDrawY(highCoinTest.coinEffect) == 54.0,
+                            "first visible coin must preserve the reference trajectory relative to its block");
+    }
+    local stackedCoinsTest = createGame();
+    startJumpingCoin(stackedCoinsTest, 22, 5);
+    startJumpingCoin(stackedCoinsTest, 23, 9);
+    local archivedCoin = stackedCoinsTest.archivedCoinEffects[0];
+    archivedCoin.frame = 3;
+    stackedCoinsTest.coinEffect.frame = 3;
+    requireSelfTest(coinEffectDrawY(archivedCoin) == 54.0 &&
+                    coinEffectDrawY(stackedCoinsTest.coinEffect) == 119.0,
+                    "overlapping coins must keep independent row origins and the misc-slot carry offset");
+    archivedCoin.displayPhase = "score";
+    archivedCoin.scoreFrame = 2;
+    requireSelfTest(coinEffectDrawY(archivedCoin) == 58.0,
+                    "archived upper coin score must stay relative to its own block");
 
     local headSampleTest = createGame();
     headSampleTest.goombas = [];
@@ -904,6 +938,74 @@ function runSimulationSelfTest() {
                     "small Mario must not break brick blocks");
     requireSelfTest(bumpedEnemy.state == "flipped" && bumpedEnemy.vy < 0.0,
                     "a bumped block must flip an enemy standing above it");
+
+    local shroomBumpTest = createGame();
+    shroomBumpTest.goombas = [];
+    shroomBumpTest.player.x = 368.0;
+    shroomBumpTest.player.y = 160.0;
+    setTile(shroomBumpTest, 23, 9, TILE_BRICK);
+    spawnPowerUp(shroomBumpTest, 22, 9, "mushroom");
+    local shroom = shroomBumpTest.powerups[0];
+    for (local i = 0; i < 73; i += 1) movePowerUp(shroomBumpTest, shroom, FIXED_DT);
+    shroom.x = 358.0;
+    hitBlock(shroomBumpTest, 23, 9);
+    updatePowerUps(shroomBumpTest, FIXED_DT);
+    requireSelfTest(shroom.vx > 0.0 && shroomBumpTest.bump.powerupPending,
+                    "front brick must wait for the mushroom's bottom-centre probe, not sprite-edge overlap");
+    updatePowerUps(shroomBumpTest, FIXED_DT);
+    requireSelfTest(shroom.vx == -NES_FRAME_RATE && shroom.vy == -3.0 * NES_FRAME_RATE &&
+                    shroom.y == 126.0 && shroom.romY == 118.0 &&
+                    !shroomBumpTest.bump.powerupPending,
+                    "mushroom entering the bumped front brick must launch up and away from Mario");
+    local launchedX = shroom.x;
+    updatePowerUps(shroomBumpTest, FIXED_DT);
+    requireSelfTest(shroom.x < launchedX && shroom.y < 126.0 && shroom.active,
+                    "bumped mushroom must continue moving left/up without being destroyed or relaunched");
+    for (local i = 0; i < 90 && shroom.vy != 0.0; i += 1)
+        updatePowerUps(shroomBumpTest, FIXED_DT);
+    requireSelfTest(shroom.active && shroom.vx < 0.0 && shroom.vy == 0.0,
+                    "bumped mushroom must land and keep walking");
+
+    foreach (kind in ["mushroom", "oneup", "flower", "star"]) {
+        local bumpKindTest = createGame();
+        bumpKindTest.player.x = 300.0;
+        spawnPowerUp(bumpKindTest, 22, 9, kind);
+        local item = bumpKindTest.powerups[0];
+        requireSelfTest(!bumpPowerUpAbove(bumpKindTest, item, 22, 9),
+                        "emerging power-ups must not be bumped");
+        item.emerging = false;
+        item.y = 128.0;
+        item.romY = 120.0;
+        item.settleFrame = -1;
+        local shouldBump = kind == "mushroom" || kind == "oneup";
+        requireSelfTest(bumpPowerUpAbove(bumpKindTest, item, 22, 9) == shouldBump,
+                        "only mushroom and 1UP use the stunned-enemy block response");
+        if (shouldBump) {
+            requireSelfTest(item.vx == NES_FRAME_RATE,
+                            "Mario on the left must send the mushroom right, not blindly reverse it");
+            item.active = false;
+            requireSelfTest(!bumpPowerUpAbove(bumpKindTest, item, 22, 9),
+                            "collected power-ups must not be bumped");
+        }
+    }
+
+    // Exercise drawCastle's real call order and coordinates without a GPU
+    // dependency. Restore the renderer before evaluating assertions.
+    local castleLayerTest = createGame();
+    castleLayerTest.castleFlagVisible = true;
+    castleLayerTest.castleFlagY = 113.0;
+    local castleDraws = [];
+    local savedWorldTexture = worldTexture;
+    worldTexture = function(g, texture, x, y, width, height) {
+        castleDraws.append({ texture = texture, x = x, y = y });
+    };
+    drawCastle(castleLayerTest);
+    worldTexture = savedWorldTexture;
+    requireSelfTest(castleDraws.len() > 1 &&
+                    castleDraws[0].texture == assets.scenery.castleFlag &&
+                    castleDraws[0].x == castleLayerTest.castleX + 32.0 &&
+                    castleDraws[0].y == 114.0,
+                    "castle flag must draw behind brickwork at OAM Y+1, retaining the ROM rise endpoint");
 
     local shellTest = createGame();
     local testKoopa = null;

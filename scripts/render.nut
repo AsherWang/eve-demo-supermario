@@ -748,6 +748,12 @@ function drawFireworks(g) {
 function drawCastle(g) {
     local x = g.castleX;
     local wall = assets.scenery.castleWall;
+    // DrawStarFlag writes attribute $22: palette 2, behind opaque background.
+    // Draw before the castle so the rising flag is hidden by its brickwork.
+    // castleFlagY is the ROM OAM coordinate; pixels start one scanline later.
+    if (g.castleFlagVisible)
+        worldTexture(g, assets.scenery.castleFlag,
+                     x + 32.0, g.castleFlagY + 1.0, 16.0, 16.0);
     // First five rows of CastleMetatiles ($45-$4b), consumed row-major by
     // CastleObject in World 1-1.  Keeping the ROM's metatile identities here
     // matters: several shapes look interchangeable at a glance but use
@@ -771,9 +777,30 @@ function drawCastle(g) {
                          160.0 + row * 16.0, 16.0, 16.0);
     worldTexture(g, assets.scenery.castleEntranceTop, x + 32.0, 176.0, 16.0, 16.0);
     worldTexture(g, assets.scenery.castleEntranceBottom, x + 32.0, 192.0, 16.0, 16.0);
-    if (g.castleFlagVisible)
-        worldTexture(g, assets.scenery.castleFlag,
-                     x + 32.0, g.castleFlagY, 16.0, 16.0);
+}
+
+function coinEffectDrawY(effect) {
+    if (effect.displayPhase == "coin") {
+        // Visible-top displacements from CoinBlock's spawn origin, including
+        // the OAM/PPU scanline relationship. The reference block was at Y=144
+        // (spawn Y=128); absolute captured screen coordinates must not be
+        // reused for blocks on other rows. CoinBlock derives Y from the block
+        // and ProcJumpCoin applies the same gravity regardless of that row.
+        local offsets = [
+            -5, -10, -15, -19, -22, -26, -29, -32,
+            -34, -36, -38, -40, -41, -42, -43, -43,
+            -43, -43, -42, -41, -40, -38, -36, -34,
+            -32, -29, -26, -22, -19, -15, -10
+        ];
+        local index = effect.frame - 2;
+        if (index < 0) index = 0;
+        if (index >= offsets.len()) index = offsets.len() - 1;
+        return effect.y + offsets[index] + effect.spawnCarryYOffset;
+    }
+    // DrawFloateyNumber_Coin retains the coin's Y, then raises the number.
+    local scoreIndex = effect.scoreFrame;
+    if (scoreIndex < 0) scoreIndex = 0;
+    return effect.y - 5.0 - floor(scoreIndex / 2.0);
 }
 
 function drawCoinEffect(g, effect) {
@@ -782,19 +809,6 @@ function drawCoinEffect(g, effect) {
             // The misc object is initialized in RAM before its two OAM sprites
             // reach the visible DMA page.
             if (effect.frame <= 2) return;
-            // OAM Y values captured from CoinBlock ($60-$63).  gfx sprites
-            // begin on the following scanline, hence these are visible tops.
-            local coinY = [
-                123, 118, 113, 109, 106, 102, 99, 96,
-                94, 92, 90, 88, 87, 86, 85, 85,
-                85, 85, 86, 87, 88, 90, 92, 94,
-                96, 99, 102, 106, 109, 113, 118
-            ];
-            // The screenshot consumed by the parity oracle is the OAM buffer
-            // prepared one gameplay pass before the latest RAM snapshot.
-            local index = effect.frame - 2;
-            if (index < 0) index = 0;
-            if (index >= coinY.len()) index = coinY.len() - 1;
             // JCoinGfxHandler selects $60-$63 directly from
             // (FrameCounter >> 1) & 3.  The visible DMA page is three counter
             // values behind the render-side counter at this capture point.
@@ -802,14 +816,11 @@ function drawCoinEffect(g, effect) {
             local tileFrame = (visibleCounter >> 1) & 3;
             worldTexture(g, assets.items.jumpCoins[tileFrame],
                          effect.x,
-                         coinY[index] + effect.spawnCarryYOffset, 8.0, 16.0);
+                         coinEffectDrawY(effect), 8.0, 16.0);
         } else {
-            local scoreIndex = effect.scoreFrame;
-            if (scoreIndex < 0) scoreIndex = 0;
-            local scoreY = 123.0 - floor(scoreIndex / 2.0);
             worldTexture(g, assets.items.score200,
                          effect.displayX,
-                         scoreY, 16.0, 8.0);
+                         coinEffectDrawY(effect), 16.0, 8.0);
         }
     }
 }

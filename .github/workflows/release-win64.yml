@@ -1,0 +1,69 @@
+name: Release Win64
+
+on:
+  push:
+    tags: ['0.*']
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    runs-on: windows-2022
+    timeout-minutes: 20
+    permissions:
+      contents: write
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Download pinned EVEngine Windows SDK
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $zip = Join-Path $env:RUNNER_TEMP 'eve-sdk-win32-v0.6.0.zip'
+          Invoke-WebRequest 'https://github.com/EVEngine/EVEngine/releases/download/v0.6.0/eve-sdk-win32-v0.6.0.zip' -OutFile $zip
+          $expected = '8b4dccb5c86e41de4e71627576a4fdc1030b225e61024c4fa71a44c45c08d8c7'
+          if ((Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash.ToLowerInvariant() -ne $expected) {
+            throw 'EVEngine SDK checksum mismatch'
+          }
+          $destination = Join-Path $env:RUNNER_TEMP 'evengine-sdk'
+          Expand-Archive -LiteralPath $zip -DestinationPath $destination
+          "EVE_SDK=$destination/eve-sdk/win32" >> $env:GITHUB_ENV
+
+      - name: Build and test Win64 package
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if ($env:GITHUB_REF_NAME -notmatch '^0\.\d+$') { throw 'Unexpected release version' }
+          $name = "super-mario-$env:GITHUB_REF_NAME-win64"
+          $package = Join-Path $env:RUNNER_TEMP $name
+          ./tools/package_windows.ps1 -Sdk $env:EVE_SDK -Output $package
+          Copy-Item -LiteralPath "docs/releases/$env:GITHUB_REF_NAME.md" -Destination "$package/README.md"
+          # Assert both PE binaries really are x64, even though the SDK is named win32.
+          foreach ($binary in @("$package/eve.exe", "$package/native/bin/mario_audio.dll")) {
+            $bytes = [IO.File]::ReadAllBytes($binary)
+            $pe = [BitConverter]::ToInt32($bytes, 0x3c)
+            if ([BitConverter]::ToUInt16($bytes, $pe + 4) -ne 0x8664) { throw "Not x64: $binary" }
+          }
+          $forbidden = Get-ChildItem -LiteralPath $package -Recurse -File |
+            Where-Object { $_.Extension -in '.nes','.fds','.mss','.sav','.log' }
+          if ($forbidden) { throw 'Unexpected ROM, state or log in package' }
+          $metadata = @{version=$env:GITHUB_REF_NAME; commit=$env:GITHUB_SHA; platform='win64'; engine='EVEngine v0.6.0'}
+          $metadata | ConvertTo-Json | Set-Content -LiteralPath "$package/build-info.json" -Encoding utf8
+          $zip = Join-Path $env:RUNNER_TEMP "$name.zip"
+          Compress-Archive -LiteralPath $package -DestinationPath $zip -CompressionLevel Optimal
+          $hash = (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$hash  $name.zip" | Set-Content -LiteralPath "$zip.sha256" -Encoding ascii
+          "RELEASE_ZIP=$zip" >> $env:GITHUB_ENV
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          gh release create $env:GITHUB_REF_NAME $env:RELEASE_ZIP "$env:RELEASE_ZIP.sha256" `
+            --verify-tag --title $env:GITHUB_REF_NAME --notes-file "docs/releases/$env:GITHUB_REF_NAME.md"
+          if ($LASTEXITCODE) { throw 'Release publication failed' }
