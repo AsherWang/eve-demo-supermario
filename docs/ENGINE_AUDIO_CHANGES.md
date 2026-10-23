@@ -62,10 +62,11 @@ EVEngine v0.6.0 Windows Release SDK。以下命令从仓库根目录执行：
 
 省略 `-Sdk` 时脚本使用本机用户目录下的 EVEngine SDK 缓存路径，见脚本默认参数。
 默认编译目录为仓库外的 `../builds/super-mario-native-audio`；插件复制到已忽略的
-`native/bin/mario_audio.dll`。构建脚本会执行 CTest。
+`native/bin/mario_audio.dll`，同时生成 GUI 启动器 `native/bin/SuperMario.exe`。构建脚本会执行 CTest。
 
 打包输出为仓库外 `../builds/super-mario-native-audio-<时间>-win64`，双击其中的
-`Play.cmd` 启动。默认包包含 SDK 运行库、游戏脚本、素材和插件，不包含 ROM。
+`SuperMario.exe`（或 `Play.cmd`）启动。启动器不会显示控制台；EVEngine 宿主位于
+`runtime/eve.exe`，其输出写入 `game.log`。默认包包含 SDK 运行库、游戏脚本、素材和插件，不包含 ROM。
 不要改名 `eve.exe`：SDK 导入库绑定该宿主名称。当前采用松散目录包，不支持直接
 融合成单 EXE；外部 DLL/WAV 如需单文件分发还需另做解包和加载设计。
 

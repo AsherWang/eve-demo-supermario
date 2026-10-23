@@ -44,17 +44,22 @@ jobs:
           } else {
             (Get-Content -LiteralPath '.release/version' -Raw).Trim()
           }
-          if ($version -notmatch '^0\.\d+$') { throw 'Unexpected release version' }
+          if ($version -notmatch '^0\.\d+(\.\d+)?$') { throw 'Unexpected release version' }
           "VERSION=$version" >> $env:GITHUB_ENV
           $name = "super-mario-$version-win64"
           $package = Join-Path $env:RUNNER_TEMP $name
           ./tools/package_windows.ps1 -Sdk $env:EVE_SDK -Output $package
           Copy-Item -LiteralPath "docs/releases/$version.md" -Destination "$package/README.md"
           # Assert both PE binaries really are x64, even though the SDK is named win32.
-          foreach ($binary in @("$package/eve.exe", "$package/native/bin/mario_audio.dll")) {
+          foreach ($binary in @("$package/SuperMario.exe", "$package/runtime/eve.exe", "$package/native/bin/mario_audio.dll")) {
             $bytes = [IO.File]::ReadAllBytes($binary)
             $pe = [BitConverter]::ToInt32($bytes, 0x3c)
             if ([BitConverter]::ToUInt16($bytes, $pe + 4) -ne 0x8664) { throw "Not x64: $binary" }
+          }
+          $launcher = [IO.File]::ReadAllBytes("$package/SuperMario.exe")
+          $launcherPe = [BitConverter]::ToInt32($launcher, 0x3c)
+          if ([BitConverter]::ToUInt16($launcher, $launcherPe + 24 + 68) -ne 2) {
+            throw 'SuperMario.exe must use the Windows GUI subsystem'
           }
           $forbidden = Get-ChildItem -LiteralPath $package -Recurse -File |
             Where-Object { $_.Extension -in '.nes','.fds','.mss','.sav','.log' }
@@ -75,6 +80,12 @@ jobs:
         run: |
           gh release view $env:VERSION --repo $env:GH_REPO *> $null
           if (!$LASTEXITCODE) { Write-Host "Release $env:VERSION already exists"; exit 0 }
-          gh release create $env:VERSION $env:RELEASE_ZIP $env:RELEASE_CHECKSUM `
-            --verify-tag --title $env:VERSION --notes-file "docs/releases/$env:VERSION.md"
+          $releaseArgs = @(
+            'release', 'create', $env:VERSION, $env:RELEASE_ZIP, $env:RELEASE_CHECKSUM,
+            '--title', $env:VERSION, '--notes-file', "docs/releases/$env:VERSION.md"
+          )
+          if ($env:GITHUB_REF_TYPE -ne 'tag') {
+            $releaseArgs += @('--target', $env:GITHUB_SHA)
+          }
+          & gh @releaseArgs
           if ($LASTEXITCODE) { throw 'Release publication failed' }

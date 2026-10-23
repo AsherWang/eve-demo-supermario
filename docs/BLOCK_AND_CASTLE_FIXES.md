@@ -40,3 +40,9 @@
 
 前一轮金币修复也包含在当前工作区：绘制使用来源方块相对位移，避免高层金币及“200”分数
 沿用低层方块的绝对屏幕坐标；相应高度差、完整生命周期及重叠金币自测保留。
+
+## 启动器与控制台窗口
+
+EVEngine v0.6.0 的 `eve.exe` 使用 Console 子系统，直接启动必然创建控制台。发布包因此
+新增 GUI 子系统 `SuperMario.exe` 启动器，以 `CREATE_NO_WINDOW` 启动 `runtime/eve.exe`，
+并将 stdout/stderr 写入 `game.log`。引擎宿主和插件保持 x64，未修改引擎本体。

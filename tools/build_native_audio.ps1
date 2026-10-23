@@ -20,4 +20,5 @@ if ($LASTEXITCODE) { throw 'Native audio build failed' }
 if ($LASTEXITCODE) { throw 'Native audio tests failed' }
 New-Item -ItemType Directory -Force -Path $OutputDir | Out-Null
 Copy-Item -LiteralPath "$BuildDir/Release/mario_audio.dll" -Destination $OutputDir
-Write-Host "Native audio built: $OutputDir/mario_audio.dll"
+Copy-Item -LiteralPath "$BuildDir/Release/SuperMario.exe" -Destination $OutputDir
+Write-Host "Native audio and GUI launcher built: $OutputDir"

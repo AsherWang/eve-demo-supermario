@@ -41,7 +41,7 @@ eve run
 ```
 
 The native plugin build needs Visual Studio 2022 C++ Build Tools and the matching
-Windows Release EVEngine SDK. For a standalone Windows folder with `Play.cmd`:
+Windows Release EVEngine SDK. For a standalone Windows folder, launch `SuperMario.exe`:
 
 ```powershell
 ./tools/package_windows.ps1
