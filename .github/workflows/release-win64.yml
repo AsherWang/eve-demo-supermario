@@ -2,7 +2,9 @@ name: Release Win64
 
 on:
   push:
+    branches: [main]
     tags: ['0.*']
+    paths: ['.release/version']
 
 permissions:
   contents: read
@@ -37,11 +39,17 @@ jobs:
       - name: Build and test Win64 package
         run: |
           $ErrorActionPreference = 'Stop'
-          if ($env:GITHUB_REF_NAME -notmatch '^0\.\d+$') { throw 'Unexpected release version' }
-          $name = "super-mario-$env:GITHUB_REF_NAME-win64"
+          $version = if ($env:GITHUB_REF_TYPE -eq 'tag') {
+            $env:GITHUB_REF_NAME
+          } else {
+            (Get-Content -LiteralPath '.release/version' -Raw).Trim()
+          }
+          if ($version -notmatch '^0\.\d+$') { throw 'Unexpected release version' }
+          "VERSION=$version" >> $env:GITHUB_ENV
+          $name = "super-mario-$version-win64"
           $package = Join-Path $env:RUNNER_TEMP $name
           ./tools/package_windows.ps1 -Sdk $env:EVE_SDK -Output $package
-          Copy-Item -LiteralPath "docs/releases/$env:GITHUB_REF_NAME.md" -Destination "$package/README.md"
+          Copy-Item -LiteralPath "docs/releases/$version.md" -Destination "$package/README.md"
           # Assert both PE binaries really are x64, even though the SDK is named win32.
           foreach ($binary in @("$package/eve.exe", "$package/native/bin/mario_audio.dll")) {
             $bytes = [IO.File]::ReadAllBytes($binary)
@@ -51,19 +59,22 @@ jobs:
           $forbidden = Get-ChildItem -LiteralPath $package -Recurse -File |
             Where-Object { $_.Extension -in '.nes','.fds','.mss','.sav','.log' }
           if ($forbidden) { throw 'Unexpected ROM, state or log in package' }
-          $metadata = @{version=$env:GITHUB_REF_NAME; commit=$env:GITHUB_SHA; platform='win64'; engine='EVEngine v0.6.0'}
+          $metadata = @{version=$version; commit=$env:GITHUB_SHA; platform='win64'; engine='EVEngine v0.6.0'}
           $metadata | ConvertTo-Json | Set-Content -LiteralPath "$package/build-info.json" -Encoding utf8
           $zip = Join-Path $env:RUNNER_TEMP "$name.zip"
           Compress-Archive -LiteralPath $package -DestinationPath $zip -CompressionLevel Optimal
           $hash = (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash.ToLowerInvariant()
           "$hash  $name.zip" | Set-Content -LiteralPath "$zip.sha256" -Encoding ascii
           "RELEASE_ZIP=$zip" >> $env:GITHUB_ENV
+          "RELEASE_CHECKSUM=$zip.sha256" >> $env:GITHUB_ENV
 
       - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          gh release create $env:GITHUB_REF_NAME $env:RELEASE_ZIP "$env:RELEASE_ZIP.sha256" `
-            --verify-tag --title $env:GITHUB_REF_NAME --notes-file "docs/releases/$env:GITHUB_REF_NAME.md"
+          gh release view $env:VERSION --repo $env:GH_REPO *> $null
+          if (!$LASTEXITCODE) { Write-Host "Release $env:VERSION already exists"; exit 0 }
+          gh release create $env:VERSION $env:RELEASE_ZIP $env:RELEASE_CHECKSUM `
+            --verify-tag --title $env:VERSION --notes-file "docs/releases/$env:VERSION.md"
           if ($LASTEXITCODE) { throw 'Release publication failed' }
