@@ -90,6 +90,8 @@ python tools/parity/capture_koopa_bounce.py --origin-state local-parity/referenc
 
 采集脚本保存 ROM、存档与输出哈希；固定初始 RAM 的 Lua 场景位于 `tests/parity/fixtures/koopa-bounce.lua.in`。这属于专项受控场景验证，不代表 1-2 整关已验收；蘑菇和击飞生命周期自检也不是逐帧 ROM 对照。
 
+本次合并后运行 11 条现有回归：1-1 的 8 条全部通过；1-2 的 idle、walk、route 仍仅在既有采样画面门禁失败，产物、状态、事件、APU 和音频检查通过。运行时音质门禁通过，整体套件保留失败状态，没有放宽画面阈值。Win64 构建、CTest 混音测试、打包和首帧显示/关闭检查通过。
+
 ## 自定义安装路径
 
 原生构建与打包支持 `-Sdk <目录>`。Python 对照工具优先读取 `EVE_EXE`、
