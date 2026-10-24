@@ -912,8 +912,38 @@ function drawIntermediateLives(g) {
     screenTexture(assets.hudFont[g.lives], 144.0, 112.0, 8.0, 8.0);
 }
 
+// saveFramePng reads the last presented frame, so the parity capture observes
+// the preceding draw.  Advance the blanking windows accordingly; otherwise the
+// staged area spawn leaks onto the screen as a one-frame teleport.
+function areaTransitionOverlay(g) {
+    if (g.state == "areaReload") {
+        if (g.areaReloadTarget == "underground") {
+            if (g.areaReloadFrames <= 3)
+                return "sky";
+            if (g.areaReloadFrames >= 4 && g.areaReloadFrames <= 25)
+                return "black";
+        } else {
+            if (g.areaReloadFrames <= 22)
+                return "black";
+            if (g.areaReloadFrames >= 23 && g.areaReloadFrames <= 25)
+                return "sky";
+        }
+        return null;
+    }
+    return null;
+}
+
 function renderGame(g) {
     gfx.clear();
+    local transitionOverlay = areaTransitionOverlay(g);
+    if (transitionOverlay != null) {
+        if (transitionOverlay == "black")
+            screenRect(0.0, 0.0, LOGICAL_WIDTH, LOGICAL_HEIGHT, 0.0, 0.0, 0.0);
+        else
+            screenRect(0.0, 0.0, LOGICAL_WIDTH, LOGICAL_HEIGHT,
+                       146.0 / 255.0, 144.0 / 255.0, 1.0);
+        return;
+    }
     if (g.state == "deathReload") {
         // Screen disable first exposes the previous sky backdrop, then the
         // intermediate lives nametable.  The final twelve-count disable wait
@@ -940,7 +970,8 @@ function renderGame(g) {
     // occlude the sprite exactly as the PPU does.
     local playerBehindBackground = g.state == "pipeDown" ||
         g.state == "pipeSide" || g.state == "areaExitEntrance";
-    if (playerBehindBackground) drawPlayer(g);
+    local playerHidden = g.state == "areaReload";
+    if (playerBehindBackground && !playerHidden) drawPlayer(g);
     drawTiles(g);
     drawPowerUps(g, false);
     if (g.area == "main") {
@@ -956,6 +987,6 @@ function renderGame(g) {
                 e.erasedDisplayFrames > 0 && e.erasedSlot == slot))
                 drawEnemy(g, e);
     drawEffects(g);
-    if (!playerBehindBackground) drawPlayer(g);
+    if (!playerBehindBackground && !playerHidden) drawPlayer(g);
     drawHud(g);
 }

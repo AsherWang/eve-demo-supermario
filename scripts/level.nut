@@ -622,6 +622,12 @@ function runSimulationSelfTest() {
     requireSelfTest(undergroundTest.area == "underground" &&
                     undergroundTest.levelCoins.len() == 19,
                     "pipe entry must load ROM bonus room page zero and nineteen coins");
+    local undergroundResumeCount = 0;
+    foreach (sound in undergroundTest.soundEvents)
+        if (sound == "resume_music") undergroundResumeCount += 1;
+    requireSelfTest(undergroundResumeCount == 1,
+                    "pipe entry must queue the underground music exactly once");
+    undergroundTest.soundEvents.clear();
     undergroundTest.input.down = false;
     undergroundTest.input.right = true;
     undergroundTest.player.x = 13.0 * TILE_SIZE - undergroundTest.player.width;
@@ -636,6 +642,55 @@ function runSimulationSelfTest() {
                     undergroundTest.state == "playing" &&
                     undergroundTest.player.x > 160.0 * TILE_SIZE,
                     "bonus-room exit must restore the main area at return pipe");
+    local overworldResumeCount = 0;
+    foreach (sound in undergroundTest.soundEvents)
+        if (sound == "resume_music") overworldResumeCount += 1;
+    requireSelfTest(overworldResumeCount == 1,
+                    "pipe exit must queue the overworld music exactly once");
+
+    local overlayTest = createGame();
+    overlayTest.state = "areaReload";
+    overlayTest.areaReloadTarget = "underground";
+    overlayTest.areaReloadFrames = 1;
+    requireSelfTest(areaTransitionOverlay(overlayTest) == "sky",
+                    "underground load must hide the staged spawn immediately");
+    overlayTest.areaReloadFrames = 3;
+    requireSelfTest(areaTransitionOverlay(overlayTest) == "sky",
+                    "underground load must keep the sky through frame 3");
+    overlayTest.areaReloadFrames = 4;
+    requireSelfTest(areaTransitionOverlay(overlayTest) == "black",
+                    "underground load must switch to black on frame 4");
+    overlayTest.areaReloadFrames = 25;
+    requireSelfTest(areaTransitionOverlay(overlayTest) == "black",
+                    "underground load must stay black through frame 25");
+    overlayTest.areaReloadFrames = 26;
+    requireSelfTest(areaTransitionOverlay(overlayTest) == null,
+                    "underground load must expose the prepared scene on frame 26");
+    overlayTest.state = "areaEntrance";
+    overlayTest.areaEntranceFrames = 1;
+    requireSelfTest(areaTransitionOverlay(overlayTest) == null,
+                    "underground entrance must expose the prepared scene");
+    overlayTest.state = "areaReload";
+    overlayTest.areaReloadTarget = "main";
+    overlayTest.areaReloadFrames = 1;
+    requireSelfTest(areaTransitionOverlay(overlayTest) == "black",
+                    "overworld return must start with a black screen");
+    overlayTest.areaReloadFrames = 22;
+    requireSelfTest(areaTransitionOverlay(overlayTest) == "black",
+                    "overworld return must stay black through frame 22");
+    overlayTest.areaReloadFrames = 23;
+    requireSelfTest(areaTransitionOverlay(overlayTest) == "sky",
+                    "overworld return must expose the sky on frame 23");
+    overlayTest.areaReloadFrames = 25;
+    requireSelfTest(areaTransitionOverlay(overlayTest) == "sky",
+                    "overworld return must keep the sky through frame 25");
+    overlayTest.areaReloadFrames = 26;
+    requireSelfTest(areaTransitionOverlay(overlayTest) == null,
+                    "overworld return must expose the prepared scene on frame 26");
+    overlayTest.state = "areaExitEntrance";
+    overlayTest.areaEntranceFrames = 1;
+    requireSelfTest(areaTransitionOverlay(overlayTest) == null,
+                    "overworld entrance must expose the prepared scene");
 
     local t = createGame();
     t.goombas = [];

@@ -272,6 +272,9 @@ function updateAreaReload(g) {
     } else if (frame == 25) {
         parityRecordEvent(g, "music",
             g.areaReloadTarget == "underground" ? "underground" : "overworld");
+        // The pipe effect stopped the previous track.  Queue the ROM's area
+        // music handoff for the native mixer as well as recording the event.
+        g.soundEvents.append("resume_music");
     } else if (frame == 26) {
         if (g.areaReloadTarget == "underground") {
             resetPlayerForArea(g, 24, 32);
