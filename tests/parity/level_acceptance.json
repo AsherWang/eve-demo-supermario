@@ -23,7 +23,8 @@
       "required_cases": [],
       "supplemental_cases": [
         "world-1-2-idle",
-        "world-1-2-walk"
+        "world-1-2-walk",
+        "world-1-2-route"
       ],
       "route_review": null,
       "required_branches": [],

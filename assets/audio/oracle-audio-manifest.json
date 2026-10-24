@@ -208,6 +208,16 @@
       "timer_freeze_after_frame": 700,
       "note_length_table_adder": 8,
       "duration_frames": null
+    },
+    "timer_tick": {
+      "sha256": "59388c8114ea02075e7db4cbae6aab6d9f0627ff926cfab0aea606781068e802",
+      "sample_frames": 15906,
+      "queue_address": 254,
+      "queue_value": 16,
+      "emulated_frames": 20,
+      "timer_freeze_after_frame": 700,
+      "note_length_table_adder": 0,
+      "duration_frames": null
     }
   }
 }

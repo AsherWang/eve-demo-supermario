@@ -1101,6 +1101,17 @@ function runSimulationSelfTest() {
     updateCourseClear(clearMusicTest,FIXED_DT);
     requireSelfTest(clearMusicTest.state=="raiseFlag" && clearMusicTest.soundEvents.len()==0,
                     "castle flag rise must not restart the course-clear music");
+    local timerSoundTest=createGame();
+    timerSoundTest.state="timeBonus";timerSoundTest.time=2;
+    timerSoundTest.nesFrameCounter=4;timerSoundTest.soundEvents=[];
+    updateCourseClear(timerSoundTest,FIXED_DT);
+    requireSelfTest(timerSoundTest.soundEvents.len()==1 &&
+                    timerSoundTest.soundEvents[0]=="timer_tick" && timerSoundTest.time==1,
+                    "time conversion must request the runtime timer sound on counter bit 2");
+    timerSoundTest.nesFrameCounter=0;timerSoundTest.soundEvents=[];
+    updateCourseClear(timerSoundTest,FIXED_DT);
+    requireSelfTest(timerSoundTest.soundEvents.len()==0 && timerSoundTest.time==0,
+                    "time conversion must skip timer sound when counter bit 2 is clear");
     enterKoopaShell(testKoopa);
     requireSelfTest(testKoopa.state == "shell" && testKoopa.vx == 0.0 &&
                     testKoopa.shellFrames == 16 * 21,

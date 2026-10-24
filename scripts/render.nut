@@ -913,7 +913,10 @@ function drawHud(g) {
     drawHudGlyphs([0x1D, 0x12, 0x16, 0x0E], 200.0, 16.0); // TIME
     if (!(parityIsEnabled() && g.parity.frame == 0) &&
         g.state != "areaExitEntrance")
-        drawHudNumber(g.displayTime, 3, 208.0, 24.0, true);
+        drawHudNumber(g.displayTime, 3, 208.0, 24.0,
+            !(g.state == "timeBonus" || g.state == "raiseFlag" ||
+              g.state == "fireworks" || g.state == "postClearDelay" ||
+              g.state == "levelComplete"));
 
     if (g.state == "gameOver") {
         screenRect(0.0, 0.0, LOGICAL_WIDTH, LOGICAL_HEIGHT, 0.0, 0.0, 0.0);

@@ -12,7 +12,7 @@ function loadAudio() {
         "jump", "jump_big", "coin", "bump", "break", "powerup", "powerup_reveal",
         "oneup", "stomp", "kick", "fireball", "pipe", "death", "flag",
         "course_clear", "game_over", "blast", "overworld", "star", "underground",
-        "hurry", "overworld_fast", "underground_fast", "star_fast"
+        "hurry", "overworld_fast", "underground_fast", "star_fast", "timer_tick"
     ];
     foreach (name in names)
         nativeAudio.loadClip(name, root + "/assets/audio/" + name + ".wav");

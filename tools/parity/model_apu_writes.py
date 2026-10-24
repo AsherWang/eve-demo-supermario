@@ -574,7 +574,7 @@ class SmbApuModel:
                 "fireball": 0x20,
                 "flag": 0x40,
             }
-            sq2 = {"coin": 0x01, "blast": 0x08, "oneup": 0x40}
+            sq2 = {"coin": 0x01, "blast": 0x08, "timer_tick": 0x10, "oneup": 0x40}
             if name == "jump":
                 big = bool(state and state.get("player", {}).get("big"))
                 self.s(0xFF, 0x01 if big else 0x80)

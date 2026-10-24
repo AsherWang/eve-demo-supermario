@@ -2202,10 +2202,8 @@ function updateCourseClear(g, dt) {
     } else if (g.state == "timeBonus") {
         // AwardGameTimerPoints subtracts one timer unit and adds 50 every frame.
         if (g.time > 0) {
-            // The ROM queues Sfx_TimerTick whenever FrameCounter bit 2 is set;
-            // the reference ticks at frames 1295..1298, 1303..1306, and so on.
-            // No timer-tick runtime clip is packaged yet, so this deliberate
-            // omission is reported instead of fabricating an event-only sound.
+            // AwardGameTimerPoints requests the timer sound on FrameCounter bit 2.
+            if ((g.nesFrameCounter & 0x04) != 0) emitSound(g, "timer_tick");
             g.time -= 1;
             g.score += 50;
             g.queuedScore = g.score;
