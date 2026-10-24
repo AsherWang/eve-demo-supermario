@@ -193,7 +193,10 @@ function parityStateJson(g, frame) {
         engineSubroutine = 7;
     } else if (g.state == "areaExitEntrance") {
         engineSubroutine = 7;
-    } else if (g.state == "endLevel") {
+    } else if (g.state == "endLevel" || g.state == "timeBonus" ||
+               g.state == "raiseFlag" || g.state == "fireworks" ||
+               g.state == "postClearDelay") {
+        // These host states are phases of the ROM's PlayerEndLevel routine.
         engineSubroutine = 5;
     } else if (g.state == "flagSlide") {
         engineSubroutine = 4;
