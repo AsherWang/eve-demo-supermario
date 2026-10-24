@@ -1826,16 +1826,31 @@ function updateGoombas(g, dt) {
         if (e.kind == "koopa" && e.state == "shell") {
             e.shellFrames = e.intervalTimer * NES_INTERVAL_FRAMES;
             e.stateTimer = e.shellFrames * FIXED_DT;
-            if (e.intervalTimer == 0) reviveKoopa(e,g.nesFrameCounter);
         }
         local playerBoxY = p.y + (p.big && !p.crouching ? 8.0 : 4.0);
         local playerBoxHeight = p.big && !p.crouching ? 24.0 : 12.0;
         local enemyBoxY = e.kind == "goomba" ? e.y + 4.0 : e.y + 9.0;
         local enemyBoxHeight = e.kind == "goomba" ? 6.0 : 12.0;
+        local playerBoxX=p.x+3.0,playerBoxWidth=10.0;
+        local enemyBoxX=e.x+3.0,enemyBoxWidth=10.0;
+        if(e.kind=="koopa") {
+            // TallBBox ($03) is relative to the ROM origin, which stays at
+            // the same Y after a stomp. Only our 14px shell body moves down.
+            local shell=e.state=="shell" || e.state=="shellMoving";
+            enemyBoxY=e.y-(shell?10.0:0.0)+9.0;
+            enemyBoxHeight=13.0;enemyBoxX=e.x+2.0;enemyBoxWidth=13.0;
+            local tall=p.big && !p.crouching;
+            playerBoxX=p.x+(tall?2.0:3.0);playerBoxWidth=tall?13.0:11.0;
+            playerBoxHeight=tall?25.0:13.0;
+        }
+        local touching=overlaps(playerBoxX,playerBoxY,playerBoxWidth,playerBoxHeight,
+                                enemyBoxX,enemyBoxY,enemyBoxWidth,enemyBoxHeight);
+        local collisionPass=(g.nesFrameCounter&1)==0;
+        if(e.kind=="koopa" && collisionPass && !touching) e.playerContact=false;
         local stompedThisFrame = false;
-        if ((g.nesFrameCounter & 1) == 0 && !p.dead &&
-            overlaps(p.x + 3.0, playerBoxY, 10.0, playerBoxHeight,
-                     e.x + 3.0, enemyBoxY, 10.0, enemyBoxHeight)) {
+        if (collisionPass && !p.dead && touching &&
+            (e.kind!="koopa" || !e.playerContact)) {
+            if(e.kind=="koopa") e.playerContact=true;
             if (p.starTimer > 0.0) {
                 launchDefeatedEnemy(g, e);
                 parityRecordEvent(g, "gameplay", "star_enemy_hit",
@@ -1846,7 +1861,11 @@ function updateGoombas(g, dt) {
             // ChkForPlayerInjury branches directly to EnemyStomped for a
             // positive Player_Y_Speed. Koopa's body collision box begins
             // below its head, so a previous-feet/head test rejects valid hits.
-            if (p.nesYSpeed > 0) {
+            if (e.kind == "koopa" && e.state == "shell") {
+                // HandlePECollisions kicks a stationary shell even when
+                // Mario is descending. Only a moving shell is stomped again.
+                kickKoopaShell(g,e);
+            } else if (p.nesYSpeed > 0) {
                 parityRecordEvent(g, "gameplay", "enemy_stomp",
                     ",\"enemy\":\"" + e.kind + "\",\"enemy_state\":\"" + e.state + "\"");
                 if (e.kind == "goomba") {
@@ -1880,10 +1899,7 @@ function updateGoombas(g, dt) {
                 e.stompDisplayLead = e.x > floor(e.x) ? 1.0 : 0.0;
                 e.x = floor(e.x).tofloat();
                 stompedThisFrame = true;
-            } else if (e.kind == "koopa" && e.state == "shell" &&
-                       e.collisionCooldown <= 0.0) {
-                kickKoopaShell(g, e);
-            } else if (e.collisionCooldown <= 0.0) {
+            } else if (e.kind == "koopa" || e.collisionCooldown <= 0.0) {
                 hurtPlayer(g, e);
             } else {
                 // A newly kicked/stopped shell briefly ignores the player who
@@ -1895,6 +1911,8 @@ function updateGoombas(g, dt) {
         // advance the enemy another half pixel.
         if (!playerWasDead && p.dead) continue;
         if (stompedThisFrame) continue;
+        if(e.kind=="koopa" && e.state=="shell" && e.intervalTimer==0)
+            reviveKoopa(e,g.nesFrameCounter);
         moveEnemyBody(g, e, dt);
         // OffscreenBoundsCheck reaches `SBC #$48` with carry clear for a
         // normal Goomba: the preceding `CPY #con_piranha_plant` fails with

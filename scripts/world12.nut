@@ -159,7 +159,12 @@ function buildWorld12(g, stage="underground") {
         decodeWorld11Foreground(g);
         // Enemy pointer $25:$0b reuses the end of GroundArea6.
         decodeWorld11Enemies(g);
-        foreach(localEnemy in g.goombas) if(localEnemy.x<11*256) localEnemy.alive=false;
+        // PositionEnemyObj skips objects behind the INITIAL RIGHT edge,
+        // not just behind screen-left. The last 1-1 group at page $0b:$10
+        // has already been passed when 1-2 enters this page from its pipe.
+        local entranceRight=12*256.0-1.0;
+        foreach(localEnemy in g.goombas)
+            if(localEnemy.x<entranceRight) localEnemy.alive=false;
     } else {
         decodeWorld12Area(g,stage=="bonus"?ROM_WORLD_1_2_BONUS:ROM_WORLD_1_2_AREA,
                           stage=="bonus"?2:0,stage=="bonus"?2:12);
@@ -486,6 +491,8 @@ function runWorld12SelfTest() {
     startWorld12Transition(g,"exit","side");
     for(local i=0;i<284;i+=1) updateWorld12Transition(g);
     requireSelfTest(g.stage=="exit" && g.area=="main","1-2 surface exit");
+    foreach(enemy in g.goombas)
+        requireSelfTest(!enemy.alive,"1-2 pipe exit must skip the passed 1-1 enemy groups");
     startWorld12(g,"intro");
     foreach(row in [10,11,12])
         requireSelfTest(getTile(g,13,row)==TILE_PIPE_SHAFT_RIGHT,

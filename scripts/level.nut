@@ -29,6 +29,7 @@ function makeEnemyAt(x, supportRow, kind) {
         enemyCollisionMask = 0,
         shellFrames = 0,
         collisionCooldown = 0.0,
+        playerContact = false,
         shellChain = 0,
         shellDirection = -1,
         kind = kind,

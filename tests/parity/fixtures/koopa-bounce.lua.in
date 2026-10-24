@@ -1,0 +1,23 @@
+-- Explicit RAM-seeded ground-koopa fixture; not a natural whole-level replay.
+local mem=emu.memType.nesInternalRam
+local file=assert(io.open(__OUTPUT_PATH__,'w'))
+local frame=-1
+local function write(a,v) emu.write(a,v,mem) end
+emu.addEventCallback(function()
+  if frame<0 then
+    frame=0
+    write(0x86,128);write(0x6d,0);write(0xce,164);write(0xb5,1)
+    write(0x1d,1);write(0x9f,3);write(0x433,254);write(0x416,0)
+    write(0x709,112);write(0x70a,112);write(0x708,176);write(0x706,1)
+    write(0x754,1);write(0x756,0);write(0x9,255)
+    for slot=0,4 do write(0x0f+slot,0) end
+    write(0x0f,1);write(0x16,0);write(0x1e,0);write(0x87,128)
+    write(0x6e,0);write(0xcf,184);write(0xb6,1);write(0x58,248)
+    write(0xa0,0);write(0x46,2);write(0x49a,3);write(0x796,0)
+  elseif frame<40 then
+    frame=frame+1
+    local y=emu.read(0x9f,mem);if y>=128 then y=y-256 end
+    file:write(string.format('{"frame":%d,"y":%d,"speed":%d,"force":%d,"dummy":%d,"enemy_state":%d}\n',frame,emu.read(0xce,mem),y,emu.read(0x433,mem),emu.read(0x416,mem),emu.read(0x1e,mem)))
+    file:flush()
+  end
+end,emu.eventType.endFrame)
