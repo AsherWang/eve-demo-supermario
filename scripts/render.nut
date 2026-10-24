@@ -704,9 +704,9 @@ function drawEnemy(g, e) {
             assets.world12.goombaDefeated : assets.enemies.goombaDefeated;
     } else if (e.kind == "koopa" &&
                (visualState == "shell" || visualState == "shellMoving")) {
-        // EnemyGfxHandler toggles both stationary and moving shell frames on
-        // FrameCounter bit 3: eight frames per image.
-        local shellFrame = floor(g.simTime * NES_FRAME_RATE / 8.0).tointeger() % 2;
+        // The first image is the fully closed shell. The exposed-feet image
+        // is a late revival warning, never the moving shell's normal frame.
+        local shellFrame = visualState == "shellMoving" ? 0 : e.displayShellFrame;
         texture = assets.enemies.greenShell[shellFrame];
         y -= 10.0;
     } else if (e.kind == "koopa") {

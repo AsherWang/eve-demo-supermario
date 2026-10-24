@@ -17,6 +17,9 @@ function makeEnemyAt(x, supportRow, kind) {
         queuedState = "walking",
         preparedState = "walking",
         displayState = "walking",
+        queuedShellFrame = 0,
+        preparedShellFrame = 0,
+        displayShellFrame = 0,
         erasedDisplayFrames = 0,
         erasedSlot = -1,
         stompDisplayLead = 0.0,
@@ -531,6 +534,8 @@ function requireSelfTest(condition, message) {
 }
 
 function runSimulationSelfTest() {
+    runPowerUpStatusSelfTest();
+    runKoopaRevivalSelfTest();
     requireSelfTest(ROM_BACK_SCENERY_OFFSETS.len() == 3,
                     "ROM scenery offset table must contain three themes");
     requireSelfTest(ROM_BACK_SCENERY_DATA.len() == 144,
@@ -1338,4 +1343,59 @@ function runSimulationSelfTest() {
                     "new fireworks must not lose a rendered frame on their spawn tick");
 
     print("World 1-1 simulation self-test passed.\n");
+}
+
+function runPowerUpStatusSelfTest() {
+    foreach(kind in ["mushroom","flower"]) {
+        for(local status=0;status<3;status+=1) {
+            local g=createGame(),p=g.player;
+            p.big=status>0;p.fire=status==2;p.height=p.big?32.0:16.0;
+            p.y=208.0-p.height;
+            p.transformFrames=status==2?7:0;
+            p.transformKind=status==2?"fire":"grow";
+            spawnPowerUp(g,21,9,kind);
+            collectPowerUp(g,g.powerups[0]);
+            requireSelfTest(p.big && p.height==32 && p.y+p.height==208,
+                            "power-up must grow once while preserving the player's feet");
+            requireSelfTest(p.fire==(status>0),
+                            "a small player must not gain fire from an existing flower");
+            requireSelfTest(p.transformFrames==(status==0?40:(status==1?63:7)),
+                            "pickup must use one growth/fire transition and not restart Fire Mario");
+            requireSelfTest(g.score==1000 && !g.powerups[0].active,
+                            "each power-up must be consumed and scored exactly once");
+        }
+    }
+}
+
+function runKoopaRevivalSelfTest() {
+    for(local counter=0;counter<16;counter+=1) {
+        requireSelfTest(koopaShellAnimationFrame("shell",16,counter)==0 &&
+                        koopaShellAnimationFrame("shell",5,counter)==0,
+                        "a fresh shell must keep its feet hidden at every animation phase");
+        requireSelfTest(koopaShellAnimationFrame("shellMoving",1,counter)==0,
+                        "a moving shell must never show the revival feet");
+        requireSelfTest(koopaShellAnimationFrame("shell",4,counter)==((counter&8)==0?1:0),
+                        "only the last four interval ticks may alternate the shell warning");
+    }
+    foreach(phase in [0,20]) {
+        local g=createGame();
+        local enemy=makeEnemy(20,12,"koopa");
+        enemy.awake=true;enemy.slot=0;
+        g.goombas=[enemy];g.intervalTimerControl=phase;
+        enterKoopaShell(enemy);
+        local lifetime=phase+1+15*NES_INTERVAL_FRAMES;
+        local sawWarning=false;
+        for(local frame=1;frame<lifetime;frame+=1) {
+            simulateFixed(g,FIXED_DT);
+            requireSelfTest(enemy.state=="shell","shell must wait for the shared interval bank");
+            if(enemy.intervalTimer>=5)
+                requireSelfTest(enemy.displayShellFrame==0 && enemy.queuedShellFrame==0,
+                                "shell must not expose feet before its revival warning window");
+            if(enemy.displayShellFrame==1) sawWarning=true;
+        }
+        requireSelfTest(sawWarning,"stationary shell must warn before revival");
+        simulateFixed(g,FIXED_DT);
+        requireSelfTest(enemy.state=="walking" && enemy.height==24 && enemy.intervalTimer==0,
+                        "shell revival must occur on the shared interval expiry");
+    }
 }

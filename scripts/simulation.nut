@@ -1214,8 +1214,9 @@ function collectPowerUp(g, item) {
         p.transformTimer = 40.0 * FIXED_DT;
         p.transformToBig = true;
         p.transformKind = "grow";
-    }
-    if (item.kind == "flower") {
+    } else if (!p.fire && (item.kind == "flower" || item.kind == "mushroom")) {
+        // Shroom_Flower_PUp upgrades the status from before this pickup:
+        // small -> Super, Super -> Fire, Fire -> unchanged, for either item.
         p.fire = true;
         p.transformFrames = 63;
         p.transformTimer = 63.0 * FIXED_DT;
@@ -1551,6 +1552,7 @@ function enterKoopaShell(e) {
     e.state = "shell";
     e.stateTimer = KOOPA_REVIVE_FRAMES * FIXED_DT;
     e.shellFrames = KOOPA_REVIVE_FRAMES;
+    e.intervalTimer = 0x10;
     e.height = 14.0;
     e.y = bottom - e.height;
     e.vx = 0.0;
@@ -1563,6 +1565,7 @@ function stopKoopaShell(e) {
     e.state = "shell";
     e.stateTimer = KOOPA_REVIVE_FRAMES * FIXED_DT;
     e.shellFrames = KOOPA_REVIVE_FRAMES;
+    e.intervalTimer = 0x10;
     e.vx = 0.0;
     e.shellChain = 0;
     e.collisionCooldown = 0.12;
@@ -1570,7 +1573,7 @@ function stopKoopaShell(e) {
 
 function kickKoopaShell(g, e) {
     local scoreControl = 3 + g.stompChain;
-    local remainingIntervals = floor((e.shellFrames + 20) / 21).tointeger();
+    local remainingIntervals = e.intervalTimer;
     if (remainingIntervals < 3) {
         local nearRevivalControls = [10, 6, 4];
         scoreControl = nearRevivalControls[remainingIntervals];
@@ -1589,15 +1592,25 @@ function kickKoopaShell(g, e) {
     emitSound(g, "kick");
 }
 
-function reviveKoopa(e) {
+function reviveKoopa(e, frameCounter = 0) {
     local bottom = e.y + e.height;
     e.state = "walking";
     e.stateTimer = 0.0;
     e.shellFrames = 0;
+    e.intervalTimer = 0;
     e.height = 24.0;
     e.y = bottom - e.height;
+    e.shellDirection = (frameCounter & 1) == 0 ? 1 : -1;
     e.vx = e.shellDirection * KOOPA_WALK_SPEED;
     e.collisionCooldown = 0.2;
+}
+
+function koopaShellAnimationFrame(state, intervalTimer, frameCounter) {
+    // EnemyGfxHandler keeps the plain shell while the interval timer is >=5.
+    // Only its last four intervals may expose feet; a kicked shell suppresses
+    // this animation regardless of how long it has moved.
+    if (state != "shell" || intervalTimer >= 5) return 0;
+    return (frameCounter & 0x08) == 0 ? 1 : 0;
 }
 
 function awardScoreControl(g, control) {
@@ -1764,6 +1777,8 @@ function updateGoombas(g, dt) {
     foreach (e in g.goombas) {
         if (!e.alive) continue;
         if (p.dead) continue;
+        // Sample before player collision, then retain OAM presentation latency.
+        e.queuedShellFrame = koopaShellAnimationFrame(e.state,e.intervalTimer,g.nesFrameCounter);
         local playerWasDead = p.dead;
         if (e.collisionCooldown > 0.0) {
             e.collisionCooldown -= dt;
@@ -1809,9 +1824,9 @@ function updateGoombas(g, dt) {
             continue;
         }
         if (e.kind == "koopa" && e.state == "shell") {
-            e.shellFrames -= 1;
+            e.shellFrames = e.intervalTimer * NES_INTERVAL_FRAMES;
             e.stateTimer = e.shellFrames * FIXED_DT;
-            if (e.shellFrames <= 0) reviveKoopa(e);
+            if (e.intervalTimer == 0) reviveKoopa(e,g.nesFrameCounter);
         }
         local playerBoxY = p.y + (p.big && !p.crouching ? 8.0 : 4.0);
         local playerBoxHeight = p.big && !p.crouching ? 24.0 : 12.0;
@@ -2612,6 +2627,8 @@ function simulateFixed(g, dt) {
         enemy.displayState = enemy.preparedState;
         enemy.preparedState = enemy.queuedState;
         enemy.queuedState = enemy.state;
+        enemy.displayShellFrame = enemy.preparedShellFrame;
+        enemy.preparedShellFrame = enemy.queuedShellFrame;
     }
     updateCamera(g);
     // sub_game_core_routine reaches UpdateScrollVariables for every gameplay

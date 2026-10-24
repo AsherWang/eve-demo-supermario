@@ -93,6 +93,11 @@ eve_init = function() {
             }
         }
         enterKoopaShell(previewKoopa);
+        previewKoopa.awake = true;
+        previewKoopa.slot = 0;
+        previewKoopa.queuedState = "shell";
+        previewKoopa.preparedState = "shell";
+        previewKoopa.displayState = "shell";
         game.cameraX = previewKoopa.x - 112.0;
         game.player.x = previewKoopa.x - 32.0;
         game.player.y = 192.0;
