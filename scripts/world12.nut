@@ -96,12 +96,16 @@ function decodeWorld12Area(g, data, firstPage = 0, lastPage = 12) {
 
 function decodeWorld12Enemies(g) {
     local data=ROM_WORLD_1_2_ENEMIES, page=0, cursor=0;
+    local pageSelected=false;
     while(cursor+1<data.len() && data[cursor]!=255) {
         local a=data[cursor], b=data[cursor+1], row=a&15;
-        if((b&128)!=0) page+=1;
-        if(row==15 && (b&128)==0) {page=b&63;cursor+=2;continue;}
+        // EnemyObjectPageSel stays set across an explicit row-$0f page
+        // command until the next real object. Its high bit must not advance
+        // that page a second time (notably $0f,$06 followed by $60,$b8).
+        if((b&128)!=0 && !pageSelected) {page+=1;pageSelected=true;}
+        if(row==15 && !pageSelected) {page=b&63;pageSelected=true;cursor+=2;continue;}
         local x=(page*16+(a>>4))*16.0;
-        if(row==14) {cursor+=3;continue;}
+        if(row==14) {cursor+=3;pageSelected=false;continue;}
         local id=b&63;
         if(id==0 || id==3 || id==6) {
             local e=makeEnemyAt(x,row+1,id==6?"goomba":"koopa");
@@ -110,12 +114,16 @@ function decodeWorld12Enemies(g) {
         } else if(id>=0x37 && id<0x3f) {
             appendEnemyGroup(g,x/16.0,id);
         } else if(id==0x26 || id==0x27) {
-            // PosPlatform adds $0c. LargeLiftUp/Down use signed 8.8 speed
-            // $ff:$10 / $00:$f0, i.e. -240/256 and +240/256 px per frame.
-            g.platforms.append({x=x+12.0,y=row*16.0+32.0,previousY=row*16.0+32.0,
-                speed=id==0x26?-240.0/256.0:240.0/256.0,width=48.0,awake=false});
+            // ProcessEnemyData stores the stream row directly as the 8-bit
+            // Enemy_Y_Position. PosPlatform then adds $0c horizontally only.
+            local platformY=row*16.0;
+            // LargeLiftUp/Down use signed 8.8 speed $ff:$10 / $00:$f0.
+            g.platforms.append({x=x+12.0,y=platformY,initialY=platformY,
+                previousY=platformY,id=id,direction=id==0x26?-1:1,
+                speed=id==0x26?-240.0/256.0:240.0/256.0,
+                width=48.0,awake=false});
         }
-        cursor+=2;
+        cursor+=2;pageSelected=false;
     }
 }
 
@@ -304,6 +312,43 @@ function tryWorld12Pipe(g) {
     return false;
 }
 
+function updateWorld12Platforms(g) {
+    local p=g.player;
+    foreach(platform in g.platforms) {
+        if(!platform.awake) {
+            local parserBoundary=floor((g.cameraX+LOGICAL_WIDTH-1.0+48.0)/16.0)*16.0;
+            if(platform.x-12.0>parserBoundary) continue;
+            platform.awake=true;
+        }
+
+        // RunLargePlatform checks collision at the old coordinate, advances
+        // Enemy_Y_Position, then calls PositionPlayerOnVPlat. Keep that order.
+        local previousY=platform.y;
+        local unwrappedY=previousY+platform.speed;
+        platform.previousY=previousY;
+        platform.y=unwrappedY;
+        if(platform.y<0.0) platform.y+=256.0;
+        if(platform.y>=256.0) platform.y-=256.0;
+
+        if(p.dead || p.nesYSpeed<0.0) continue;
+        local previousFeet=p.previousY+p.height;
+        local currentFeet=p.y+p.height;
+        local wasRiding=abs(previousFeet-previousY)<=2.0;
+        local crossedTop=previousFeet<=previousY+2.0 &&
+            currentFeet>=unwrappedY;
+        if(!wasRiding && !crossedTop) continue;
+        if(p.x+p.width<=platform.x || p.x>=platform.x+platform.width) continue;
+
+        // PositionPlayerOnVPlat clears Player_Y_Speed and MoveForce. The low
+        // Y byte wraps at 256, so the rider crosses the same screen boundary.
+        p.y=platform.y-p.height;
+        p.grounded=true;
+        p.vy=0.0;
+        p.nesYSpeed=0;
+        p.nesYMoveForce=0;
+    }
+}
+
 function updateWorld12Actors(g) {
     local p=g.player;
     foreach(plant in g.plants) {
@@ -337,26 +382,89 @@ function updateWorld12Actors(g) {
             else hurtPlayer(g);
         }
     }
-    foreach(platform in g.platforms) {
-        if(!platform.awake && platform.x<=g.cameraX+304) platform.awake=true;
-        if(!platform.awake) continue;
-        platform.previousY=platform.y;
-        platform.y+=platform.speed;
-        if(platform.y<0) platform.y+=256;
-        if(platform.y>=256) platform.y-=256;
-        if(!p.dead && p.nesYSpeed>=0 && abs(platform.y-platform.previousY)<2 &&
-           p.previousY+p.height<=platform.previousY+2 &&
-           p.y+p.height>=platform.y && p.x+p.width>platform.x && p.x<platform.x+48) {
-            p.y=platform.y-p.height;p.grounded=true;p.vy=0;p.nesYSpeed=0;
-        }
+    updateWorld12Platforms(g);
+}
+
+function runWorld12LiftSelfTest() {
+    local g=createGame();startWorld12(g,"underground");
+    requireSelfTest(g.platforms.len()==4,"1-2 lift decode count");
+    local expected=[
+        {x=139*16.0+12.0,y=112.0,direction=1},
+        {x=139*16.0+12.0,y=208.0,direction=1},
+        {x=154*16.0+12.0,y=16.0,direction=-1},
+        {x=154*16.0+12.0,y=144.0,direction=-1}
+    ];
+    for(local i=0;i<expected.len();i+=1) {
+        local lift=g.platforms[i],want=expected[i];
+        requireSelfTest(abs(lift.x-want.x)<0.001 && abs(lift.y-want.y)<0.001,
+            "1-2 lift must use ROM row Y and PosPlatform X");
+        requireSelfTest(lift.direction==want.direction &&
+            abs(abs(lift.speed)-240.0/256.0)<0.001,
+            "1-2 large lift must use ROM 8.8 direction and speed");
+        requireSelfTest(getTile(g,floor(lift.x/16).tointeger(),13)==TILE_EMPTY,
+            "ROM lift columns must align with map gaps, not the exit brick wall");
     }
+
+    // ProcessEnemyData admits a platform through its extended right edge;
+    // the first activated frame advances it once, as RunLargePlatform does.
+    g.goombas=[];g.plants=[];
+    local activate=g.platforms[0];
+    g.cameraX=activate.x-12.0-(LOGICAL_WIDTH-1.0+48.0)-1.0;
+    updateWorld12Platforms(g);
+    requireSelfTest(!activate.awake && abs(activate.y-112.0)<0.001,
+        "1-2 lift must remain dormant beyond the parser boundary");
+    g.cameraX=activate.x-12.0-(LOGICAL_WIDTH-1.0+48.0);
+    updateWorld12Platforms(g);
+    requireSelfTest(activate.awake && abs(activate.y-(112.0+15.0/16.0))<0.001,
+        "1-2 lift must activate and move at the ROM parser boundary");
+
+    // Run an ascending lift through several 256-pixel cycles while Mario is
+    // attached. The old 32-pixel seed put his feet 32 pixels inside or below
+    // the lift, and the old one-way contact test dropped him on descent.
+    startWorld12(g,"underground");
+    g.goombas=[];g.plants=[];g.state="playing";g.cameraX=0.0;
+    local rising=g.platforms[3];
+    rising.awake=true;
+    local p=g.player;
+    p.x=rising.x+16.0;p.y=rising.y-p.height;
+    p.previousX=p.x;p.previousY=p.y;
+    p.grounded=true;p.vy=0.0;p.nesYSpeed=0;p.nesYMoveForce=0;
+    local risingWraps=0;
+    for(local frame=0;frame<720;frame+=1) {
+        simulateFixed(g,FIXED_DT);
+        requireSelfTest(abs((p.y+p.height)-rising.y)<0.001,
+            "rider must stay attached to a rising 1-2 lift");
+        if(rising.previousY<32.0 && rising.y>224.0) risingWraps+=1;
+    }
+    requireSelfTest(risingWraps>=2 && abs(rising.x-(154*16.0+12.0))<0.001,
+        "rising 1-2 lift must wrap repeatedly without horizontal drift");
+
+    // Drive a descending lift through its wrap in the opposite direction.
+    startWorld12(g,"underground");
+    g.goombas=[];g.plants=[];g.state="playing";g.cameraX=0.0;
+    local falling=g.platforms[0];
+    falling.awake=true;
+    p=g.player;
+    p.x=falling.x+16.0;p.y=falling.y-p.height;
+    p.previousX=p.x;p.previousY=p.y;
+    p.grounded=true;p.vy=0.0;p.nesYSpeed=0;p.nesYMoveForce=0;
+    local fallingWraps=0;
+    for(local frame=0;frame<400;frame+=1) {
+        simulateFixed(g,FIXED_DT);
+        requireSelfTest(abs((p.y+p.height)-falling.y)<0.001,
+            "rider must stay attached to a descending 1-2 lift");
+        if(falling.previousY>224.0 && falling.y<32.0) fallingWraps+=1;
+    }
+    requireSelfTest(fallingWraps>=1,"descending 1-2 lift must cross the Y wrap");
+    print("World 1-2 lift self-test passed.\n");
 }
 
 function runWorld12SelfTest() {
     local g=createGame();startWorld12(g,"underground");
     requireSelfTest(g.areaWidth==208 && g.level==2,"1-2 area dimensions");
     requireSelfTest(getTile(g,10,9)==TILE_POWERUP_BLOCK,"1-2 opening mushroom at ROM column 10");
-    requireSelfTest(g.platforms.len()==4,"1-2 four ROM lift objects");
+    runWorld12LiftSelfTest();
+    startWorld12(g,"underground");
     requireSelfTest(g.plants.len()==6,"1-2 six ROM pipe plants");
     requireSelfTest(g.sidePipeX==166,"1-2 exit pipe at ROM column 166");
     requireSelfTest(getTile(g,80,13)==TILE_EMPTY,"1-2 gap at ROM column 80");
@@ -432,6 +540,34 @@ function runWorld12EnemyPipeSelfTest() {
         requireSelfTest(enemy.x+16<=leftPipe && enemy.vx<0,
                         "an embedded right-moving enemy must resolve left of the whole pipe");
     }
+}
+
+// Development-only visual scenes; movement uses the same runtime actor passes.
+function setupWorld12ActorPreview(g,scenario) {
+    startWorld12(g,"underground");
+    local p=g.player;
+    p.big=true;p.fire=true;p.height=32;
+    g.goombas=[];
+    if(scenario=="world12-pipes") {
+        g.cameraX=103*16.0-80;p.x=103*16.0-48;p.y=176;p.grounded=true;
+        g.platforms=[];
+        local enemy=makeEnemyAt(103*16.0+8,12,"goomba");
+        enemy.awake=true;enemy.slot=0;g.goombas.append(enemy);
+        for(local frame=0;frame<48;frame+=1) {
+            g.nesFrameCounter=frame;
+            moveEnemyBody(g,enemy,FIXED_DT);
+            updateWorld12Actors(g);
+        }
+    } else {
+        g.plants=[];
+        local lift=g.platforms[3];lift.awake=true;
+        g.cameraX=lift.x-112;p.x=lift.x+16;p.y=lift.y-p.height;
+        p.previousY=p.y;p.grounded=true;
+        for(local frame=0;frame<64;frame+=1) simulateFixed(g,FIXED_DT);
+    }
+    g.displayCameraX=g.cameraX;
+    syncWorld12Player(g);
+    g.state="preview";
 }
 
 function drawWorld12Actors(g, behind) {

@@ -34,7 +34,9 @@ eve_init = function() {
     if (parityIsEnabled() && "PARITY_START_LEVEL" in getroottable() && PARITY_START_LEVEL == 2)
         initializeWorld12Parity(game);
     parityInitialize(game);
-    if (config.previewScenario == "underground") {
+    if (config.previewScenario == "world12-pipes" || config.previewScenario == "world12-lifts") {
+        setupWorld12ActorPreview(game,config.previewScenario);
+    } else if (config.previewScenario == "underground") {
         buildUndergroundBonus(game);
         game.player.x = 40.0;
         game.player.y = 192.0;
@@ -142,7 +144,7 @@ eve_render = function() {
     renderGame(game);
     if (parityIsEnabled()) parityCaptureRenderedFrame(game);
     if (config.capturePreview && !game.previewCaptured && game.simTime > 0.5) {
-        local previewName = "world-1-1-" + config.previewScenario + "-preview.png";
+        local previewName = "world-1-" + game.level + "-" + config.previewScenario + "-preview.png";
         if (gfx.saveFramePng(previewName)) game.previewCaptured = true;
     }
 };
