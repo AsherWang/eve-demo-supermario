@@ -1486,13 +1486,30 @@ function moveEnemyBody(g, e, dt) {
     // RunNormalEnemies checks background at the current actor position and
     // only then dispatches movement.  Side samples are x+$00 and x+$10.
     local probeX = e.vx > 0.0 ? e.x + 16.0 : e.x;
+    if (g.level == 2 && g.area == "underground") probeX += e.vx * dt;
     local tx = floor(probeX / TILE_SIZE).tointeger();
     local top = floor((e.y + 1.0) / TILE_SIZE).tointeger();
     local bottom = floor((e.y + e.height - 1.0) / TILE_SIZE).tointeger();
     local hitWall = false;
+    local wallRow = top;
     for (local ty = top; ty <= bottom; ty += 1)
-        if (isSolidAt(g, tx, ty)) hitWall = true;
+        if (isSolidAt(g, tx, ty)) {hitWall = true;wallRow = ty;}
     if (hitWall) {
+        if (g.level == 2 && g.area == "underground") {
+            // Group spawns can start inside a two-column pipe. A direction
+            // flip alone leaves the probe embedded and flips it back next
+            // frame. Resolve against the entire solid span before turning.
+            local edge = tx;
+            if (e.vx > 0.0) {
+                while (edge >= 0 && isSolidAt(g, edge, wallRow)) edge -= 1;
+                local boundary=(edge + 1) * TILE_SIZE - 16.0;
+                if(e.x>boundary) e.x=boundary;
+            } else {
+                while (edge < g.areaWidth && isSolidAt(g, edge, wallRow)) edge += 1;
+                local boundary=edge * TILE_SIZE.tofloat();
+                if(e.x<boundary) e.x=boundary;
+            }
+        }
         e.vx = -e.vx;
         if (e.kind == "koopa") e.shellDirection = e.vx >= 0.0 ? 1 : -1;
     }

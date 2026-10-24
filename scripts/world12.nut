@@ -314,9 +314,15 @@ function updateWorld12Actors(g) {
                 if(plant.direction>0 && abs(p.x-plant.x)<33) continue;
                 plant.direction=-plant.direction;plant.moving=true;
             }
-            if((g.nesFrameCounter&1)!=0) plant.y+=plant.direction;
-            if(plant.y==plant.baseY || plant.y==plant.baseY-24) {
-                plant.moving=false;plant.timer=64;
+            // MovePiranhaPlant compares only the destination of this leg,
+            // and only after its odd-frame movement. Testing both endpoints
+            // on a skipped frame reverses a new rise at its starting point.
+            if((g.nesFrameCounter&1)!=0) {
+                local target=plant.direction<0?plant.baseY-24:plant.baseY;
+                plant.y=clampValue(plant.y+plant.direction,plant.baseY-24,plant.baseY);
+                if(plant.y==target) {
+                    plant.moving=false;plant.timer=64;
+                }
             }
         }
         foreach(ball in g.fireballs) {
@@ -376,7 +382,56 @@ function runWorld12SelfTest() {
     foreach(row in [10,11,12])
         requireSelfTest(getTile(g,13,row)==TILE_PIPE_SHAFT_RIGHT,
                         "1-2 intro pipe right shaft must reach the floor");
+    runWorld12PlantSelfTest();
+    runWorld12EnemyPipeSelfTest();
     print("World 1-2 simulation self-test passed.\n");
+}
+
+function runWorld12PlantSelfTest() {
+    local g=createGame();startWorld12(g,"underground");
+    local plant=g.plants[0];
+    g.plants=[plant];g.platforms=[];
+    g.cameraX=plant.x-128;g.player.x=plant.x-80;
+    g.nesFrameCounter=0;
+    updateWorld12Actors(g);
+    requireSelfTest(plant.moving && plant.direction==-1 && plant.y==plant.baseY,
+                    "a skipped plant movement frame must not complete the new rise");
+    local reachedTop=false,reachedBottom=false;
+    for(local frame=1;frame<=4000;frame+=1) {
+        g.nesFrameCounter=frame&255;
+        updateWorld12Actors(g);
+        requireSelfTest(plant.y>=plant.baseY-24 && plant.y<=plant.baseY,
+                        "plant must remain inside its 24-pixel pipe travel for long cycles");
+        if(plant.y==plant.baseY-24) reachedTop=true;
+        if(reachedTop && plant.y==plant.baseY) reachedBottom=true;
+    }
+    requireSelfTest(reachedTop && reachedBottom,"plant must both emerge and retract");
+    plant.y=plant.baseY;plant.direction=1;plant.moving=false;plant.timer=0;
+    g.player.x=plant.x;
+    for(local frame=0;frame<128;frame+=1) {
+        g.nesFrameCounter=frame;updateWorld12Actors(g);
+    }
+    requireSelfTest(plant.y==plant.baseY && !plant.moving,
+                    "a player at the pipe must prevent a hidden plant from emerging");
+}
+
+function runWorld12EnemyPipeSelfTest() {
+    local g=createGame();startWorld12(g,"underground");
+    local leftPipe=103*TILE_SIZE.tofloat(),rightPipe=109*TILE_SIZE.tofloat();
+    foreach(kind in ["goomba","koopa"]) {
+        local enemy=makeEnemyAt(leftPipe+8,12,kind);
+        enemy.grounded=true;
+        for(local frame=0;frame<1200;frame+=1) {
+            moveEnemyBody(g,enemy,FIXED_DT);
+            requireSelfTest(enemy.x>=leftPipe+32 && enemy.x+16<=rightPipe,
+                            "a grouped enemy must leave a pipe and bounce between pipe walls");
+        }
+        enemy=makeEnemyAt(leftPipe+8,12,kind);
+        enemy.vx=KOOPA_WALK_SPEED;enemy.grounded=true;
+        moveEnemyBody(g,enemy,FIXED_DT);
+        requireSelfTest(enemy.x+16<=leftPipe && enemy.vx<0,
+                        "an embedded right-moving enemy must resolve left of the whole pipe");
+    }
 }
 
 function drawWorld12Actors(g, behind) {
