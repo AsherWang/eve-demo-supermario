@@ -19,6 +19,10 @@ dofile("scripts/simulation.nut");
 dofile("scripts/world12.nut");
 dofile("scripts/render.nut");
 dofile("scripts/parity.nut");
+dofile("scripts/generated/koopa_bounce_trace.nut");
+dofile("scripts/bounce_regression.nut");
+dofile("scripts/powerup_regression.nut");
+dofile("scripts/shell_regression.nut");
 
 eve_init = function() {
     // Ground-area backdrop is palette index $22.  Match the Mesen 2C02
@@ -29,6 +33,9 @@ eve_init = function() {
     if (!("startupSelfTests" in config) || config.startupSelfTests || parityIsEnabled()) {
         runSimulationSelfTest();
         runWorld12SelfTest();
+        runKoopaBounceSelfTest();
+        runPowerUpGapSelfTest();
+        runShellDefeatSelfTest();
     }
     game = createGame();
     if ("startLevel" in config && config.startLevel == 2)

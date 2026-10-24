@@ -1407,12 +1407,21 @@ function launchDefeatedEnemy(g, enemy, direction = 0) {
         local enemyCenter = enemy.x + enemy.width * 0.5;
         direction = enemyCenter >= playerCenter ? 1 : -1;
     }
+    // ChkToStunEnemies preserves the enemy type, moves it two pixels up, and
+    // sets state d1 plus a -3px/frame vertical speed. ShellOrBlockDefeat then
+    // adds state d5. Keep the object allocated until its ballistic path leaves
+    // the screen so the existing flipped-enemy renderer can present it.
+    enemy.alive = true;
     enemy.state = "flipped";
+    enemy.stateTimer = 0.0;
+    enemy.intervalTimer = 0;
     enemy.y -= 2.0;
     enemy.vx = direction * NES_FRAME_RATE;
-    enemy.vy = -180.0;
+    enemy.vy = -3.0 * NES_FRAME_RATE;
     enemy.grounded = false;
     enemy.collisionCooldown = 0.0;
+    enemy.erasedDisplayFrames = 0;
+    enemy.erasedSlot = -1;
 }
 
 function updateFireballs(g, dt) {
@@ -1665,21 +1674,48 @@ function updateFloatingScores(g) {
 }
 
 function updateShellEnemyCollisions(g) {
-    foreach (shell in g.goombas) {
-        if (!shell.alive || shell.kind != "koopa" ||
-            shell.state != "shellMoving") continue;
-        foreach (other in g.goombas) {
-            if (other == shell || !other.alive || other.state == "defeated" ||
-                other.state == "flipped") continue;
-            if (!overlaps(shell.x, shell.y, shell.width, shell.height,
-                          other.x, other.y, other.width, other.height)) continue;
-            if (other.kind == "koopa" && other.state == "shellMoving") {
-                shell.vx = -shell.vx;
-                other.vx = -other.vx;
+    // EnemiesCollision visits each lower-index object once for every later
+    // object. Do the same here so every overlapping pair is processed once.
+    for (local firstIndex = 0; firstIndex < g.goombas.len(); firstIndex += 1) {
+        local first = g.goombas[firstIndex];
+        if (!first.alive) continue;
+        for (local secondIndex = 0; secondIndex < firstIndex; secondIndex += 1) {
+            local second = g.goombas[secondIndex];
+            if (!second.alive) continue;
+            local firstMoving = first.kind == "koopa" &&
+                first.state == "shellMoving";
+            local secondMoving = second.kind == "koopa" &&
+                second.state == "shellMoving";
+            if (!firstMoving && !secondMoving) continue;
+            if (first.state == "defeated" || first.state == "flipped" ||
+                second.state == "defeated" || second.state == "flipped")
+                continue;
+            if (!overlaps(first.x, first.y, first.width, first.height,
+                          second.x, second.y, second.width, second.height))
+                continue;
+            if (firstMoving && secondMoving) {
+                // Both d7 states enter ProcEnemyCollisions. The unresolved
+                // SetupFloateyNumber #6 write on the first shell is replaced
+                // by ShellOrBlockDefeat's type score, while the second shell
+                // receives the chain score. FloateyNumbersRoutine consumes only
+                // these final controls after enemy processing, so #6 is not an
+                // additional award. The chain belongs to the first shell.
+                launchDefeatedEnemy(g, first);
+                launchDefeatedEnemy(g, second);
+                awardScoreControl(g, 2);
+                awardScoreControl(g, 4 + first.shellChain);
+                emitSound(g, "kick");
+                first.shellChain += 1;
                 continue;
             }
-            other.alive = false;
+            local shell = firstMoving ? first : second;
+            local other = firstMoving ? second : first;
+            // ShellOrBlockDefeat stuns the complete enemy object before adding
+            // defeated state d5. Do not erase the victim: shell kills retain
+            // its type and follow the same airborne animation as other flips.
+            launchDefeatedEnemy(g, other);
             awardScoreControl(g, 4 + shell.shellChain);
+            emitSound(g, "kick");
             shell.shellChain += 1;
         }
     }

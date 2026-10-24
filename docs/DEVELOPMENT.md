@@ -72,6 +72,24 @@ python tools/check_windows_startup.py --package 'C:/path/to/package' `
 重建音频先运行 README 中的 idle reference 命令生成 `origin.mss`，随后执行素材采集。
 游戏本身已经包含素材，因此普通开发不需要重新提取或采集音频。
 
+## 乌龟与蘑菇交互回归（2026-10-25）
+
+源码启动和 parity 回放会执行三组专项自检：
+
+- `runKoopaBounceSelfTest`：缩壳后继续使用原始乌龟碰撞框，并保留连续接触标记；再次接触静止壳时踢壳，不重复回弹。比较原版 ROM 的连续 40 帧 Y、整数速度、两项小数状态和龟壳状态。
+- `runShellDefeatSelfTest`：移动龟壳击中敌人后保留对象，展示翻转、上抛、下落，越过屏幕下边界才删除；同时检查连杀计分、音效和双壳碰撞。
+- `runPowerUpGapSelfTest`：实际 1-2 第 89 列奖命砖出菇期间打碎右邻砖，蘑菇底部中心失去支撑后落下；保留完整砖面的对照及普通蘑菇检查。
+
+1-2 出口加载共享地面敌人数据时，跳过初始屏幕右边界之前的敌人，避免楼梯末尾出现本不应生成的两个栗宝宝。
+
+重新采集踩踏对照需要已校验的 ROM 和 1-1 起始存档：
+
+```powershell
+python tools/parity/capture_koopa_bounce.py --origin-state local-parity/reference/walk-right-smoke/origin.mss --write-fixture
+```
+
+采集脚本保存 ROM、存档与输出哈希；固定初始 RAM 的 Lua 场景位于 `tests/parity/fixtures/koopa-bounce.lua.in`。这属于专项受控场景验证，不代表 1-2 整关已验收；蘑菇和击飞生命周期自检也不是逐帧 ROM 对照。
+
 ## 自定义安装路径
 
 原生构建与打包支持 `-Sdk <目录>`。Python 对照工具优先读取 `EVE_EXE`、

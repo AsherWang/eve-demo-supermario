@@ -1140,8 +1140,9 @@ function runSimulationSelfTest() {
     testGoomba.x = testKoopa.x;
     testGoomba.y = testKoopa.y;
     updateShellEnemyCollisions(shellTest);
-    requireSelfTest(!testGoomba.alive && testKoopa.shellChain == 1,
-                    "moving shell must defeat enemies and advance its chain");
+    requireSelfTest(testGoomba.alive && testGoomba.state == "flipped" &&
+                    testKoopa.shellChain == 1,
+                    "moving shell must launch its victim while advancing the chain");
 
     local scoreControlTest = createGame();
     scoreControlTest.score = 0;
