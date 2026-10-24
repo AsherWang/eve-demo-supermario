@@ -90,6 +90,7 @@
 
 ## 相关资料
 
+- [32 关整关验收清单与检查工具](LEVEL_ACCEPTANCE.md)
 - [1-2 实现与当前差异](WORLD_1_2_PLAN.md)
 - [原版对照清单](../ORIGINAL_PARITY_CHECKLIST.md)
 - [对照测试计划与命令](../PARITY_TEST_PLAN.md)

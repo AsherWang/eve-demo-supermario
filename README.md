@@ -38,6 +38,8 @@ The overall milestones, current gaps, and acceptance criteria are tracked in
 
 For isolated parallel development, see
 [`docs/WORKTREE_DEVELOPMENT.md`](docs/WORKTREE_DEVELOPMENT.md).
+Whole-level acceptance evidence for all 32 stages is tracked using
+[`docs/LEVEL_ACCEPTANCE.md`](docs/LEVEL_ACCEPTANCE.md).
 
 ## Controls
 

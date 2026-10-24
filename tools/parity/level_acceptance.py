@@ -156,7 +156,7 @@ def _validate_frame_report(
         return
     frame_ids = [row.get("frame") for row in rows if isinstance(row, dict)]
     expected = _expected_capture_frames(frame_count)
-    if frame_ids != expected:
+    if len(rows) != frame_count or any(not isinstance(row, dict) for row in rows) or frame_ids != expected:
         reasons.append(
             "frames report must contain each frame exactly once in ascending order "
             f"(expected {frame_count}, observed {len(rows)})"

@@ -353,6 +353,17 @@ class LevelAcceptanceTests(unittest.TestCase):
         reasons = self._report()["levels"][0]["reasons"]
         self.assertTrue(any("must contain each frame" in reason for reason in reasons))
 
+    def test_extra_malformed_frame_row_is_rejected_without_crashing(self) -> None:
+        movie_sha = self._write_case_evidence()
+        self._write_inventory(route_sha=movie_sha, branch_sha=movie_sha)
+        path = self.root / "local-parity" / "reports" / self.case_id / "report.json"
+        report = json.loads(path.read_text(encoding="utf-8"))
+        report["frames"].append(None)
+        path.write_text(json.dumps(report), encoding="utf-8")
+        level = self._report()["levels"][0]
+        self.assertEqual(level["status"], "pending")
+        self.assertTrue(any("must contain each frame" in reason for reason in level["reasons"]))
+
     def test_explicit_zero_branch_review_is_distinct_from_missing_matrix(self) -> None:
         movie_sha = self._write_case_evidence()
         self._write_inventory(route_sha=movie_sha, branch_sha=movie_sha, branches=[])
