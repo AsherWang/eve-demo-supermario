@@ -6,10 +6,8 @@
 /native/bin/
 /*-preview.png
 
-# User-provided ROMs and emulator state
-*.nes
-# The user supplied this ROM for the local study/parity workflow.
-!/roms/Super Mario Bros. (World).nes
+# User-supplied ROMs are kept in roms/ for local study and parity work.
+# Release packaging never copies that directory into the published game.
 *.fds
 *.unf
 *.unif
