@@ -13,6 +13,7 @@ import subprocess
 import wave
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
+from tool_paths import tool_path
 
 PROJECT = Path(__file__).resolve().parents[1]
 REQUESTS = {
@@ -46,7 +47,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--rom", type=Path, required=True)
     parser.add_argument("--origin-state", type=Path, required=True)
-    parser.add_argument("--mesen", type=Path, default=Path.home() / ".local/bin/mesen-agent.exe")
+    parser.add_argument("--mesen", type=Path, default=tool_path("mesen"))
     parser.add_argument("--output", type=Path, default=PROJECT / "assets/audio")
     parser.add_argument("--work", type=Path, default=PROJECT / "local-parity/native-audio-assets")
     parser.add_argument("--only", choices=["overworld", *REQUESTS], help="Recapture one clip in an existing asset set")

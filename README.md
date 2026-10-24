@@ -37,25 +37,40 @@ or endorsed by Nintendo.
 
 ## Run from source
 
-Install EVEngine v0.6.0 (or make its executable available on `PATH`), then run:
+Project layout and local development data are documented in
+[`docs/PROJECT_LAYOUT.md`](docs/PROJECT_LAYOUT.md). Builds use `build/` and
+standalone Windows packages use `dist/` inside this project.
+
+On Windows x64, install Python 3.12+ (available as `python` on PATH) and Visual
+Studio 2022 C++ Build Tools with Desktop development with C++ and CMake tools.
+PowerShell 7 is recommended. Then run from the project root:
+
+```powershell
+./tools/setup_windows.ps1
+./tools/package_windows.ps1
+```
+
+Setup downloads checksum-pinned EVEngine v0.6.0 and Mesen agent v0.1.0 into
+ignored `.tools/`, and installs `requirements.txt` into `.venv/`. Open the newest
+`dist/super-mario-<timestamp>-win64/SuperMario.exe` to play. To run editable source:
 
 ```powershell
 ./tools/build_native_audio.ps1
-eve run
-```
-
-The native plugin build needs Visual Studio 2022 C++ Build Tools and the matching
-Windows Release EVEngine SDK. For a standalone Windows folder, launch `SuperMario.exe`:
-
-```powershell
-./tools/package_windows.ps1
+& ./.tools/evengine/eve-sdk/win32/bin/eve.exe run .
 ```
 
 ## Rebuild local audio
 
+Generate the origin state first; a fresh clone contains no emulator save states:
+
 ```powershell
-python tools/render_reference_audio_assets.py `
-  --rom 'C:\path\to\Super Mario Bros. (World).nes' `
+.\.venv\Scripts\python.exe tools/parity/run_reference.py `
+  --rom 'roms/Super Mario Bros. (World).nes' `
+  --movie tests/parity/movies/world-1-1-idle-opening-10s.json `
+  --output local-parity/reference/world-1-1-idle-opening-10s
+
+.\.venv\Scripts\python.exe tools/render_reference_audio_assets.py `
+  --rom 'roms/Super Mario Bros. (World).nes' `
   --origin-state local-parity/reference/world-1-1-idle-opening-10s/origin.mss
 ```
 
@@ -85,10 +100,13 @@ The ROM is used only by the local Mesen reference runner. It is never linked
 into the EVEngine executable or copied into `dist/`.
 
 ```powershell
-python tools\parity\run_suite.py `
-  --rom 'C:\path\to\Super Mario Bros. (World).nes' `
-  --reuse-reference
+.\.venv\Scripts\python.exe tools\parity\run_suite.py `
+  --rom 'roms\Super Mario Bros. (World).nes'
 ```
+
+The first run generates all reference captures. Add `--reuse-reference` only
+after a successful first run. For a quick first check, add `--cases walk-right-smoke`.
+See [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md) for tool overrides and verification.
 
 Open `local-parity/reports/index.html` for artifact, frame, state, event, APU,
 strict PCM and runtime-WAV quality results. The current seven movies pass the artifact contract, all

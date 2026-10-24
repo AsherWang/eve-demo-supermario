@@ -1,11 +1,15 @@
 param(
-    [string]$Sdk = "$env:USERPROFILE/.codex/cache/evengine/v0.6.0/sdk/eve-sdk/win32",
+    [string]$Sdk = "",
     [string]$BuildDir = "",
     [string]$OutputDir = ""
 )
 $ErrorActionPreference = 'Stop'
 $projectDir = Split-Path $PSScriptRoot -Parent
-if (!$BuildDir) { $BuildDir = Join-Path (Split-Path $projectDir -Parent) 'builds/super-mario-native-audio' }
+if (!$Sdk) { $Sdk = Join-Path $projectDir '.tools/evengine/eve-sdk/win32' }
+if (!(Test-Path -LiteralPath "$Sdk/cmake/EVEngineConfig.cmake")) {
+    throw 'EVEngine SDK missing. Run tools/setup_windows.ps1 or pass -Sdk <SDK directory>.'
+}
+if (!$BuildDir) { $BuildDir = Join-Path $projectDir 'build/native-audio' }
 if (!$OutputDir) { $OutputDir = Join-Path $projectDir 'native/bin' }
 $vswhere = "${env:ProgramFiles(x86)}/Microsoft Visual Studio/Installer/vswhere.exe"
 $vsDir = & $vswhere -latest -products '*' -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath

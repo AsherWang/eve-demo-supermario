@@ -15,10 +15,11 @@ worker, resets the device, unprepares the buffers, then closes the handle.
 Build the DLL against the matching **Release Windows SDK**:
 
 ```powershell
+./tools/setup_windows.ps1
 ./tools/build_native_audio.ps1
 ```
 
-Build output stays outside the project in `../builds/super-mario-native-audio`.
+Build output stays in the ignored project directory `build/native-audio`.
 The generated DLL is copied into the ignored `native/bin` directory. The build
 uses the official SDK import library, MSVC's Release CRT, and Windows `winmm`.
 It does not download or compile another engine or emulator.

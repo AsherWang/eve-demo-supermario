@@ -1,11 +1,12 @@
 param(
-    [string]$Sdk = "$env:USERPROFILE/.codex/cache/evengine/v0.6.0/sdk/eve-sdk/win32",
+    [string]$Sdk = "",
     [string]$Output = ""
 )
 $ErrorActionPreference = 'Stop'
 $projectDir = Split-Path $PSScriptRoot -Parent
+if (!$Sdk) { $Sdk = Join-Path $projectDir '.tools/evengine/eve-sdk/win32' }
 if (!$Output) {
-    $Output = Join-Path (Split-Path $projectDir -Parent) ("builds/super-mario-native-audio-" + (Get-Date -Format 'yyyyMMdd-HHmmss') + '-win64')
+    $Output = Join-Path $projectDir ("dist/super-mario-" + (Get-Date -Format 'yyyyMMdd-HHmmss') + '-win64')
 }
 if (Test-Path -LiteralPath $Output) { throw "Output must be a new directory: $Output" }
 if ((Get-Content -Raw "$projectDir/scripts/generated/parity_movie.nut") -match 'PARITY_MOVIE_ENABLED\s*<-\s*true') {

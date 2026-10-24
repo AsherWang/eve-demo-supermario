@@ -9,7 +9,7 @@ import wave
 from collections import defaultdict
 from pathlib import Path
 
-from common import load_movie, mesen_section_input_arguments, sha256_file
+from common import load_movie, mesen_section_input_arguments, sha256_file, tool_path
 
 
 def load_writes(path: Path, frames: int) -> dict[int, list[dict[str, int]]]:
@@ -138,7 +138,7 @@ def main() -> int:
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument(
         "--mesen-agent", type=Path,
-        default=Path.home() / ".local" / "bin" / "mesen-agent.exe",
+        default=tool_path("mesen"),
     )
     args = parser.parse_args()
 

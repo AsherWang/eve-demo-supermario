@@ -8,6 +8,7 @@ import shutil
 import subprocess
 import wave
 from pathlib import Path
+from tool_paths import tool_path
 
 PROJECT = Path(__file__).resolve().parents[1]
 
@@ -24,7 +25,7 @@ def main() -> int:
     parser.add_argument("--reference", type=Path, required=True)
     parser.add_argument("--use-game-assets", action="store_true", help="Verify the shipped opening music without replacing it")
     parser.add_argument("--project", type=Path, default=PROJECT)
-    parser.add_argument("--eve", type=Path, default=Path.home() / ".codex/cache/evengine/v0.6.0/sdk/eve-sdk/win32/bin/eve.exe")
+    parser.add_argument("--eve", type=Path, default=tool_path("eve"))
     parser.add_argument("--output", type=Path, default=PROJECT / "local-parity/native-audio-runtime")
     args = parser.parse_args()
     output = args.output.resolve()

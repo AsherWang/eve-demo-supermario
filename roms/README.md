@@ -12,15 +12,7 @@ test data. It is intentionally kept in the source tree for this local workflow;
 it is not bundled into the packaged game or linked into EVEngine. Do not publish
 or redistribute the ROM without permission from its rights holder.
 
-The additional user-supplied `supermario.nes` is also kept in the source tree.
-Its SHA-256 is:
-
-```text
-4473b008df230c7dc071a977c26b0b53426aeb9fff2042935f10e8c4c7457225
-```
-
-It differs from the verified reference ROM above and is therefore not used by
-the deterministic parity suite. The release packager copies only runtime files,
+The release packager copies only runtime files,
 `assets`, `scripts` and `native`; it never copies `roms/` or any `.nes` file.
 
 From the project root, the parity suite can use it directly:

@@ -12,7 +12,8 @@ movie.json
                                       comparator/report.html
 ```
 
-ROM、Mesen home、截图、WAV、RAM、状态和报告均位于 `local-parity/`，该目录被忽略且不得打入发布包。
+ROM 位于 `roms/`；Mesen home、截图、WAV、RAM、状态和报告位于被忽略的
+`local-parity/`。工具安装和首次执行方法见 `docs/DEVELOPMENT.md`。
 
 ## 执行顺序
 
@@ -75,10 +76,9 @@ python tools\parity\compare_events.py `
   --actual local-parity\actual\walk-right-smoke\events.jsonl `
   --output local-parity\reports\walk-right-smoke
 
-# 运行全部用例；--reuse-reference 只重放 EVEngine，--skip-runs 只重建报告
+# 首次运行全部用例；后续 --reuse-reference 只重放 EVEngine，--skip-runs 只重建报告
 python tools\parity\run_suite.py `
-  --rom 'C:\path\to\Super Mario Bros. (World).nes' `
-  --reuse-reference
+  --rom 'roms\Super Mario Bros. (World).nes'
 ```
 
 产物字段与合法性约束见 [`PARITY_ARTIFACT_SPEC.md`](PARITY_ARTIFACT_SPEC.md)。

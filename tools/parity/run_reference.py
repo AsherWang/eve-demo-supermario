@@ -9,7 +9,7 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-from common import load_movie, mesen_section_input_arguments, sha256_file
+from common import load_movie, mesen_section_input_arguments, sha256_file, tool_path
 
 
 EXPECTED_ROM_SHA256 = "f61548fdf1670cffefcc4f0b7bdcdd9eaba0c226e3b74f8666071496988248de"
@@ -168,7 +168,7 @@ def main() -> int:
     parser.add_argument(
         "--mesen-agent",
         type=Path,
-        default=Path.home() / ".local" / "bin" / "mesen-agent.exe",
+        default=tool_path("mesen"),
     )
     parser.add_argument("--allow-other-rom", action="store_true")
     args = parser.parse_args()

@@ -1,0 +1,12 @@
+{
+  "schema": "smb-parity-movie-v1",
+  "name": "world-1-1-idle-opening-10s",
+  "description": "Idle opening reference and reproducible origin state for audio capture.",
+  "frames": 601,
+  "reference_bootstrap": {
+    "frames": 600,
+    "inputs": [{"port": 0, "start": 40, "end": 46, "buttons": ["start"]}]
+  },
+  "inputs": [],
+  "capture_frames": [0, 600]
+}

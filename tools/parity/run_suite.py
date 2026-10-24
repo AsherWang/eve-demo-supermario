@@ -68,8 +68,12 @@ def main() -> int:
         ]
         if args.skip_runs or args.reuse_reference:
             command.append("--skip-runs")
-        run(command, {0, 1})
         summary_path = artifacts / "reports" / case / "summary.json"
+        # A failed capture must never reuse a previous successful report.
+        summary_path.unlink(missing_ok=True)
+        run(command, {0, 1})
+        if not summary_path.is_file():
+            raise RuntimeError(f"Case did not produce a fresh summary: {case}")
         summary = json.loads(summary_path.read_text(encoding="utf-8"))
         summaries.append(summary)
 
