@@ -8,6 +8,13 @@
     "frames": 700,
     "inputs": [{"port": 0, "start": 40, "end": 46, "buttons": ["start"]}]
   },
+  "known_visual_gaps": [
+    "frame 17: captured player OAM is x=45/y=112 versus the renderer's staged canvas, and the right-edge Goomba OAM does not match"
+  ],
+  "origin_evidence": {
+    "player_oam": {"x": 40, "y": 50},
+    "rendered_canvas_y": 46
+  },
   "inputs": [{"port": 0, "start": 0, "end": 179, "buttons": ["right"]}],
   "capture_frames": [17, 30, 60, 90, 120, 150, 179]
 }

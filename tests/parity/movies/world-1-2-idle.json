@@ -8,6 +8,14 @@
     "frames": 700,
     "inputs": [{"port": 0, "start": 40, "end": 46, "buttons": ["start"]}]
   },
+  "known_visual_gaps": [
+    "frame 0: the right-edge Goomba differs; captured OAM uses x=247 for the first Goomba while the renderer's rolling motion lead targets the next movement pass",
+    "frame 1: the capture remains one rendered frame behind, preserving the frame-0 player canvas and stale PPU scanline prefix while drawing timer digits that are not yet present in VRAM"
+  ],
+  "origin_evidence": {
+    "player_oam": {"x": 40, "y": 50},
+    "rendered_canvas_y": 46
+  },
   "inputs": [],
   "capture_frames": [0, 1, 17, 30, 60, 120, 239]
 }

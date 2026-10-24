@@ -414,5 +414,8 @@ function initializeWorld12Parity(g) {
     syncWorld12Player(g);
     g.player.animationFrame=0;g.player.displayAnimationFrame=0;
     g.player.preparedAnimationFrame=0;g.player.queuedAnimationFrame=0;
-    g.player.displayRelY=48;g.player.preparedRelY=48;g.player.queuedRelY=48;
+    // Captured origin frame: player OAM X/Y are 40/50 and the rendered
+    // 16x32 canvas begins at Y=46.  Preserve that already-visible page while
+    // the first controllable simulation stage prepares its next OAM values.
+    g.player.displayRelY=46;g.player.preparedRelY=48;g.player.queuedRelY=48;
 }
