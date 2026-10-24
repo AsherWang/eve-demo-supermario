@@ -36,6 +36,9 @@ World 1 are not implemented; selecting one ends at a destination screen.
 The overall milestones, current gaps, and acceptance criteria are tracked in
 [`docs/ROADMAP.md`](docs/ROADMAP.md).
 
+For isolated parallel development, see
+[`docs/WORKTREE_DEVELOPMENT.md`](docs/WORKTREE_DEVELOPMENT.md).
+
 ## Controls
 
 - Move: arrow keys or A/D

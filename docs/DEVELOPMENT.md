@@ -1,5 +1,9 @@
 # Windows 开发环境与首次验证
 
+Worktree 并行任务可复用只读 SDK 和 Mesen 安装，用 `tools/setup_worktree.ps1`
+建立独立依赖与插件输出；初始化命令、并发限制和集成流程见
+[Worktree 并行开发](WORKTREE_DEVELOPMENT.md)。
+
 支持的开发平台是 Windows x64。安装 Python 3.12+ 并将 `python` 加入 PATH；
 安装 Visual Studio 2022 C++ Build Tools，勾选桌面 C++、Windows SDK 和 CMake 工具。
 推荐使用 PowerShell 7。在 clone 后的项目根目录执行：
