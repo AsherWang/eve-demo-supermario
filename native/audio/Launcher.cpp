@@ -1,5 +1,6 @@
 #include <windows.h>
 
+#include <cwchar>
 #include <string>
 
 namespace {
@@ -24,7 +25,63 @@ std::wstring quoted(const std::wstring& value) {
 }
 
 void showError(const std::wstring& message) {
-    MessageBoxW(nullptr, message.c_str(), L"Super Mario 1-1", MB_OK | MB_ICONERROR);
+    MessageBoxW(nullptr, message.c_str(), L"Super Mario", MB_OK | MB_ICONERROR);
+}
+
+struct GameWindow {
+    DWORD processId;
+    HWND handle = nullptr;
+};
+
+BOOL CALLBACK findGameWindow(HWND window, LPARAM context) {
+    auto& game = *reinterpret_cast<GameWindow*>(context);
+    DWORD processId = 0;
+    GetWindowThreadProcessId(window, &processId);
+    wchar_t className[64]{};
+    if (processId == game.processId &&
+        GetClassNameW(window, className, 64) && std::wcscmp(className, L"SDL_app") == 0) {
+        game.handle = window;
+        return FALSE;
+    }
+    return TRUE;
+}
+
+bool revealAfterFirstPresent(const PROCESS_INFORMATION& process, const std::wstring& logPath) {
+    // The pinned SDK has no hidden-window setting. Windows honors this
+    // process's SW_HIDE startup flag on SDL's first ShowWindow call, while
+    // Vulkan continues rendering. Reveal only after the SDK's present marker.
+    HANDLE input = CreateFileW(logPath.c_str(), GENERIC_READ,
+        FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+    if (input == INVALID_HANDLE_VALUE) return false;
+    const ULONGLONG deadline = GetTickCount64() + 30000;
+    std::string pending;
+    bool revealed = false;
+    while (GetTickCount64() < deadline) {
+        char buffer[4096];
+        DWORD count = 0;
+        if (!ReadFile(input, buffer, sizeof(buffer), &count, nullptr)) break;
+        pending.append(buffer, count);
+        if (pending.find("eve_init failed:") != std::string::npos ||
+            pending.find("Run failed:") != std::string::npos ||
+            pending.find("frame error:") != std::string::npos ||
+            pending.find("present error:") != std::string::npos) break;
+        if (pending.find("[startup] first present - window shows content") != std::string::npos) {
+            GameWindow game{process.dwProcessId};
+            EnumWindows(findGameWindow, reinterpret_cast<LPARAM>(&game));
+            if (game.handle != nullptr) {
+                ShowWindow(game.handle, SW_SHOW);
+                SetForegroundWindow(game.handle);
+                revealed = IsWindowVisible(game.handle) != FALSE;
+                break;
+            }
+        }
+        // Keep enough tail for markers split across reads, without retaining
+        // the game's full state/event trace in the launcher.
+        if (pending.size() > 8192) pending.erase(0, pending.size() - 1024);
+        if (WaitForSingleObject(process.hProcess, 10) != WAIT_TIMEOUT) break;
+    }
+    CloseHandle(input);
+    return revealed;
 }
 
 }  // namespace
@@ -61,7 +118,8 @@ int WINAPI wWinMain(HINSTANCE, HINSTANCE, PWSTR, int) {
 
     STARTUPINFOW startup{};
     startup.cb = sizeof(startup);
-    startup.dwFlags = STARTF_USESTDHANDLES;
+    startup.dwFlags = STARTF_USESTDHANDLES | STARTF_USESHOWWINDOW;
+    startup.wShowWindow = SW_HIDE;
     startup.hStdInput = nullInput;
     startup.hStdOutput = log;
     startup.hStdError = log;
@@ -77,6 +135,17 @@ int WINAPI wWinMain(HINSTANCE, HINSTANCE, PWSTR, int) {
         return 1;
     }
 
+    if (!revealAfterFirstPresent(process, logPath)) {
+        // Never leave an invisible hung engine behind after a failed boot.
+        if (WaitForSingleObject(process.hProcess, 0) == WAIT_TIMEOUT) {
+            TerminateProcess(process.hProcess, 1);
+            WaitForSingleObject(process.hProcess, 5000);
+        }
+        CloseHandle(process.hThread);
+        CloseHandle(process.hProcess);
+        showError(L"The game could not prepare its first frame. See game.log for details.");
+        return 1;
+    }
     WaitForSingleObject(process.hProcess, INFINITE);
     DWORD exitCode = 1;
     GetExitCodeProcess(process.hProcess, &exitCode);

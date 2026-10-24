@@ -17,6 +17,17 @@ New-Item -ItemType Directory -Path $Output | Out-Null
 New-Item -ItemType Directory -Path "$Output/runtime" | Out-Null
 Copy-Item -Path "$Sdk/bin/*" -Destination "$Output/runtime"
 Copy-Item -LiteralPath "$projectDir/main.nut", "$projectDir/config.nut" -Destination $Output
+# Keep development checks and hot reload in source runs, not player startup.
+$releaseConfig = Get-Content -LiteralPath "$projectDir/config.nut" -Raw
+foreach ($setting in @('hotReload', 'startupSelfTests')) {
+    $pattern = "(?m)^(\s*" + $setting + "\s*=\s*)true\b"
+    $releaseConfig = [regex]::Replace($releaseConfig, $pattern, '${1}false')
+    if ($releaseConfig -notmatch ("(?m)^\s*" + $setting + "\s*=\s*false\b")) {
+        throw "Release configuration must disable $setting"
+    }
+}
+[System.IO.File]::WriteAllText((Join-Path $Output 'config.nut'), $releaseConfig,
+    [System.Text.UTF8Encoding]::new($false))
 Copy-Item -LiteralPath "$projectDir/assets", "$projectDir/scripts" -Destination $Output -Recurse
 New-Item -ItemType Directory -Path "$Output/native/bin" -Force | Out-Null
 Copy-Item -LiteralPath "$projectDir/native/bin/mario_audio.dll" -Destination "$Output/native/bin"

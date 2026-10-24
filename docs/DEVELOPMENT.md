@@ -17,6 +17,33 @@ Worktree 并行任务可复用只读 SDK 和 Mesen 安装，用 `tools/setup_wor
 Mesen agent 到 `.tools/`。这些目录均被忽略，不需要复制原作者的缓存。
 游戏包位于 `dist/`，源码模式的启动命令见 README。
 
+## Windows 首帧显示与发布配置
+
+`SuperMario.exe` 以 `STARTF_USESHOWWINDOW / SW_HIDE` 启动固定版本的 EVEngine。
+引擎可在原生窗口隐藏期间初始化和提交 Vulkan 帧；启动器读取 `game.log`，确认
+`[startup] first present - window shows content` 后，仅显示该子进程的 `SDL_app`
+游戏窗口，不显示 IME 等辅助窗口。初始化失败、present 报错、进程退出或 30 秒
+超时均停止隐藏的引擎并显示错误提示，避免无窗口进程长期残留。
+
+此方案不修改 SDK 或引擎二进制，依赖已固定 SDK 的启动标记。升级 SDK 时必须
+复验。直接运行 `eve.exe run .` 会绕过启动器，因此不包含隐藏到首帧的行为。
+
+源码保留 `hotReload = true` 和 `startupSelfTests = true`；打包脚本仅将发布包的
+这两项设为 `false`，不改源码配置。完整启动检查仍在源码开发和确定性回放中执行；
+即使配置关闭 `startupSelfTests`，启用 parity 回放也会强制执行。
+
+```powershell
+python tools/check_windows_startup.py --package 'C:/path/to/package' `
+  --report local-parity/startup-check.json
+```
+
+检查工具记录该次启动的子进程窗口，确认首帧前没有可见游戏窗口、首帧后窗口可见。
+正常关闭检查会避开 SDK 最初 45 帧的退出事件保护期，再发送标题栏关闭命令。
+`--expect-failure` 可用于隔离的失败启动夹具，检查错误提示、非零退出及子进程清理；
+可加 `--expected-error` 核对具体日志原因。测试会关闭它自己启动的游戏，不影响其他
+游戏进程。启动耗时受机器、音频素材和驱动影响；隐藏窗口消除的是未准备好时的显示，
+不代表完全消除初始化等待。
+
 ## 固定工具来源
 
 - EVEngine v0.6.0：<https://github.com/EVEngine/EVEngine/releases/tag/v0.6.0>

@@ -26,8 +26,10 @@ eve_init = function() {
     gfx.setBackgroundColor(146.0 / 255.0, 144.0 / 255.0, 1.0, 1.0);
     loadAssets();
     loadAudio();
-    runSimulationSelfTest();
-    runWorld12SelfTest();
+    if (!("startupSelfTests" in config) || config.startupSelfTests || parityIsEnabled()) {
+        runSimulationSelfTest();
+        runWorld12SelfTest();
+    }
     game = createGame();
     if ("startLevel" in config && config.startLevel == 2)
         startWorld12(game, ("startArea" in config) ? config.startArea : "intro");

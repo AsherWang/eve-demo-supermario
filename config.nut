@@ -8,6 +8,7 @@ config <- {
     startArea = "intro"
     debug = false
     hotReload = true
+    startupSelfTests = true
     capturePreview = false
     previewCameraX = 0.0
     previewScenario = "main"

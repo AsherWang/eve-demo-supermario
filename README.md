@@ -25,7 +25,7 @@ or endorsed by Nintendo.
 - ROM 8×8 HUD font, 400 timer, lives, halfway checkpoint and Game Over
 - Offline ROM/Mesen-captured 48 kHz stereo music and sound effects
 - Independent Windows PCM playback through a native EVEngine plugin
-- Startup regression suite covering layout, objects, movement and state changes
+- Development/parity startup regression suite covering layout, objects, movement and state changes
 - World 1-2 underground map and coin room from the original ROM parser's metatiles
 - World 1-2 entrance, pipe return, surface exit, lifts, piranha plants and roof route
 
