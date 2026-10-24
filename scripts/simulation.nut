@@ -1309,14 +1309,13 @@ function movePowerUp(g, item, dt) {
     local nextY = item.y + item.vy * dt;
     if (item.vy >= 0.0) {
         local floorTy = floor((nextY + item.height - 0.001) / TILE_SIZE).tointeger();
-        local left = floor((item.x + 1.0) / TILE_SIZE).tointeger();
-        local right = floor((item.x + item.width - 1.0) / TILE_SIZE).tointeger();
-        for (local floorTx = left; floorTx <= right; floorTx += 1) {
-            if (isSolidAt(g, floorTx, floorTy)) {
-                nextY = floorTy * TILE_SIZE - item.height;
-                item.vy = item.kind == "star" ? -180.0 : 0.0;
-                break;
-            }
+        // ChkUnderEnemy samples one block below (ROM X + $08, ROM Y + $18).
+        // A corner probe keeps a mushroom suspended while either sprite edge
+        // still overlaps its old block, allowing it to cross a one-tile hole.
+        local centerTx = floor((item.x + item.width * 0.5) / TILE_SIZE).tointeger();
+        if (isSolidAt(g, centerTx, floorTy)) {
+            nextY = floorTy * TILE_SIZE - item.height;
+            item.vy = item.kind == "star" ? -180.0 : 0.0;
         }
     }
     item.y = nextY;
