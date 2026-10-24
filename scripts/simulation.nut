@@ -709,19 +709,37 @@ function handlePlayerBackgroundSides(g, p) {
         impedePlayerMove(g, p, p.movingDir);
         return;
     }
-    if (g.area != "main" || g.state != "playing") return;
+    local courseClear = g.state == "endLevel" ||
+        g.state == "timeBonus" || g.state == "raiseFlag" ||
+        g.state == "fireworks" || g.state == "postClearDelay";
+    if (g.area != "main" || (g.state != "playing" && !courseClear)) return;
 
     local spriteY = p.big && !p.crouching ? p.y : p.y - 16.0;
     local sampleRow = floor((spriteY + 24.0) / TILE_SIZE).tointeger();
     local flagColumn = floor(g.flagX / TILE_SIZE).tointeger();
     local xLow = floor(p.x).tointeger() & 0x0F;
     local sideOffsets = [2.0, 13.0];
+    // For the tall World 1-1 castle, CastleObject replaces the floor metatile
+    // under its second rendered column with the collision brick at $52.  The
+    // side probe's block-buffer row is 12 for small Mario.
+    local castleStopColumn =
+        floor(g.castleX / TILE_SIZE).tointeger() + 3;
     for (local side = 0; side < 2; side += 1) {
         local sampleColumn = floor((p.x + sideOffsets[side]) / TILE_SIZE).tointeger();
-        if (sampleColumn == flagColumn && sampleRow >= 2 && sampleRow <= 11) {
+        if (g.state == "playing" && sampleColumn == flagColumn &&
+            sampleRow >= 2 && sampleRow <= 11) {
             // HandleClimbingMetatile narrows the 16px metatile to raw player
             // X low-nibble values 6..9 before attaching to the pole.
             if (xLow >= 6 && xLow < 10) beginFlagSequence(g);
+            return;
+        }
+        if (courseClear && side == 1 && sampleRow == 12 &&
+            sampleColumn == castleStopColumn) {
+            // PlayerBGCollision invokes ImpedePlayerMove while PlayerEndLevel
+            // keeps auto-control held right.  The cleared d0 bit starts the
+            // star-flag task on this pass; the position nudge remains in the
+            // ordinary collision routine below.
+            impedePlayerMove(g, p, 1);
             return;
         }
         if (isSolidAt(g, sampleColumn, sampleRow)) {
@@ -2039,10 +2057,41 @@ function beginFlagSequence(g) {
         ",\"score_award\":" + awards[scoreIndex]);
 }
 
+function autoControlPlayerEndLevel(g, dt) {
+    local savedLeft = g.input.left;
+    local savedRight = g.input.right;
+    local savedRun = g.input.run;
+    local savedRunDown = g.input.runDown;
+    local savedJumpDown = g.input.jumpDown;
+    local savedJumpQueued = g.input.jumpQueued;
+    local savedFireQueued = g.input.fireQueued;
+    g.input.left = false;
+    g.input.right = true;
+    g.input.run = false;
+    g.input.runDown = false;
+    g.input.jumpDown = false;
+    g.input.jumpQueued = false;
+    g.input.fireQueued = false;
+    updatePlayer(g, dt);
+    g.input.left = savedLeft;
+    g.input.right = savedRight;
+    g.input.run = savedRun;
+    g.input.runDown = savedRunDown;
+    g.input.jumpDown = savedJumpDown;
+    g.input.jumpQueued = savedJumpQueued;
+    g.input.fireQueued = savedFireQueued;
+}
+
 function updateCourseClear(g, dt) {
     local p = g.player;
     g.stateTimer += dt;
     if (g.flagScoreAge >= 0) g.flagScoreAge += 1;
+    // StarFlagTaskControl runs alongside PlayerEndLevel; subroutine $05 stays
+    // selected while time, flag, fireworks and the final delay execute.
+    local timedSettlement = g.state == "timeBonus" ||
+        g.state == "raiseFlag" || g.state == "fireworks" ||
+        g.state == "postClearDelay";
+    if (timedSettlement) autoControlPlayerEndLevel(g, dt);
     if (g.state == "endLevel") {
         if (g.endLevelUnlockFrames > 0) {
             g.endLevelUnlockFrames -= 1;
@@ -2074,28 +2123,7 @@ function updateCourseClear(g, dt) {
         } else {
             // PlayerEndLevel supplies held-right input to the ordinary player
             // control path; preserve the replay's real input around that call.
-            local savedLeft = g.input.left;
-            local savedRight = g.input.right;
-            local savedRun = g.input.run;
-            local savedRunDown = g.input.runDown;
-            local savedJumpDown = g.input.jumpDown;
-            local savedJumpQueued = g.input.jumpQueued;
-            local savedFireQueued = g.input.fireQueued;
-            g.input.left = false;
-            g.input.right = true;
-            g.input.run = false;
-            g.input.runDown = false;
-            g.input.jumpDown = false;
-            g.input.jumpQueued = false;
-            g.input.fireQueued = false;
-            updatePlayer(g, dt);
-            g.input.left = savedLeft;
-            g.input.right = savedRight;
-            g.input.run = savedRun;
-            g.input.runDown = savedRunDown;
-            g.input.jumpDown = savedJumpDown;
-            g.input.jumpQueued = savedJumpQueued;
-            g.input.fireQueued = savedFireQueued;
+            autoControlPlayerEndLevel(g, dt);
 
             local canonicalY = p.big && !p.crouching ? p.y : p.y - 16.0;
             if (g.endLevelScrollLocked && canonicalY >= 0xAE) {
@@ -2107,8 +2135,11 @@ function updateCourseClear(g, dt) {
                     emitSound(g, "course_clear");
                 }
             }
-            if (p.x >= g.castleX + 30.0) {
-                p.vx = 0.0;
+            // PlayerEndLevel advances StarFlagTaskControl only after
+            // PlayerBGCollision clears d0 of Player_CollisionBits.
+            if ((p.collisionBits & 0x01) == 0) {
+                // ScrollHandler still consumes this pass's Player_X_Scroll.
+                g.flagContactScrollPending = true;
                 g.state = "timeBonus";
                 g.stateTimer = 0.0;
             }
@@ -2162,19 +2193,25 @@ function updateCourseClear(g, dt) {
         if (p.nesXSpeed > 0x18) p.nesXSpeed = 0x18;
         p.x += nesHorizontalDelta(p);
         p.vx = p.nesXSpeed * 3.75;
-        if (p.x >= g.castleX + 30.0) {
+        if (p.x >= g.castleX + 35.0) {
             p.vx = 0.0;
+            g.flagContactScrollPending = true;
             g.state = "timeBonus";
             g.stateTimer = 0.0;
         }
     } else if (g.state == "timeBonus") {
         // AwardGameTimerPoints subtracts one timer unit and adds 50 every frame.
         if (g.time > 0) {
+            // The ROM queues Sfx_TimerTick whenever FrameCounter bit 2 is set;
+            // the reference ticks at frames 1295..1298, 1303..1306, and so on.
+            // No timer-tick runtime clip is packaged yet, so this deliberate
+            // omission is reported instead of fabricating an event-only sound.
             g.time -= 1;
             g.score += 50;
-        }
-        if (g.time <= 0) {
-            g.time = 0;
+            g.queuedScore = g.score;
+        } else {
+            // Task 2 observes zero on the next frame and advances to task 3;
+            // task 3 does not begin raising the flag until its own next pass.
             g.castleFlagVisible = true;
             g.castleFlagY = 144.0;
             g.state = "raiseFlag";

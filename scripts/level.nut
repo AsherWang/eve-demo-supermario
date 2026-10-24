@@ -1095,6 +1095,10 @@ function runSimulationSelfTest() {
     clearMusicTest.state="timeBonus";clearMusicTest.time=1;
     clearMusicTest.soundEvents=[];
     updateCourseClear(clearMusicTest,FIXED_DT);
+    requireSelfTest(clearMusicTest.state=="timeBonus" && clearMusicTest.time==0 &&
+                    clearMusicTest.soundEvents.len()==0,
+                    "timer exhaustion must wait for the following star-flag task");
+    updateCourseClear(clearMusicTest,FIXED_DT);
     requireSelfTest(clearMusicTest.state=="raiseFlag" && clearMusicTest.soundEvents.len()==0,
                     "castle flag rise must not restart the course-clear music");
     enterKoopaShell(testKoopa);
@@ -1253,16 +1257,44 @@ function runSimulationSelfTest() {
                     lowFlagTest.state == "endLevel" &&
                     lowFlagTest.player.endLevelClimbing,
                     "high flag grab must enter PlayerEndLevel after the flag bottom stop");
+    local castleCollisionTest = createGame();
+    castleCollisionTest.goombas = [];
+    castleCollisionTest.state = "endLevel";
+    castleCollisionTest.player.x = castleCollisionTest.castleX + 34.0;
+    // Internal small-Mario Y is the ROM Y plus the 16px sprite offset.
+    castleCollisionTest.player.y = 192.0;
+    castleCollisionTest.player.grounded = true;
+    castleCollisionTest.player.endLevelClimbing = false;
+    castleCollisionTest.player.nesXSpeed = 24;
+    castleCollisionTest.player.nesXSpeedAbsolute = 24;
+    castleCollisionTest.player.nesXForce = 232;
+    castleCollisionTest.player.nesXMoveForce = 192;
+    updateCourseClear(castleCollisionTest, FIXED_DT);
+    requireSelfTest(castleCollisionTest.state == "timeBonus" &&
+                    castleCollisionTest.player.x == castleCollisionTest.castleX + 35.0 &&
+                    castleCollisionTest.player.nesXSpeed == 0 &&
+                    (castleCollisionTest.player.collisionBits & 0x01) == 0,
+                    "castle doorway must use ImpedePlayerMove and the right collision bit");
+    updateCourseClear(castleCollisionTest, FIXED_DT);
+    requireSelfTest(castleCollisionTest.player.x == castleCollisionTest.castleX + 34.0 &&
+                    castleCollisionTest.player.nesXSpeed == 0,
+                    "a blocked PlayerEndLevel pass must retain the doorway position");
+    updateCourseClear(castleCollisionTest, FIXED_DT);
+    requireSelfTest(castleCollisionTest.player.collisionBits == 0xFF,
+                    "castle collision permissions must recover after clear side probes");
     clearTest.state = "autoWalk";
     clearTest.score = clearTest.flagScoreAward;
-    clearTest.player.x = clearTest.castleX + 30.0;
+    clearTest.player.x = clearTest.castleX + 35.0;
     updateCourseClear(clearTest, FIXED_DT);
     requireSelfTest(clearTest.state == "timeBonus",
                     "automatic castle walk must lead into time-score conversion");
     updateCourseClear(clearTest, FIXED_DT);
     requireSelfTest(clearTest.time == 0 && clearTest.score == 5050 &&
-                    clearTest.state == "raiseFlag",
+                    clearTest.state == "timeBonus",
                     "remaining time must convert by one unit and fifty points per frame");
+    updateCourseClear(clearTest, FIXED_DT);
+    requireSelfTest(clearTest.state == "raiseFlag",
+                    "exhausted time must advance StarFlagTaskControl next frame");
     for (local i = 0; i < 31; i += 1) updateCourseClear(clearTest, FIXED_DT);
     requireSelfTest(clearTest.castleFlagY == 113.0 && clearTest.state == "raiseFlag",
                     "castle star flag must rise from $90 through $72 one pixel per frame");
