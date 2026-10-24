@@ -393,6 +393,11 @@ function createPlayer() {
 
 function createGame() {
     local g = {
+        level = 1, stage = "world11",
+        plants = [], platforms = [], enterablePipes = [],
+        world12BaseTiles = [], world12Metatiles = [], savedWorld12 = null,
+        world12Target = "underground", world12PipeMode = "side", world12TransitionFrames = 0,
+        warpWorld = 0,
         accumulator = 0.0,
         simTime = 0.0,
         cameraX = 0.0,
@@ -424,6 +429,7 @@ function createGame() {
         displayCoins = 0,
         lives = 3,
         time = 400,
+        hurryActive = false,
         displayTime = 400,
         // RAM $0787 is 23 at the captured first controllable frame.  The
         // global timer pass decrements it before RunGameTimer tests for zero;
@@ -1071,6 +1077,26 @@ function runSimulationSelfTest() {
     }
     requireSelfTest(testKoopa != null && testGoomba != null,
                     "shell regression requires one koopa and one goomba");
+    foreach(big in [false,true]) {
+        local collisionTest=createGame();
+        local turtle=makeEnemyAt(100.0,12,"koopa");
+        turtle.awake=true;turtle.slot=0;collisionTest.goombas=[turtle];
+        collisionTest.nesFrameCounter=0;
+        local mario=collisionTest.player;
+        mario.big=big;mario.height=big?32.0:16.0;
+        mario.x=100.0;mario.previousX=100.0;
+        mario.y=turtle.y+12-mario.height;mario.previousY=mario.y-3;
+        mario.nesYSpeed=3;mario.vy=3*NES_FRAME_RATE;
+        updateGoombas(collisionTest,FIXED_DT);
+        requireSelfTest(turtle.state=="shell" && !mario.dead && mario.nesYSpeed==-4,
+                        "descending small/big Mario must stomp a walking koopa");
+    }
+    local clearMusicTest=createGame();
+    clearMusicTest.state="timeBonus";clearMusicTest.time=1;
+    clearMusicTest.soundEvents=[];
+    updateCourseClear(clearMusicTest,FIXED_DT);
+    requireSelfTest(clearMusicTest.state=="raiseFlag" && clearMusicTest.soundEvents.len()==0,
+                    "castle flag rise must not restart the course-clear music");
     enterKoopaShell(testKoopa);
     requireSelfTest(testKoopa.state == "shell" && testKoopa.vx == 0.0 &&
                     testKoopa.shellFrames == 16 * 21,
@@ -1144,6 +1170,16 @@ function runSimulationSelfTest() {
     updateTimer(timerTest);
     requireSelfTest(timerTest.time == 399,
                     "course timer must decrement once per original 24-frame interval");
+    timerTest.time=101;timerTest.gameTimerControl=0;timerTest.soundEvents=[];
+    updateTimer(timerTest);
+    requireSelfTest(timerTest.time==100 && !timerTest.hurryActive && timerTest.soundEvents.len()==0,
+                    "hurry must not trigger on 101 to 100");
+    timerTest.gameTimerControl=0;updateTimer(timerTest);
+    requireSelfTest(timerTest.time==99 && timerTest.hurryActive &&
+                    timerTest.soundEvents.len()==1 && timerTest.soundEvents[0]=="hurry",
+                    "100 to 99 must trigger the ROM hurry request exactly once");
+    timerTest.gameTimerControl=0;updateTimer(timerTest);
+    requireSelfTest(timerTest.soundEvents.len()==1,"hurry must not repeat below 100");
     timerTest.lives = 1;
     finishPlayerDeath(timerTest);
     requireSelfTest(timerTest.state == "deathReload" && timerTest.lives == 1,

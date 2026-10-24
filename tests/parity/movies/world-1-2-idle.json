@@ -1,0 +1,13 @@
+{
+  "schema": "smb-parity-movie-v1",
+  "name": "world-1-2-idle",
+  "description": "Explicit area-selection fixture for World 1-2 underground; no gameplay RAM edits after origin.",
+  "level": 2,
+  "frames": 240,
+  "reference_bootstrap": {
+    "frames": 700,
+    "inputs": [{"port": 0, "start": 40, "end": 46, "buttons": ["start"]}]
+  },
+  "inputs": [],
+  "capture_frames": [0, 1, 17, 30, 60, 120, 239]
+}

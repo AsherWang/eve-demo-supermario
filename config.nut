@@ -3,7 +3,9 @@
 config <- {
     width = 768
     height = 720
-    title = "Super Mario Bros. World 1-1 - EVEngine"
+    title = "Super Mario Bros. World 1-1 / 1-2 - EVEngine"
+    startLevel = 1
+    startArea = "intro"
     debug = false
     hotReload = true
     capturePreview = false

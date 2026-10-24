@@ -168,6 +168,46 @@
       "queue_value": 1,
       "emulated_frames": 90,
       "timer_freeze_after_frame": 0
+    },
+    "hurry": {
+      "sha256": "79be7d7feaf677be7f02ad8db34067ef369cd26d6153a3ce51019574602ba6c8",
+      "sample_frames": 135776,
+      "queue_address": 252,
+      "queue_value": 64,
+      "emulated_frames": 180,
+      "timer_freeze_after_frame": 700,
+      "note_length_table_adder": 0,
+      "duration_frames": 170
+    },
+    "overworld_fast": {
+      "sha256": "1e87d532c36a67b9b723a10fe264fea71014ad641dbc71814cce126b4802256b",
+      "sample_frames": 2875196,
+      "queue_address": 251,
+      "queue_value": 1,
+      "emulated_frames": 3600,
+      "timer_freeze_after_frame": 700,
+      "note_length_table_adder": 8,
+      "duration_frames": null
+    },
+    "underground_fast": {
+      "sha256": "513e706330e735c7fdbc06b94d0e765f23d434d535a77e5f74f08ccdbf39f033",
+      "sample_frames": 2875196,
+      "queue_address": 251,
+      "queue_value": 4,
+      "emulated_frames": 3600,
+      "timer_freeze_after_frame": 700,
+      "note_length_table_adder": 8,
+      "duration_frames": null
+    },
+    "star_fast": {
+      "sha256": "2b3d6804fd49d735a37c8e4deba0ab5787190ef5034c57577da07652acaddc2e",
+      "sample_frames": 959951,
+      "queue_address": 251,
+      "queue_value": 64,
+      "emulated_frames": 1202,
+      "timer_freeze_after_frame": 700,
+      "note_length_table_adder": 8,
+      "duration_frames": null
     }
   }
 }

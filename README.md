@@ -1,6 +1,6 @@
-# Super Mario Bros. World 1-1 — EVEngine
+# Super Mario Bros. World 1-1 / 1-2 — EVEngine
 
-Personal-study, ROM-data-driven reconstruction of NES World 1-1 in EVEngine.
+Personal-study, ROM-data-driven reconstruction of NES World 1-1 and 1-2 in EVEngine.
 The packaged game does not include a ROM. Runtime assets were extracted locally
 from a user-provided ROM for this study build.
 
@@ -26,6 +26,15 @@ or endorsed by Nintendo.
 - Offline ROM/Mesen-captured 48 kHz stereo music and sound effects
 - Independent Windows PCM playback through a native EVEngine plugin
 - Startup regression suite covering layout, objects, movement and state changes
+- World 1-2 underground map and coin room from the original ROM parser's metatiles
+- World 1-2 entrance, pipe return, surface exit, lifts, piranha plants and roof route
+
+World 1-2 implementation and its current comparison coverage are documented in
+[`docs/WORLD_1_2_PLAN.md`](docs/WORLD_1_2_PLAN.md). Warp Zone destinations beyond
+World 1 are not implemented; selecting one ends at a destination screen.
+
+The overall milestones, current gaps, and acceptance criteria are tracked in
+[`docs/ROADMAP.md`](docs/ROADMAP.md).
 
 ## Controls
 
@@ -34,6 +43,10 @@ or endorsed by Nintendo.
 - Jump: Z or Space
 - Enter pipe: Down while standing on the World 1-1 warp pipe
 - Reset (or restart after Game Over): R
+- Start World 1-2 at its entrance: F2 (or finish World 1-1)
+
+For development, set `startLevel = 2` in `config.nut`; `startArea` accepts
+`intro`, `underground`, `bonus`, or `exit` to inspect that World 1-2 area.
 
 ## Run from source
 

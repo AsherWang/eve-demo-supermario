@@ -3,13 +3,20 @@ persist assets = null
 persist nativeAudio = null
 persist nativeAudioCaptureTime = 0.0
 persist musicState = null
+persist hurryMusicTime = 0.0
+persist levelTwoKeyDown = false
 
 dofile("scripts/core.nut");
 dofile("scripts/generated/rom_data.nut");
+dofile("scripts/generated/hurry_audio.nut");
+dofile("scripts/generated/world12_data.nut");
+dofile("scripts/generated/world12_map.nut");
+dofile("scripts/generated/world12_bonus_map.nut");
 dofile("scripts/generated/parity_movie.nut");
 dofile("scripts/level.nut");
 dofile("scripts/audio.nut");
 dofile("scripts/simulation.nut");
+dofile("scripts/world12.nut");
 dofile("scripts/render.nut");
 dofile("scripts/parity.nut");
 
@@ -20,7 +27,12 @@ eve_init = function() {
     loadAssets();
     loadAudio();
     runSimulationSelfTest();
+    runWorld12SelfTest();
     game = createGame();
+    if ("startLevel" in config && config.startLevel == 2)
+        startWorld12(game, ("startArea" in config) ? config.startArea : "intro");
+    if (parityIsEnabled() && "PARITY_START_LEVEL" in getroottable() && PARITY_START_LEVEL == 2)
+        initializeWorld12Parity(game);
     parityInitialize(game);
     if (config.previewScenario == "underground") {
         buildUndergroundBonus(game);
@@ -87,7 +99,7 @@ eve_init = function() {
         game.displayCameraX = game.cameraX;
         game.player.x = config.previewCameraX + 32.0;
     }
-    if (game.area == "main") validateLevel(game);
+    if (game.level == 1 && game.area == "main") validateLevel(game);
     print("World 1-1 remake ready: arrows/A-D move, X/Shift run or throw, Z/Space jump, R reset.\n");
 };
 
@@ -104,6 +116,9 @@ eve_update = function(dt) {
     if (frameDt > 0.25) frameDt = 0.25;
 
     sampleInput(game);
+    local levelTwoKey=keyboard.isDown("F2");
+    if(levelTwoKey && !levelTwoKeyDown) startWorld12(game);
+    levelTwoKeyDown=levelTwoKey;
     game.accumulator += frameDt;
 
     local steps = 0;

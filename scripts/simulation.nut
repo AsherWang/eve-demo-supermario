@@ -1,4 +1,5 @@
 function resetRound(g) {
+    if (g.level == 2) { startWorld12(g); return; }
     local checkpointPage = g.checkpointPage;
     g.player = createPlayer();
     g.cameraX = checkpointPage * 256.0;
@@ -9,6 +10,7 @@ function resetRound(g) {
     g.state = "playing";
     g.stateTimer = 0.0;
     g.time = 400;
+    g.hurryActive = false;
     g.displayTime = 400;
     g.queuedScore = g.score;
     g.displayScore = g.score;
@@ -152,6 +154,7 @@ function restoreMainArea(g) {
 }
 
 function tryStartAreaTransition(g) {
+    if (g.level == 2) return tryWorld12Pipe(g);
     local p = g.player;
     if (g.area == "main" && g.input.down && p.grounded) {
         local pipeLeft = 57.0 * TILE_SIZE;
@@ -497,6 +500,24 @@ function bumpEnemiesAbove(g, tx, ty) {
 
 function hitBlock(g, tx, ty) {
     local tile = getTile(g, tx, ty);
+    if (tile == TILE_BRICK_POWERUP || tile == TILE_BRICK_ONEUP || tile == TILE_BRICK_VINE ||
+        tile == TILE_HIDDEN_COIN) {
+        retainOldTileForPpu(g, tx, ty, tile);
+        bumpEnemiesAbove(g, tx, ty);
+        g.bump.active=true;g.bump.tx=tx;g.bump.ty=ty;g.bump.tile=tile;
+        g.bump.time=0.0;g.bump.frame=0;g.bump.powerupPending=true;
+        parityRecordEvent(g,"gameplay","block_hit",
+            ",\"tile_x\":"+tx+",\"tile_y\":"+ty+",\"tile\":"+tile);
+        emitSound(g,"bump");
+        setTile(g, tx, ty, TILE_USED);
+        if (tile == TILE_HIDDEN_COIN) { startJumpingCoin(g, tx, ty); awardCoin(g); }
+        else {
+            spawnPowerUp(g, tx, ty, tile == TILE_BRICK_ONEUP ? "oneup" :
+                (g.player.big ? "flower" : "mushroom"));
+            emitSound(g, "powerup", "reveal");
+        }
+        return;
+    }
     if (tile != TILE_BRICK && tile != TILE_QUESTION &&
         tile != TILE_POWERUP_BLOCK && tile != TILE_HIDDEN_ONEUP &&
         tile != TILE_BRICK_COIN && tile != TILE_BRICK_STAR) return;
@@ -559,7 +580,9 @@ function movePlayerX(g, p, dt) {
     p.sidePipeCollision = false;
     local sideOffsets = p.height > 16.0 ? [8.0, 24.0] : [p.height * 0.5];
     if (p.vx > 0.0) {
-        if (g.area == "underground" && g.sidePipeX >= 0) {
+        if (g.area == "underground" && g.sidePipeX >= 0 &&
+            (g.level != 2 || (p.y+p.height>(g.world12SidePipeBottomRow-1)*16 &&
+                             p.y<(g.world12SidePipeBottomRow+1)*16))) {
             local mouthX = g.sidePipeX * TILE_SIZE.tofloat();
             if (nextX + p.width >= mouthX) {
                 // The ROM's side sample uses an inclusive right edge, leaving
@@ -644,7 +667,7 @@ function movePlayerY(g, p, dt, fallingOrStationary = false) {
         // The two-pixel difference decides the canonical corner bump frame.
         local tx = floor((p.x + 8.0) / TILE_SIZE).tointeger();
         local tile = getTile(g, tx, ty);
-        if (isSolidTile(tile) || tile == TILE_HIDDEN_ONEUP) {
+        if (isSolidTile(tile) || tile == TILE_HIDDEN_ONEUP || tile == TILE_HIDDEN_COIN) {
             // SMB samples the head point after applying the integer vertical
             // displacement and does not snap Player_Y_Position to the tile
             // boundary.  For this block the canonical result is $8d (141),
@@ -730,7 +753,7 @@ function killPlayer(g, causeJson = "") {
     p.vx = 0.0;
     p.vy = -4.0 * NES_FRAME_RATE;
     p.nesXSpeed = 0;
-    p.nesXForce = 0;
+    if (g.level == 1) p.nesXForce = 0;
     p.nesYSpeed = -4;
     p.fallForce = 0x28;
     p.grounded = false;
@@ -1434,6 +1457,11 @@ function updateFireballs(g, dt) {
 }
 
 function moveEnemyBody(g, e, dt) {
+    if ("red" in e && e.red && e.state == "walking" && e.grounded) {
+        local footX=e.vx<0?e.x:e.x+e.width;
+        if(!isSolidAt(g,floor(footX/16).tointeger(),floor((e.y+e.height+1)/16).tointeger()))
+            e.vx=-e.vx;
+    }
     e.vy += 857.8125 * dt;
     if (e.vy > 180.0) e.vy = 180.0;
 
@@ -1765,8 +1793,10 @@ function updateGoombas(g, dt) {
                 g.score += e.kind == "goomba" ? 100 : 200;
                 continue;
             }
-            local playerBottomBefore = p.previousY + p.height;
-            if (p.vy > 0.0 && playerBottomBefore <= e.y + 6.0) {
+            // ChkForPlayerInjury branches directly to EnemyStomped for a
+            // positive Player_Y_Speed. Koopa's body collision box begins
+            // below its head, so a previous-feet/head test rejects valid hits.
+            if (p.nesYSpeed > 0) {
                 parityRecordEvent(g, "gameplay", "enemy_stomp",
                     ",\"enemy\":\"" + e.kind + "\",\"enemy_state\":\"" + e.state + "\"");
                 if (e.kind == "goomba") {
@@ -1883,7 +1913,7 @@ function updateEffects(g, dt) {
 }
 
 function updateCamera(g) {
-    if (g.area == "underground") {
+    if (g.area == "underground" && !(g.level == 2 && g.stage == "underground")) {
         g.cameraX = 0.0;
         g.displayCameraX = 0.0;
         g.previousScrollAmount = 0.0;
@@ -1921,7 +1951,7 @@ function updateCamera(g) {
     g.flagContactScrollPending = false;
     // HalfwayPageNybbles stores page 5 for World 1-1.  It is only retained
     // after the left edge has actually reached that page.
-    if (g.area == "main" && g.cameraX >= 5.0 * 256.0)
+    if (g.level == 1 && g.area == "main" && g.cameraX >= 5.0 * 256.0)
         g.checkpointPage = 5;
 }
 
@@ -2149,7 +2179,6 @@ function updateCourseClear(g, dt) {
             g.castleFlagY = 144.0;
             g.state = "raiseFlag";
             g.stateTimer = 0.0;
-            emitSound(g, "course_clear");
         }
     } else if (g.state == "raiseFlag") {
         // RaiseFlagSetoffFWorks decrements $90 until it has crossed $72.
@@ -2193,6 +2222,10 @@ function updateCourseClear(g, dt) {
 function updateTimer(g) {
     if (g.player.dead || g.gameTimerControl != 0) return;
     if (g.time > 0) {
+        if (g.time == 100 && !g.hurryActive) {
+            g.hurryActive = true;
+            emitSound(g,"hurry");
+        }
         // US SMB1 constants.inc: con_game_timer_reload = $18.  This value is
         // a frame timer, not a 0.4-second wall-clock approximation.
         g.gameTimerControl = 0x18;
@@ -2290,6 +2323,15 @@ function updateFireworks(g, dt) {
 }
 
 function updateDeathReload(g) {
+    if (g.level == 2) {
+        g.deathReloadFrames += 1;
+        if (g.deathReloadFrames == 1) {
+            g.lives -= 1;
+            if (g.lives <= 0) {g.state="gameOver";emitSound(g,"game_over");return;}
+        }
+        if (g.deathReloadFrames >= 166) startWorld12(g,"underground");
+        return;
+    }
     g.deathReloadFrames += 1;
     local frame = g.deathReloadFrames;
     if (frame == 1) {
@@ -2337,6 +2379,7 @@ function updateDeathReload(g) {
         // observable.  On the next frame RunGameTimer immediately subtracts
         // one and reloads $0787 to $18, exposing 400 in normal control.
         g.time = 401;
+        g.hurryActive = false;
         g.gameTimerControl = 0;
         g.player = createPlayer();
         g.state = "deathEntrance";
@@ -2359,6 +2402,12 @@ function updateDeathReload(g) {
 
 function simulateFixed(g, dt) {
     g.simTime += dt;
+    if (g.level == 1 && g.state == "levelComplete" && !parityIsEnabled()) {
+        g.stateTimer += dt;
+        if (g.stateTimer >= 1.0) startWorld12(g);
+        return;
+    }
+    if (g.level == 2 && updateWorld12Transition(g)) return;
     // A sprite retained from the preceding pass is consumed by this pass's
     // render. Values set later below therefore survive until the next call.
     foreach (enemy in g.goombas) {
@@ -2458,6 +2507,7 @@ function simulateFixed(g, dt) {
             updateFireballs(g, dt);
             updateGoombas(g, dt);
             updateLevelCoins(g);
+            if (g.level == 2) updateWorld12Actors(g);
         } else if (g.state == "pipeDown" || g.state == "pipeSide") {
             // Pipe-entry player control is a game-engine subroutine; normal
             // enemy objects still run on the transition's first frame.

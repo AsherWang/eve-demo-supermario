@@ -1,0 +1,13 @@
+{
+  "schema": "smb-parity-movie-v1",
+  "name": "world-1-2-walk",
+  "description": "World 1-2 initial fall, horizontal acceleration and first enemy encounter; explicit pre-origin area selection.",
+  "level": 2,
+  "frames": 180,
+  "reference_bootstrap": {
+    "frames": 700,
+    "inputs": [{"port": 0, "start": 40, "end": 46, "buttons": ["start"]}]
+  },
+  "inputs": [{"port": 0, "start": 0, "end": 179, "buttons": ["right"]}],
+  "capture_frames": [17, 30, 60, 90, 120, 150, 179]
+}

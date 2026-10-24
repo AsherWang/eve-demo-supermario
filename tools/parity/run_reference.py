@@ -125,10 +125,28 @@ end, emu.eventType.endFrame)
 """
 
 
-def build_origin_lua() -> str:
+def build_origin_lua(level: int = 1) -> str:
     # SMBDIS RAM symbols: OperMode=$0770 and GameEngineSubroutine=$000e.
     # Subroutine 8 is PlayerCtrlRoutine, the first normal controllable state.
-    return """-- Report the first completed normal gameplay frame.
+    selector = "" if level == 1 else """
+-- Explicit test fixture: select World 1-2 after boot, before area initialization.
+local selected = false
+emu.addEventCallback(function()
+  if not selected and emu.read(0x0770, emu.memType.nesInternalRam) == 1
+     and emu.read(0x000e, emu.memType.nesInternalRam) == 8 then
+    selected = true
+    emu.write(0x075c, 1, emu.memType.nesInternalRam)
+    emu.write(0x0760, 2, emu.memType.nesInternalRam)
+    emu.write(0x0750, 0xc0, emu.memType.nesInternalRam)
+    emu.write(0x0752, 0, emu.memType.nesInternalRam)
+    emu.write(0x075b, 0, emu.memType.nesInternalRam)
+    emu.write(0x0757, 1, emu.memType.nesInternalRam)
+    emu.write(0x0769, 1, emu.memType.nesInternalRam)
+    emu.write(0x0772, 0, emu.memType.nesInternalRam)
+  end
+end, emu.eventType.endFrame)
+"""
+    body = """-- Report the first completed normal gameplay frame.
 local absoluteFrame = 0
 local found = false
 emu.addEventCallback(function()
@@ -143,6 +161,11 @@ emu.addEventCallback(function()
   absoluteFrame = absoluteFrame + 1
 end, emu.eventType.endFrame)
 """
+    if level == 2:
+        body = body.replace('if not found and operMode',
+            'if emu.read(0x075c, emu.memType.nesInternalRam) == 1 and '
+            'emu.read(0x074e, emu.memType.nesInternalRam) == 2 and not found and operMode')
+    return selector + body
 
 
 def run_command(command: list[str], stdout_path: Path, stderr_path: Path) -> tuple[subprocess.CompletedProcess[str], list[dict]]:
@@ -198,7 +221,7 @@ def main() -> int:
     bootstrap = movie.get("reference_bootstrap", {})
     bootstrap_frames = bootstrap.get("frames", 0)
     origin_lua = output / "find-origin.lua"
-    origin_lua.write_text(build_origin_lua(), encoding="utf-8", newline="\n")
+    origin_lua.write_text(build_origin_lua(movie.get("level", 1)), encoding="utf-8", newline="\n")
     origin_state = output / "origin.mss"
     scan_command = [
         str(args.mesen_agent.resolve()),
@@ -231,6 +254,7 @@ def main() -> int:
         "--timeout", "120",
         "--save-state", str(origin_state),
         "--state-json", str(output / "origin-state.json"),
+        "--lua", str(origin_lua),
     ]
     bootstrap_command.extend(mesen_section_input_arguments(bootstrap.get("inputs", [])))
     bootstrap_result, bootstrap_summaries = run_command(

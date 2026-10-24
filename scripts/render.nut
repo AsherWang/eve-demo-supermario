@@ -47,6 +47,15 @@ function loadAssets() {
     if (assets != null) return;
 
     assets = {
+        world12 = {
+            questions = [loadTexture("assets/world12/question-0.png"),loadTexture("assets/world12/question-1.png"),
+                loadTexture("assets/world12/question-2.png"),loadTexture("assets/world12/question-3.png"),
+                loadTexture("assets/world12/question-4.png"),loadTexture("assets/world12/question-5.png")],
+            goombas = [loadTexture("assets/world12/goomba-0.png"),loadTexture("assets/world12/goomba-1.png")],
+            goombaDefeated = loadTexture("assets/world12/goomba-defeated.png"),
+            plants = [loadTexture("assets/world12/piranha-0.png"),loadTexture("assets/world12/piranha-1.png")],
+            platform = loadTexture("assets/world12/platform.png")
+        },
         tiles = {
             ground = loadTexture("assets/tiles/ground.png"),
             solid = loadTexture("assets/tiles/solid.png"),
@@ -332,6 +341,15 @@ function loadAssets() {
             }
         ]
     };
+    assets.world12.metatiles <- {};
+    foreach(column in ROM_WORLD_1_2_METATILES) foreach(meta in column) {
+        if(!(meta in assets.world12.metatiles))
+            assets.world12.metatiles[meta]<-loadTexture("assets/world12/metatile-"+meta+".png");
+    }
+    foreach(column in ROM_WORLD_1_2_BONUS_METATILES) foreach(meta in column) {
+        if(!(meta in assets.world12.metatiles))
+            assets.world12.metatiles[meta]<-loadTexture("assets/world12/metatile-"+meta+".png");
+    }
 }
 
 function screenRect(x, y, width, height, r, g, b, a = 1.0) {
@@ -410,7 +428,8 @@ function drawBackground(g) {
     // three nametable pages, exactly as it does in the ROM.
     local firstColumn = floor(visualCameraX(g) / TILE_SIZE).tointeger() - 1;
     local lastColumn = firstColumn + 19;
-    local sceneryOffset = ROM_BACK_SCENERY_OFFSETS[ROM_WORLD_1_1_BACKGROUND_SCENERY - 1];
+    local sceneryType=g.level==2 && g.stage=="intro"?1:ROM_WORLD_1_1_BACKGROUND_SCENERY;
+    local sceneryOffset = ROM_BACK_SCENERY_OFFSETS[sceneryType - 1];
 
     for (local column = firstColumn; column <= lastColumn; column += 1) {
         if (column < 0) continue;
@@ -433,6 +452,9 @@ function drawBackground(g) {
 }
 
 function tileTexture(g, tile) {
+    if (tile == TILE_HIDDEN_COIN) return null;
+    if (tile == TILE_BRICK_POWERUP || tile == TILE_BRICK_ONEUP || tile == TILE_BRICK_VINE)
+        return g.area == "underground" ? assets.tiles.undergroundBrick : assets.tiles.brick;
     if (g.area == "underground" && tile == TILE_GROUND)
         return assets.tiles.undergroundGround;
     if (g.area == "underground" &&
@@ -476,6 +498,11 @@ function drawTiles(g) {
             }
             if (tile == TILE_EMPTY) continue;
             local texture = tileTexture(g, tile);
+            if(g.level==2 && (g.stage=="underground" || g.stage=="bonus") && g.world12BaseTiles.len()>0 &&
+               tile==g.world12BaseTiles[tileIndex(tx,ty)] && tile!=TILE_QUESTION && tile!=TILE_POWERUP_BLOCK) {
+                local meta=g.world12Metatiles[tileIndex(tx,ty)];
+                if(meta in assets.world12.metatiles) texture=assets.world12.metatiles[meta];
+            }
             if (texture == null) continue;
             local offsetY = 0.0;
             if (g.bump.active && g.bump.tx == tx && g.bump.ty == ty) {
@@ -502,7 +529,9 @@ function drawTiles(g) {
                 // ColorRotation advances every eighth frame through the six
                 // ROM palette entries; use the pre-rendered exact variants.
                 local phase = g.displayColorPhase;
-                worldTexture(g, assets.tiles.questions[phase], tx * 16.0,
+                local questionTextures=g.level==2 && g.area=="underground" ?
+                    assets.world12.questions : assets.tiles.questions;
+                worldTexture(g, questionTextures[phase], tx * 16.0,
                              ty * 16.0 + offsetY, 16.0, 16.0);
             } else {
                 worldTexture(g, texture, tx * 16.0, ty * 16.0 + offsetY, 16.0, 16.0);
@@ -579,10 +608,10 @@ function marioTexture(g) {
 
 function drawPlayer(g) {
     local p = g.player;
-    if (parityIsEnabled() && g.parity.frame == 0) return;
+    if (g.level == 1 && parityIsEnabled() && g.parity.frame == 0) return;
     if (g.state == "timeBonus" || g.state == "raiseFlag" ||
         g.state == "fireworks" || g.state == "postClearDelay" ||
-        g.state == "levelComplete" || g.state == "gameOver") return;
+        g.state == "levelComplete" || g.state == "gameOver" || g.state == "warpComplete") return;
     if (p.invulnerable > 0.0 && floor(g.simTime * 14.0).tointeger() % 2 == 0) return;
     // Player_Rel_YPos is prepared before the current movement integration;
     // OAM therefore displays the preceding world Y while RAM already holds
@@ -671,7 +700,8 @@ function drawEnemy(g, e) {
                             16.0, height, 180.0);
         return;
     } else if (e.kind == "goomba" && visualState == "defeated") {
-        texture = assets.enemies.goombaDefeated;
+        texture = g.level == 2 && g.area == "underground" ?
+            assets.world12.goombaDefeated : assets.enemies.goombaDefeated;
     } else if (e.kind == "koopa" &&
                (visualState == "shell" || visualState == "shellMoving")) {
         // EnemyGfxHandler toggles both stationary and moving shell frames on
@@ -697,7 +727,8 @@ function drawEnemy(g, e) {
             local movingLeft = e.vx < 0.0;
             frame = counterBitSet == movingLeft ? 1 : 0;
         }
-        texture = assets.enemies.goombas[frame];
+        texture = g.level == 2 && g.area == "underground" ?
+            assets.world12.goombas[frame] : assets.enemies.goombas[frame];
     }
     // RelativeEnemyPosition is prepared before EnemyMovementSubs.  With the
     // host-side post-movement coordinate, left-moving Goombas need a one-pixel
@@ -878,7 +909,7 @@ function drawHud(g) {
     screenTexture(assets.hudFont[0x29], 96.0, 24.0, 8.0, 8.0);
     drawHudNumber(g.displayCoins, 2, 104.0, 24.0);
     drawHudGlyphs([0x20, 0x18, 0x1B, 0x15, 0x0D], 144.0, 16.0); // WORLD
-    drawHudGlyphs([0x01, 0x28, 0x01], 152.0, 24.0);
+    drawHudGlyphs([0x01, 0x28, g.level], 152.0, 24.0);
     drawHudGlyphs([0x1D, 0x12, 0x16, 0x0E], 200.0, 16.0); // TIME
     if (!(parityIsEnabled() && g.parity.frame == 0) &&
         g.state != "areaExitEntrance")
@@ -890,7 +921,10 @@ function drawHud(g) {
                        0x18, 0x1F, 0x0E, 0x1B], 92.0, 112.0);
     } else if (g.state == "levelComplete") {
         drawHudGlyphs([0x20, 0x18, 0x1B, 0x15, 0x0D], 88.0, 96.0);
-        drawHudGlyphs([0x01, 0x28, 0x01], 112.0, 112.0);
+        drawHudGlyphs([0x01, 0x28, g.level], 112.0, 112.0);
+    } else if (g.state == "warpComplete") {
+        drawHudGlyphs([0x20,0x18,0x1b,0x15,0x0d],88,96);
+        drawHudGlyphs([g.warpWorld,0x28,1],112,112);
     }
 }
 
@@ -902,11 +936,11 @@ function drawIntermediateLives(g) {
     screenTexture(assets.hudFont[0x29], 96.0, 24.0, 8.0, 8.0);
     drawHudNumber(g.coins, 2, 104.0, 24.0);
     drawHudGlyphs([0x20, 0x18, 0x1B, 0x15, 0x0D], 144.0, 16.0);
-    drawHudGlyphs([0x01, 0x28, 0x01], 152.0, 24.0);
+    drawHudGlyphs([0x01, 0x28, g.level], 152.0, 24.0);
     drawHudGlyphs([0x1D, 0x12, 0x16, 0x0E], 200.0, 16.0);
 
     drawHudGlyphs([0x20, 0x18, 0x1B, 0x15, 0x0D, 0x24,
-                   0x01, 0x28, 0x01], 88.0, 80.0);
+                   0x01, 0x28, g.level], 88.0, 80.0);
     screenTexture(assets.mario.standRight, 96.0, 89.0, 16.0, 32.0);
     screenTexture(assets.hudFont[0x29], 120.0, 112.0, 8.0, 8.0);
     screenTexture(assets.hudFont[g.lives], 144.0, 112.0, 8.0, 8.0);
@@ -935,6 +969,13 @@ function areaTransitionOverlay(g) {
 
 function renderGame(g) {
     gfx.clear();
+    local world12EntryFrames=g.world12PipeMode=="side"?160:48;
+    if (g.level == 2 && g.state == "world12Pipe" &&
+        g.world12TransitionFrames > world12EntryFrames &&
+        g.world12TransitionFrames < world12EntryFrames+27) {
+        screenRect(0,0,LOGICAL_WIDTH,LOGICAL_HEIGHT,0,0,0);
+        return;
+    }
     local transitionOverlay = areaTransitionOverlay(g);
     if (transitionOverlay != null) {
         if (transitionOverlay == "black")
@@ -965,17 +1006,19 @@ function renderGame(g) {
     drawLevelCoins(g);
     drawPowerUps(g, true);
     drawFireballs(g);
+    if (g.level == 2) drawWorld12Actors(g, true);
     // Pipe/entrance movement sets OAM priority bit 5 for Mario.  Draw him
     // before the background metatiles so non-transparent pipe/ground pixels
     // occlude the sprite exactly as the PPU does.
     local playerBehindBackground = g.state == "pipeDown" ||
-        g.state == "pipeSide" || g.state == "areaExitEntrance";
+        g.state == "pipeSide" || g.state == "areaExitEntrance" ||
+        (g.level == 2 && g.state == "world12Pipe");
     local playerHidden = g.state == "areaReload";
     if (playerBehindBackground && !playerHidden) drawPlayer(g);
     drawTiles(g);
     drawPowerUps(g, false);
     if (g.area == "main") {
-        drawFlag(g);
+        if (!(g.level == 2 && g.stage == "intro")) drawFlag(g);
         drawCastle(g);
     }
     drawFireworks(g);
@@ -987,6 +1030,7 @@ function renderGame(g) {
                 e.erasedDisplayFrames > 0 && e.erasedSlot == slot))
                 drawEnemy(g, e);
     drawEffects(g);
+    if (g.level == 2) drawWorld12Actors(g, false);
     if (!playerBehindBackground && !playerHidden) drawPlayer(g);
     drawHud(g);
 }

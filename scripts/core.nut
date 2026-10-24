@@ -41,6 +41,10 @@ TILE_SIDE_PIPE_TOP_JOINT <- 16;
 TILE_SIDE_PIPE_BOTTOM_END <- 17;
 TILE_SIDE_PIPE_BOTTOM_SHAFT <- 18;
 TILE_SIDE_PIPE_BOTTOM_JOINT <- 19;
+TILE_BRICK_POWERUP <- 20;
+TILE_BRICK_ONEUP <- 21;
+TILE_HIDDEN_COIN <- 22;
+TILE_BRICK_VINE <- 23;
 
 function clampValue(value, minimum, maximum) {
     if (value < minimum) return minimum;
@@ -80,6 +84,7 @@ function setTile(g, tx, ty, value) {
 
 function isSolidTile(value) {
     return value == TILE_GROUND || value == TILE_SOLID || value == TILE_BRICK ||
+           value == TILE_BRICK_POWERUP || value == TILE_BRICK_ONEUP || value == TILE_BRICK_VINE ||
            value == TILE_BRICK_COIN || value == TILE_BRICK_STAR ||
            value == TILE_QUESTION || value == TILE_POWERUP_BLOCK ||
            value == TILE_USED ||

@@ -11,7 +11,8 @@ function loadAudio() {
     local names = [
         "jump", "jump_big", "coin", "bump", "break", "powerup", "powerup_reveal",
         "oneup", "stomp", "kick", "fireball", "pipe", "death", "flag",
-        "course_clear", "game_over", "blast", "overworld", "star", "underground"
+        "course_clear", "game_over", "blast", "overworld", "star", "underground",
+        "hurry", "overworld_fast", "underground_fast", "star_fast"
     ];
     foreach (name in names)
         nativeAudio.loadClip(name, root + "/assets/audio/" + name + ".wav");
@@ -19,6 +20,7 @@ function loadAudio() {
     if ("audioReferenceClip" in config)
         nativeAudio.loadClip("overworld", config.audioReferenceClip);
     nativeAudioCaptureTime = 0.0;
+    hurryMusicTime = 0.0;
     if ("audioCaptureSeconds" in config && config.audioCaptureSeconds > 0)
         nativeAudio.beginCapture(config.audioCaptureSeconds);
     nativeAudio.open();
@@ -45,28 +47,33 @@ function playSound(name) {
 }
 
 function stopMusic() {
+    hurryMusicTime = 0.0;
     if (nativeAudio == null) return;
     nativeAudio.stopMusic();
     musicState = "stopped";
 }
 
 function resumeMusic(useStarMusic = false) {
+    hurryMusicTime = 0.0;
     if (nativeAudio == null) return;
     local name = useStarMusic ? "star" :
         ((game != null && game.area == "underground") ? "underground" : "overworld");
+    if (game != null && game.hurryActive) name += "_fast";
     nativeAudio.playMusic(name);
     musicState = useStarMusic ? "star" : "ground";
 }
 
 function startStarMusic() {
-    if (nativeAudio == null) return;
-    nativeAudio.playMusic("star");
-    musicState = "star";
+    resumeMusic(true);
 }
 
 function updateMusic(dt = 0.0) {
     if (nativeAudio == null) return;
     nativeAudio.verify();
+    if (hurryMusicTime > 0.0) {
+        hurryMusicTime -= dt;
+        if (hurryMusicTime <= 0.0) resumeMusic(game.player.starMusicActive);
+    }
     if ("audioCaptureSeconds" in config && config.audioCaptureSeconds > 0 &&
         nativeAudioCaptureTime >= 0.0) {
         nativeAudioCaptureTime += dt;
@@ -80,6 +87,12 @@ function updateMusic(dt = 0.0) {
 
 function flushSoundEvents(g) {
     foreach (name in g.soundEvents) {
+        if (name == "hurry") {
+            if (nativeAudio != null) nativeAudio.playMusic("hurry");
+            hurryMusicTime = HURRY_WARNING_FRAMES / NES_FRAME_RATE;
+            musicState = "hurry";
+            continue;
+        }
         if (name == "silence_music") { stopMusic(); continue; }
         if (name == "resume_music") { resumeMusic(g.player.starMusicActive); continue; }
         if (name == "star_music") { startStarMusic(); continue; }

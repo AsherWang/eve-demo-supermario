@@ -590,6 +590,8 @@ class SmbApuModel:
                 self.s(0xFC, 0x01)
             elif name == "course_clear":
                 self.s(0xFC, 0x20)
+            elif name == "hurry":
+                self.s(0xFC, 0x40)
             elif name == "game_over":
                 self.s(0xFC, 0x02)
             elif name == "star_music":
@@ -600,7 +602,7 @@ class SmbApuModel:
             name = event.get("name")
             if name == "silence":
                 self.s(0xFC, 0x80)
-            elif name == "underground":
+            elif name == "underground" and event.get("frame", 0) > 0:
                 self.s(0xFB, 0x04)
             elif name == "overworld" and event.get("frame", 0) > 0:
                 self.s(0xFB, 0x01)

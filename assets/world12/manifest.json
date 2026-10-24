@@ -1,0 +1,25 @@
+{
+  "rom_sha256": "f61548fdf1670cffefcc4f0b7bdcdd9eaba0c226e3b74f8666071496988248de",
+  "streams": {
+    "AREA": {
+      "cpu_address": "0xac35",
+      "length": 163,
+      "sha256": "fba6eb4acdb570dad659a78ddf66dd2b3b9375977695b7f0bf707a65cee75154"
+    },
+    "ENEMIES": {
+      "cpu_address": "0xa0d8",
+      "length": 45,
+      "sha256": "3423ecc653f8afe76aadb37f39697be43b45df3fe5f52806fabd4861ce2dc776"
+    },
+    "INTRO": {
+      "cpu_address": "0xa832",
+      "length": 9,
+      "sha256": "c054d62d829fcdecd8322e1f9c0e8c04cbc460c06b6ef26ca2fb21571c24272f"
+    },
+    "BONUS": {
+      "cpu_address": "0xad79",
+      "length": 141,
+      "sha256": "95a65bbdc2351f0cfc630edf4a551f32fec91a19d83b9ffa5a9a9eec94e1cc39"
+    }
+  }
+}

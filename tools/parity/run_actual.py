@@ -46,6 +46,7 @@ def squirrel_source(movie: dict, output: Path) -> str:
     captures = ", ".join(str(value) for value in movie.get("capture_frames", range(movie["frames"])))
     return f"""// Generated local replay. Do not package this file.
 PARITY_MOVIE_ENABLED <- true;
+PARITY_START_LEVEL <- {movie.get('level', 1)};
 PARITY_MOVIE_NAME <- \"{movie_name}\";
 PARITY_OUTPUT_DIR <- \"{output_text}\";
 PARITY_FRAME_MASKS <- [
