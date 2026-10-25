@@ -121,6 +121,20 @@ python tools/parity/run_case.py `
 The full replay invokes `runWorld14SelfTest()` during startup. Direct source
 startup also exercises the self-test through the parent integration.
 
+To reproduce the checked-in PCM without using a runtime emulator:
+
+```powershell
+python tools/extract_world14.py `
+  --rom 'roms/Super Mario Bros. (World).nes' `
+  --origin-state 'D:/workspace/eve-demos/super-mario/local-parity/reference/world-1-4-idle/origin.mss' `
+  --mesen 'D:/workspace/eve-demos/super-mario/.tools/mesen/mesen-agent.exe' `
+  --audio-work local-parity/world14-audio-verify
+```
+
+This reconstruction produced the same five WAV hashes in the manifest and two
+matching captures per clip. Nothing from this extraction path is loaded by the
+game: runtime playback uses the checked-in PCM files.
+
 ## Strict acceptance status
 
 This is a functional, deterministic host route, not a strict whole-level pass.
@@ -134,3 +148,13 @@ Known review areas still requiring strict evidence are firebar frame equivalence
 Bowser movement and flame cadence, castle question-block animation, Toad palette
 and OAM presentation, runtime APU channel stealing/mixing, and the missing real
 World 2-1 transition.
+
+The latest all-frame strict probe remains failed evidence. It mismatches player
+vertical physics at frame 29 and horizontal physics at frame 39, before castle
+actors can be compared. The same movie makes the ROM enter its death routine at
+frames 789 and 1393 while the host route survives. The six-gate probe therefore
+did not reach the axe in the ROM and cannot validate the castle-clear route. Its
+APU stream reached 766 exact frames of 2400, and its audio correlation was
+0.618849 with mean absolute PCM error 0.022511. These failures must remain visible
+until the shared player physics and a single ROM-and-host-clear controller route
+are supplied and the full comparison is rerun.
