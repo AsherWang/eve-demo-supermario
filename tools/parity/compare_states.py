@@ -8,6 +8,8 @@ from typing import Any
 
 
 FIELD_SPECS = (
+    {"field": "world"},
+    {"field": "level"},
     {"field": "frame_counter"},
     {"field": "player.x"},
     {"field": "player.y"},

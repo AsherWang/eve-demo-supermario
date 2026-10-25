@@ -23,7 +23,8 @@ function parityInitialize(g) {
     };
     if (parityIsEnabled()) {
         print("PARITY_BEGIN " + PARITY_MOVIE_NAME + " frames=" + PARITY_FRAME_MASKS.len() + "\n");
-        parityRecordEvent(g, "music", g.area == "underground" ? "underground" : "overworld",
+        parityRecordEvent(g, "music", g.area == "castle" ? "castle" :
+            (g.area == "underground" ? "underground" : "overworld"),
             ",\"action\":\"start\",\"phase\":\"intro\"");
     }
 }
@@ -214,6 +215,7 @@ function parityStateJson(g, frame) {
     return "{\"frame\":" + frame +
         ",\"input_mask\":" + g.parity.inputMask +
         ",\"state\":\"" + g.state + "\"" +
+        ",\"world\":1,\"level\":" + g.level +
         ",\"area\":\"" + g.area + "\"" +
         ",\"player\":{\"x\":" + p.x + ",\"y\":" + canonicalY +
         ",\"previous_x\":" + p.previousX +

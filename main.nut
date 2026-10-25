@@ -17,6 +17,7 @@ dofile("scripts/level.nut");
 dofile("scripts/audio.nut");
 dofile("scripts/simulation.nut");
 dofile("scripts/world12.nut");
+dofile("scripts/levels.nut");
 dofile("scripts/render.nut");
 dofile("scripts/parity.nut");
 dofile("scripts/generated/koopa_bounce_trace.nut");

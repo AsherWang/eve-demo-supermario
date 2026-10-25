@@ -1,4 +1,5 @@
 function resetRound(g) {
+    if(g.level>=3) {startWorld1Stage(g,g.level,true);return;}
     if (g.level == 2) { g.player=createPlayer(); startWorld12(g); return; }
     local checkpointPage = g.checkpointPage;
     g.player = createPlayer();
@@ -154,6 +155,7 @@ function restoreMainArea(g) {
 }
 
 function tryStartAreaTransition(g) {
+    if(g.level>=3) return false;
     if (g.level == 2) return tryWorld12Pipe(g);
     local p = g.player;
     if (g.area == "main" && g.input.down && p.grounded) {
@@ -709,7 +711,7 @@ function handlePlayerBackgroundSides(g, p) {
         impedePlayerMove(g, p, p.movingDir);
         return;
     }
-    if (g.level == 2 && g.area == "underground" && g.state == "playing") {
+    if (g.level >= 2 && (g.area == "underground" || g.area == "castle") && g.state == "playing") {
         // The ROM runs DoPlayerSideCheck after the head/feet pass in every
         // area. The old implementation only ran this pass above ground,
         // leaving the inclusive +12 foot sample supported by a wall's side.
@@ -2471,6 +2473,7 @@ function updateFireworks(g, dt) {
 }
 
 function updateDeathReload(g) {
+    if(g.level>=3) {updateWorld1StageDeath(g);return;}
     if (g.level == 2) {
         g.deathReloadFrames += 1;
         if (g.deathReloadFrames == 1) {
@@ -2557,12 +2560,16 @@ function updateDeathReload(g) {
 
 function simulateFixed(g, dt) {
     g.simTime += dt;
-    if (g.level == 1 && g.state == "levelComplete" && !parityIsEnabled()) {
+    if (g.level <= 3 && g.state == "levelComplete") {
         g.stateTimer += dt;
-        if (g.stateTimer >= 1.0) startWorld12(g);
+        // Preserve the established 1-1 parity endpoint; newer whole-route
+        // movies include the next stage and therefore must cross this edge.
+        if(g.stateTimer>=1.0 && !(g.level==1 && parityIsEnabled()))
+            startWorld1Stage(g,g.level+1);
         return;
     }
     if (g.level == 2 && updateWorld12Transition(g)) return;
+    if (g.level == 4 && updateWorld14Transition(g)) return;
     // A sprite retained from the preceding pass is consumed by this pass's
     // render. Values set later below therefore survive until the next call.
     foreach (enemy in g.goombas) {
@@ -2663,6 +2670,8 @@ function simulateFixed(g, dt) {
             updateGoombas(g, dt);
             updateLevelCoins(g);
             if (g.level == 2) updateWorld12Actors(g);
+            if (g.level == 3) updateWorld13Actors(g);
+            if (g.level == 4) updateWorld14Actors(g);
         } else if (g.state == "pipeDown" || g.state == "pipeSide") {
             // Pipe-entry player control is a game-engine subroutine; normal
             // enemy objects still run on the transition's first frame.

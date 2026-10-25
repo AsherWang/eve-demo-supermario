@@ -421,6 +421,8 @@ function positiveModulo(value, divisor) {
 }
 
 function drawBackground(g) {
+    if(g.level==3) {drawWorld13Background(g);return;}
+    if(g.level==4) {drawWorld14Background(g);return;}
     if (g.area == "underground") return;
     // SMB's renderer selects one byte for every 16-pixel column. The upper
     // nibble is the vertical start row and the lower nibble selects a
@@ -495,6 +497,12 @@ function drawTiles(g) {
                     tile = entry.tile;
                     break;
                 }
+            }
+            if(g.level>=3) {
+                local texture=g.level==3?world13TileTexture(g,tx,ty,tile):
+                    world14TileTexture(g,tx,ty,tile);
+                if(texture!=null) worldTexture(g,texture,tx*TILE_SIZE,ty*TILE_SIZE,TILE_SIZE,TILE_SIZE);
+                continue;
             }
             if (tile == TILE_EMPTY) continue;
             local texture = tileTexture(g, tile);
@@ -1003,13 +1011,15 @@ function renderGame(g) {
         }
         return;
     }
-    if (g.area == "underground")
+    if (g.area == "underground" || g.area == "castle")
         screenRect(0.0, 0.0, LOGICAL_WIDTH, LOGICAL_HEIGHT, 0.0, 0.0, 0.0);
     drawBackground(g);
     drawLevelCoins(g);
     drawPowerUps(g, true);
     drawFireballs(g);
     if (g.level == 2) drawWorld12Actors(g, true);
+    if (g.level == 3) drawWorld13Actors(g, true);
+    if (g.level == 4) drawWorld14Actors(g, true);
     // Pipe/entrance movement sets OAM priority bit 5 for Mario.  Draw him
     // before the background metatiles so non-transparent pipe/ground pixels
     // occlude the sprite exactly as the PPU does.
@@ -1034,6 +1044,8 @@ function renderGame(g) {
                 drawEnemy(g, e);
     drawEffects(g);
     if (g.level == 2) drawWorld12Actors(g, false);
+    if (g.level == 3) drawWorld13Actors(g, false);
+    if (g.level == 4) drawWorld14Actors(g, false);
     if (!playerBehindBackground && !playerHidden) drawPlayer(g);
     drawHud(g);
 }

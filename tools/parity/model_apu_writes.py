@@ -606,6 +606,8 @@ class SmbApuModel:
                 self.s(0xFB, 0x04)
             elif name == "overworld" and event.get("frame", 0) > 0:
                 self.s(0xFB, 0x01)
+            elif name == "castle" and event.get("frame", 0) > 0:
+                self.s(0xFB, 0x08)
 
 
 def main() -> int:

@@ -112,6 +112,8 @@ def decode_line(line: str) -> dict:
     powerup_kinds = {0: "mushroom", 1: "flower", 2: "star", 3: "oneup"}
     return {
         "frame": raw["frame"],
+        "world": ram[0x075F] + 1,
+        "level": ram[0x075C] + 1,
         "frame_counter": ram[0x0009],
         "player": {
             "x": ram[ADDR["player_page"]] * 256 + ram[ADDR["player_x"]],

@@ -57,7 +57,8 @@ function resumeMusic(useStarMusic = false) {
     hurryMusicTime = 0.0;
     if (nativeAudio == null) return;
     local name = useStarMusic ? "star" :
-        ((game != null && game.area == "underground") ? "underground" : "overworld");
+        ((game != null && game.area == "castle") ? "castle" :
+         ((game != null && game.area == "underground") ? "underground" : "overworld"));
     if (game != null && game.hurryActive) name += "_fast";
     nativeAudio.playMusic(name);
     musicState = useStarMusic ? "star" : "ground";

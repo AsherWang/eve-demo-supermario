@@ -126,6 +126,8 @@ end, emu.eventType.endFrame)
 
 
 def build_origin_lua(level: int = 1) -> str:
+    if level not in (1, 2, 3, 4):
+        raise ValueError('Only World 1 stages 1..4 are supported')
     # SMBDIS RAM symbols: OperMode=$0770 and GameEngineSubroutine=$000e.
     # Subroutine 8 is PlayerCtrlRoutine, the first normal controllable state.
     selector = "" if level == 1 else """
@@ -146,6 +148,14 @@ emu.addEventCallback(function()
   end
 end, emu.eventType.endFrame)
 """
+    if level in (3, 4):
+        # World1Areas: $25, $29, $c0, $26, $60. The underground
+        # introduction consumes a separate internal area number.
+        selector = selector.replace('World 1-2', f'World 1-{level}')
+        selector = selector.replace('emu.write(0x075c, 1,', f'emu.write(0x075c, {level - 1},')
+        selector = selector.replace('emu.write(0x0760, 2,', f'emu.write(0x0760, {level},')
+        selector = selector.replace('emu.write(0x0750, 0xc0,',
+                                    f'emu.write(0x0750, {0x26 if level == 3 else 0x60},')
     body = """-- Report the first completed normal gameplay frame.
 local absoluteFrame = 0
 local found = false
@@ -161,10 +171,11 @@ emu.addEventCallback(function()
   absoluteFrame = absoluteFrame + 1
 end, emu.eventType.endFrame)
 """
-    if level == 2:
+    if level != 1:
+        area_type = {2: 2, 3: 1, 4: 3}[level]
         body = body.replace('if not found and operMode',
-            'if emu.read(0x075c, emu.memType.nesInternalRam) == 1 and '
-            'emu.read(0x074e, emu.memType.nesInternalRam) == 2 and not found and operMode')
+            f'if emu.read(0x075c, emu.memType.nesInternalRam) == {level - 1} and '
+            f'emu.read(0x074e, emu.memType.nesInternalRam) == {area_type} and not found and operMode')
     return selector + body
 
 
