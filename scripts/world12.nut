@@ -561,7 +561,61 @@ function runWorld12SelfTest() {
     runWorld12PlantSelfTest();
     runWorld12EnemyPipeSelfTest();
     runWorld12RespawnSelfTest();
+    runWorld12WallSelfTest();
     print("World 1-2 simulation self-test passed.\n");
+}
+
+function runWorld12WallSelfTest() {
+    foreach(big in [false,true]) {
+        foreach(direction in [-1,1]) {
+            local g=createGame();startWorld12(g,"underground");
+            g.goombas=[];g.plants=[];g.platforms=[];
+            for(local tx=20;tx<=28;tx+=1)
+                for(local ty=2;ty<13;ty+=1) setTile(g,tx,ty,TILE_EMPTY);
+            for(local ty=5;ty<13;ty+=1) setTile(g,24,ty,TILE_SOLID);
+            local p=g.player;p.big=big;p.height=big?32.0:16.0;
+            p.x=direction>0?384.0-p.width:400.0;
+            p.y=160.0-p.height;p.previousY=p.y;
+            p.grounded=true;p.entranceFalling=false;
+            g.cameraX=320;g.input.right=direction>0;g.input.left=direction<0;
+            for(local frame=0;frame<50;frame+=1) {
+                simulateFixed(g,FIXED_DT);
+                if(frame>0 && p.y+p.height<208.0)
+                    requireSelfTest(!p.grounded,
+                        "a wall's middle blocks must not support Mario from either side");
+            }
+            requireSelfTest(p.grounded && p.y+p.height==208.0,
+                "wall contact must allow both player sizes to fall to the actual floor");
+        }
+    }
+    local g=createGame();startWorld12(g,"underground");
+    g.goombas=[];g.plants=[];g.platforms=[];
+    for(local tx=20;tx<=28;tx+=1)
+        for(local ty=2;ty<13;ty+=1) setTile(g,tx,ty,TILE_EMPTY);
+    for(local ty=5;ty<13;ty+=1) setTile(g,24,ty,TILE_SOLID);
+    setTile(g,23,6,TILE_BRICK);
+    local p=g.player;p.big=true;p.height=32.0;
+    p.x=372.0;p.y=108.0;p.previousY=p.y;
+    p.grounded=false;p.entranceFalling=false;p.nesYSpeed=-1;
+    g.cameraX=320;g.input.right=true;
+    simulateFixed(g,FIXED_DT);
+    requireSelfTest(p.headCollision,"wall fixture must actually hit the overhead brick");
+    for(local frame=0;frame<70;frame+=1) {
+        simulateFixed(g,FIXED_DT);
+        if(p.y+p.height<208.0)
+            requireSelfTest(!p.grounded,
+                "falling after a head bump must not land inside the adjacent wall");
+    }
+    requireSelfTest(p.grounded && p.y+p.height==208.0,
+        "head-bump fall beside a wall must reach the floor");
+    p.x=386.0;p.y=80.0-p.height-3.0;p.previousY=p.y;
+    p.grounded=false;p.nesYSpeed=3;p.nesYMoveForce=0;p.nesYDummy=0;
+    p.nesXSpeed=0;p.nesXForce=0;p.nesXMoveForce=0;
+    g.input.right=false;
+    simulateFixed(g,FIXED_DT);
+    requireSelfTest(p.grounded && p.y+p.height==80.0,
+        "landing on the exposed top of the same column must remain valid");
+    print("World 1-2 wall-contact self-test passed.\n");
 }
 
 function runWorld12RespawnSelfTest() {

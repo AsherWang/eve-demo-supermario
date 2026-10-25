@@ -709,6 +709,27 @@ function handlePlayerBackgroundSides(g, p) {
         impedePlayerMove(g, p, p.movingDir);
         return;
     }
+    if (g.level == 2 && g.area == "underground" && g.state == "playing") {
+        // The ROM runs DoPlayerSideCheck after the head/feet pass in every
+        // area. The old implementation only ran this pass above ground,
+        // leaving the inclusive +12 foot sample supported by a wall's side.
+        // Preserve the separate side-pipe mouth handling in movePlayerX.
+        if (p.sidePipeCollision) return;
+        local canonicalY=p.big && !p.crouching?p.y:p.y-16.0;
+        foreach(side in [0,1]) {
+            foreach(offset in (p.big && !p.crouching?[8.0,24.0]:[24.0])) {
+                if(canonicalY<(offset==8.0?32.0:8.0) ||
+                   canonicalY>=(offset==8.0?228.0:208.0)) continue;
+                local tx=floor((p.x+(side==0?2.0:13.0))/TILE_SIZE).tointeger();
+                local ty=floor((canonicalY+offset)/TILE_SIZE).tointeger();
+                if(isSolidAt(g,tx,ty)) {
+                    impedePlayerMove(g,p,side==0?2:1);
+                    return;
+                }
+            }
+        }
+        return;
+    }
     local courseClear = g.state == "endLevel" ||
         g.state == "timeBonus" || g.state == "raiseFlag" ||
         g.state == "fireworks" || g.state == "postClearDelay";
