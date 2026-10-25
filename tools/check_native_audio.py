@@ -24,6 +24,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--reference", type=Path, required=True)
     parser.add_argument("--use-game-assets", action="store_true", help="Verify the shipped opening music without replacing it")
+    parser.add_argument("--death-respawn", action="store_true", help="Verify real music output after the World 1-1 death reload resumes music")
     parser.add_argument("--project", type=Path, default=PROJECT)
     parser.add_argument("--eve", type=Path, default=tool_path("eve"))
     parser.add_argument("--output", type=Path, default=PROJECT / "local-parity/native-audio-runtime")
@@ -44,6 +45,22 @@ def main() -> int:
         config += "config.audioReferenceClip <- " + json.dumps(args.reference.resolve().as_posix()) + ";\n"
     (stage / "config.nut").write_text(config, encoding="utf-8")
     main_source = (stage / "main.nut").read_text(encoding="utf-8")
+    if args.death_respawn:
+        main_source += """
+local capturedInit = eve_init;
+eve_init = function() {
+    capturedInit();
+    nativeAudio.stopAll();
+    stopMusic();
+    nativeAudio.beginCapture(config.audioCaptureSeconds);
+    nativeAudioCaptureTime = 0.0;
+    game = createGame();
+    finishPlayerDeath(game);
+    game.deathReloadFrames = 164;
+    updateDeathReload(game);
+    flushSoundEvents(game);
+};
+"""
     main_source += """
 local capturedUpdate = eve_update;
 eve_update = function(dt) {
@@ -71,6 +88,7 @@ eve_update = function(dt) {
               "reference_pcm_sha256": hashlib.sha256(raw).hexdigest(),
               "compared_sample_frames": len(raw) // 4, "startup_offset_frames": offset // 4,
               "sample_exact": equal, "runtime_status": status[-1],
+              "scenario": "World 1-1 death reload music boundary" if args.death_respawn else "opening",
               "boundary": "PCM submitted to waveOut; excludes Windows/device processing"}
     (output / "report.json").write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
     print(json.dumps(report, indent=2))

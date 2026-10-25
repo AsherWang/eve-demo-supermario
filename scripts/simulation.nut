@@ -2526,6 +2526,9 @@ function updateDeathReload(g) {
         g.nesFrameCounter = 0;
     } else if (frame == 165) {
         parityRecordEvent(g, "music", "overworld");
+        // The semantic ROM trace does not drive the live audio mixer.
+        // Restart the runtime music at the same frame as the ROM queue.
+        g.soundEvents.append("resume_music");
     } else if (frame == 166) {
         // InitializeGameTimer writes 401 while the entrance handler is still
         // observable.  On the next frame RunGameTimer immediately subtracts

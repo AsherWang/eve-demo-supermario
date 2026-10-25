@@ -105,6 +105,16 @@ $env:MESEN_AGENT = 'C:\tools\mesen\mesen-agent.exe'
 
 ## 引擎源码及验证边界
 
+1-1 死亡重载第 165 帧除了记录原版语义音乐事件，还必须向运行时声音队列加入
+`resume_music`。语义事件只服务离线对照，不会启动原生音频模块；此前因此出现
+下一命没有背景音乐，而死亡回放对照仍通过的情况。
+
+`tools/check_native_audio.py --death-respawn --use-game-assets --reference <地面音乐PCM片段>`
+会在隔离副本中停止音乐，执行真实的死亡重载恢复边界、派发声音队列，并检查
+提交给 Windows 的 PCM。2026-10-25 验证地面音乐开头 48000 帧逐样本一致，
+underrun、削波和音频错误均为零；700 帧完整死亡回归全部门禁通过。
+该 PCM 检查覆盖重生恢复边界，不代表对 Windows/扬声器最终输出的录音验证。
+
 迁入的 `local-reference/EVEngine-v0.6.0-audio` 在整理时工作区无改动，HEAD 为
 `848301ca`。当前游戏音频实现位于已版本管理的 `native/audio/`，构建链接官方 SDK；
 不需要依赖该本地引擎副本，也没有必须另行应用的未提交引擎补丁。
