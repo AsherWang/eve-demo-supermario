@@ -145,7 +145,8 @@ function startWorld14(g) {
         projectiles = [], flames = [], bridgeRight = 140,
         axeX = 141.0 * 16.0, stateFrames = 0, clearStarted = false,
         rescued = false, completeFrames = 0, axeSparkle = 0,
-        bridgeOffset = 0, axeGone = false, chainGone = false
+        bridgeOffset = 0, axeGone = false, chainGone = false,
+        primaryMsgCounter = 0, secondaryMsgCounter = 0, worldEndFrames = 0
     };
     if("world14" in g) g.world14 = resetWorld; else g.world14 <- resetWorld;
     world14BuildCollision(g);
@@ -495,7 +496,31 @@ function updateWorld14Transition(g) {
             g.time -= 1;
             g.score += 50;
             g.queuedScore = g.score;
-        } else if(w.stateFrames >= 180) {
+        }
+        // PrintVictoryMessages accumulates four in SecondaryMsgCounter each
+        // frame. Its carry advances PrimaryMsgCounter once per 64 frames. For
+        // World 1-7, primary value four sets WorldEndTimer and advances to
+        // PlayerEndWorld.
+        w.secondaryMsgCounter += 4;
+        if(w.secondaryMsgCounter > 0xFF) {
+            w.secondaryMsgCounter = w.secondaryMsgCounter & 0xFF;
+            w.primaryMsgCounter += 1;
+        }
+        if(w.primaryMsgCounter >= 4) {
+            w.primaryMsgCounter = 4;
+            // WorldEndTimer is in the interval-timer bank, which advances
+            // once per 21 rendered frames in the shared timer implementation.
+            w.worldEndFrames = 6 * 21;
+            g.state = "world14EndWorld";
+            w.stateFrames = 0;
+        }
+        return true;
+    }
+    if(g.state == "world14EndWorld") {
+        w.stateFrames += 1;
+        p.nesXSpeed = 0; p.vx = 0.0; p.grounded = true;
+        if(w.worldEndFrames > 0) w.worldEndFrames -= 1;
+        if(w.worldEndFrames <= 0) {
             g.state = "worldComplete";
             w.completeFrames = 0;
             parityRecordEvent(g, "gameplay", "world14_complete");
@@ -584,12 +609,16 @@ function drawWorld14Actors(g, behind) {
         worldTexture(g, world14Assets.firebar[(frame >> 1) & 1],
                      w.podoboo.x, w.podoboo.y, 8.0, 12.0);
     if(g.state == "world14Rescue") {
-        if(w.stateFrames < 48)
+        if(w.primaryMsgCounter < 2)
             world14DrawText(g, "THANK YOU MARIO!", g.cameraX + 38.0, 48.0, 2.0);
         else {
             world14DrawText(g, "BUT OUR PRINCESS IS IN", g.cameraX + 24.0, 44.0, 1.5);
             world14DrawText(g, "ANOTHER CASTLE!", g.cameraX + 64.0, 72.0, 2.0);
         }
+    }
+    if(g.state == "world14EndWorld") {
+        world14DrawText(g, "BUT OUR PRINCESS IS IN", g.cameraX + 24.0, 44.0, 1.5);
+        world14DrawText(g, "ANOTHER CASTLE!", g.cameraX + 64.0, 72.0, 2.0);
     }
     if(g.state == "worldComplete") {
         world14DrawText(g, "BUT OUR PRINCESS IS IN", g.cameraX + 24.0, 44.0, 1.5);
@@ -663,10 +692,11 @@ function runWorld14SelfTest() {
     updateWorld14Actors(clear);
     requireSelfTest(clear.state == "world14Axe",
         "touching the ROM axe must enter automatic castle clear");
-    for(local frame = 0; frame < 2000 && clear.state != "worldComplete"; frame += 1)
+    for(local frame = 0; frame < 2500 && clear.state != "worldComplete"; frame += 1)
         updateWorld14Transition(clear);
     requireSelfTest(clear.world14.bridgeRight < 128 && clear.world14.rescued &&
-        clear.state == "worldComplete" && clear.time == 0 && clear.score == 15000,
+        clear.state == "worldComplete" && clear.time == 44 && clear.score == 12800 &&
+        clear.world14.primaryMsgCounter == 4 && clear.world14.worldEndFrames == 0,
         "1-4 clear must collapse the bridge, save the mushroom retainer and stop at worldComplete");
     requireSelfTest(clear.player.x < clear.areaWidth * 16.0,
         "1-4 clear must remain bounded to the castle map");

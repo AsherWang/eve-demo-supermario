@@ -50,6 +50,10 @@ Implemented rules include:
 - Toad/mushroom-retainer rescue at the ROM object position. The first message is
   `THANK YOU MARIO!`; the continuation is `BUT OUR PRINCESS IS IN ANOTHER
   CASTLE!`. There is no princess entity or `princess_rescued` event in 1-4.
+- The victory message state follows `PrintVictoryMessages`: four added to the
+  secondary counter each frame, carry into the primary counter every 64 frames,
+  and primary value four sets the six-interval `WorldEndTimer`. The first text
+  remains through primary value one, and the second text begins at primary two.
 - Fifty points per converted timer interval, with the timer-tick sound on the
   original four-frame cadence. There is no fixed 5000-point Toad award.
 
@@ -91,7 +95,7 @@ events. Important frames are:
 | Bowser fall cue | 1709 |
 | Victory walk begins | 1774 |
 | Toad saved | 1966 |
-| Bounded `worldComplete` | 2199 |
+| Bounded `worldComplete` | 2348 |
 | Final captured frame | 2399 |
 
 At frame 2399 the host state is `worldComplete`, timer 0, score 11600, lives 3.
