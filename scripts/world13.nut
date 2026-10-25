@@ -388,6 +388,22 @@ function runWorld13SelfTest() {
     }
     requireSelfTest(verticalMoved,"vertical platform must move");
     requireSelfTest(horizontalMoved,"horizontal platform must move");
+    startWorld13(g);
+    local redParatroopa=null;
+    foreach(enemy in g.goombas)
+        if("paratroopa" in enemy && enemy.paratroopa) {
+            redParatroopa=enemy;break;
+        }
+    requireSelfTest(redParatroopa!=null,"1-3 must load red Paratroopas");
+    redParatroopa.awake=true;
+    local paratroopaX=redParatroopa.anchorX,paratroopaY=redParatroopa.originalY;
+    for(local i=0;i<86;i+=1) {
+        g.nesFrameCounter=(g.nesFrameCounter+1)&0xff;
+        updateWorld13Actors(g);
+    }
+    requireSelfTest(redParatroopa.x==paratroopaX && redParatroopa.vx==0.0 &&
+        redParatroopa.y==paratroopaY+1,
+        "red Paratroopa must use the ROM vertical 8.8 motion without walking");
     startWorld13(g);vertical=g.platforms[0];vertical.awake=true;
     g.player.x=vertical.x+12.0;g.player.y=vertical.y-g.player.height;
     g.player.previousY=g.player.y;

@@ -110,6 +110,7 @@ end, emu.callbackType.exec, {offset + 0x8000}, {offset + 0x8000}, emu.cpuType.ne
             for value in map(
                 json.loads, (folder / "columns.jsonl").read_text().splitlines()
             )
+            if 0 <= value["x"] < WIDTH
         }
 
     columns: dict[int, dict[str, list[int]]] = {}
