@@ -1,0 +1,50 @@
+{
+  "schema": "smb-parity-movie-v1",
+  "name": "world-1-4-route",
+  "description": "Deterministic normal-entrance World 1-4 route from the raised castle entrance through the firebars, Bowser bridge, axe, bridge collapse, mushroom retainer save and bounded worldComplete endpoint.",
+  "level": 4,
+  "frames": 1400,
+  "reference_bootstrap": {
+    "frames": 800,
+    "inputs": [
+      {"port": 0, "start": 40, "end": 46, "buttons": ["start"]}
+    ]
+  },
+  "inputs": [
+    {"port": 0, "start": 0, "end": 1399, "buttons": ["right", "b"]},
+    {"port": 0, "start": 10, "end": 27, "buttons": ["right", "b", "a"]},
+    {"port": 0, "start": 50, "end": 67, "buttons": ["right", "b", "a"]},
+    {"port": 0, "start": 90, "end": 107, "buttons": ["right", "b", "a"]},
+    {"port": 0, "start": 148, "end": 154, "buttons": ["right", "b", "a"]},
+    {"port": 0, "start": 210, "end": 227, "buttons": ["right", "b", "a"]},
+    {"port": 0, "start": 250, "end": 267, "buttons": ["right", "b", "a"]},
+    {"port": 0, "start": 290, "end": 307, "buttons": ["right", "b", "a"]},
+    {"port": 0, "start": 330, "end": 347, "buttons": ["right", "b", "a"]},
+    {"port": 0, "start": 370, "end": 387, "buttons": ["right", "b", "a"]},
+    {"port": 0, "start": 410, "end": 427, "buttons": ["right", "b", "a"]},
+    {"port": 0, "start": 450, "end": 467, "buttons": ["right", "b", "a"]},
+    {"port": 0, "start": 490, "end": 507, "buttons": ["right", "b", "a"]},
+    {"port": 0, "start": 530, "end": 547, "buttons": ["right", "b", "a"]},
+    {"port": 0, "start": 570, "end": 587, "buttons": ["right", "b", "a"]},
+    {"port": 0, "start": 610, "end": 627, "buttons": ["right", "b", "a"]},
+    {"port": 0, "start": 650, "end": 667, "buttons": ["right", "b", "a"]},
+    {"port": 0, "start": 690, "end": 707, "buttons": ["right", "b", "a"]},
+    {"port": 0, "start": 730, "end": 747, "buttons": ["right", "b", "a"]},
+    {"port": 0, "start": 770, "end": 787, "buttons": ["right", "b", "a"]},
+    {"port": 0, "start": 810, "end": 827, "buttons": ["right", "b", "a"]},
+    {"port": 0, "start": 850, "end": 867, "buttons": ["right", "b", "a"]},
+    {"port": 0, "start": 890, "end": 907, "buttons": ["right", "b", "a"]},
+    {"port": 0, "start": 930, "end": 947, "buttons": ["right", "b", "a"]},
+    {"port": 0, "start": 970, "end": 987, "buttons": ["right", "b", "a"]},
+    {"port": 0, "start": 1010, "end": 1027, "buttons": ["right", "b", "a"]},
+    {"port": 0, "start": 1050, "end": 1067, "buttons": ["right", "b", "a"]},
+    {"port": 0, "start": 1090, "end": 1107, "buttons": ["right", "b", "a"]},
+    {"port": 0, "start": 1130, "end": 1147, "buttons": ["right", "b", "a"]},
+    {"port": 0, "start": 1170, "end": 1187, "buttons": ["right", "b", "a"]},
+    {"port": 0, "start": 1210, "end": 1227, "buttons": ["right", "b", "a"]},
+    {"port": 0, "start": 1250, "end": 1267, "buttons": ["right", "b", "a"]},
+    {"port": 0, "start": 1290, "end": 1307, "buttons": ["right", "b", "a"]},
+    {"port": 0, "start": 1330, "end": 1347, "buttons": ["right", "b", "a"]}
+  ],
+  "capture_frames": [0, 240, 480, 720, 960, 1200, 1399]
+}

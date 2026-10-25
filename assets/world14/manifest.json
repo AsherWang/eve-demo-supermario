@@ -1,0 +1,45 @@
+{
+  "schema": "smb-world14-assets-v1",
+  "rom_sha256": "f61548fdf1670cffefcc4f0b7bdcdd9eaba0c226e3b74f8666071496988248de",
+  "offline_only": true,
+  "levels": [
+    "1-4"
+  ],
+  "streams": {
+    "AREA": {
+      "label": "L_CastleArea1",
+      "cpu_address": "0xa1af",
+      "length": 97,
+      "sha256": "49949292621c3f5bfdd942f882d36024f9d065adcaa9074a6bc2a2a7fc35f66f"
+    },
+    "ENEMY": {
+      "label": "E_CastleArea1",
+      "cpu_address": "0x9d70",
+      "length": 39,
+      "sha256": "a877dbcf39932173b70063df5767182e63d5c9e1a181ba6c4cb51f3301d835eb"
+    }
+  },
+  "area_pointer": "0x60",
+  "internal_area": 4,
+  "level_number": 3,
+  "shared_rom_level": "6-4",
+  "generated_textures": {
+    "metatiles": "assets/world14/metatile-*.png",
+    "bowser": [
+      "assets/world14/bowser-0.png",
+      "assets/world14/bowser-1.png"
+    ],
+    "mushroom_retainer": "assets/world14/toad.png",
+    "firebar": [
+      "assets/world14/firebar-0.png",
+      "assets/world14/firebar-1.png"
+    ],
+    "flame": "assets/world14/bowser-flame.png"
+  },
+  "audio": {
+    "castle_theme": "assets/audio/castle_theme.wav",
+    "castle_clear": "assets/audio/castle_clear.wav",
+    "bowser_fire": "assets/audio/bowser_fire.wav",
+    "bowser_fall": "assets/audio/bowser_fall.wav"
+  }
+}
