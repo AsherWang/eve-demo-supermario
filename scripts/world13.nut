@@ -91,19 +91,30 @@ function decodeWorld13Enemies(g) {
         local a=data[cursor],b=data[cursor+1],row=a&15;
         if((b&128)!=0) page+=1;
         if(row==14) {cursor+=3;continue;}
+        // Secondary-hard-mode objects remain in the stream but are not
+        // instantiated during a normal game. Both World 1-3 Bullet Bill
+        // frenzy sources carry this bit.
+        if((b&64)!=0) {cursor+=2;continue;}
         local id=b&63;
         local x=(page*16+(a>>4))*16.0;
         if(id==0x0f) {
             local e=makeEnemyAt(x,row+1,"koopa");
-            e.red <- true;e.paratroopa <- true;e.baseY <- e.y;
-            e.flightTick <- 0;e.flightRadius <- 48.0;g.goombas.append(e);
+            e.red <- true;e.paratroopa <- true;
+            local enemyY=e.y.tointeger();
+            e.anchorX <- x;e.verticalY <- enemyY;
+            e.originalY <- enemyY;
+            e.centerY <- (e.originalY < 0x80 ? e.originalY+0x30 : e.originalY-0x20);
+            e.verticalSpeed <- 0;e.verticalForce <- 0;e.verticalDummy <- 0;
+            g.goombas.append(e);
         } else if(id==0x00 || id==0x03 || id==0x06) {
             local e=makeEnemyAt(x,row+1,id==0x06?"goomba":"koopa");
             e.red <- id==0x03;g.goombas.append(e);
         } else if(id==0x25) {
-            g.platforms.append({x=x,y=row*16.0,initialY=row*16.0,
-                previousX=x,previousY=row*16.0,id=id,motion="vertical",
-                width=48.0,awake=false,fraction=0.0,counter=0,up=true});
+            local platformY=row*16;
+            g.platforms.append({x=x,y=platformY.tofloat(),initialY=platformY.tofloat(),
+                previousX=x,previousY=platformY.tofloat(),id=id,motion="vertical",
+                width=48.0,awake=false,verticalY=platformY,
+                verticalSpeed=0,verticalForce=0,verticalDummy=0});
         } else if(id==0x26 || id==0x27) {
             local up=id==0x26;
             g.platforms.append({x=x+12.0,y=row*16.0,initialY=row*16.0,
@@ -112,7 +123,8 @@ function decodeWorld13Enemies(g) {
         } else if(id==0x28) {
             g.platforms.append({x=x,y=row*16.0,initialY=row*16.0,
                 previousX=x,previousY=row*16.0,id=id,motion="horizontal",
-                width=48.0,awake=false,fraction=0.0,counter=0,right=true});
+                width=48.0,awake=false,fraction=0.0,
+                secondaryCounter=0,primaryCounter=0});
         } else if(id==0x17) {
             g.world13BulletSources.append({x=x,y=row*16.0,awake=false,timer=0});
         }
@@ -146,7 +158,7 @@ function startWorld13(g) {
     g.player.height=big?32.0:16.0;
     g.player.grounded=true;g.player.entranceFalling=false;
     g.player.vy=0.0;g.player.nesYSpeed=0;g.player.nesYMoveForce=0;
-    g.time=400;g.displayTime=400;g.gameTimerControl=23;
+    g.time=300;g.displayTime=300;g.gameTimerControl=23;
     g.hurryActive=false;g.nesFrameCounter=0x1a;
     g.intervalTimerControl=0;g.colorRotateOffset=1;
     g.displayColorPhase=0;g.pendingColorPhase=0;g.colorPhasePending=false;
@@ -160,6 +172,7 @@ function initializeWorld13Parity(g) {
     g.gameTimerControl=23;g.colorRotateOffset=1;
     g.displayColorPhase=0;g.vramAreaParserTask=0;g.vramBufferAddrCtrl=0;
     g.cameraX=0.0;g.displayCameraX=0.0;
+    g.player.big=false;g.player.fire=false;
     resetPlayerForArea(g,40,176);g.player.grounded=true;
 }
 
@@ -178,6 +191,38 @@ function world13PlatformRider(g,platform,oldX,oldY,newX,newY) {
     p.vy=0.0;p.nesYSpeed=0;p.nesYMoveForce=0;
 }
 
+function world13SignedByte(value) {
+    return value>=0x80?value-0x100:value;
+}
+
+// ImposeGravity in SMBDIS.ASM. The actor stores the same byte-sized vertical
+// speed, movement force and dummy accumulator as the original object slot.
+function world13ImposeGravity(actor,downAmount,upAmount,maxSpeed,upward) {
+    local forceBefore=actor.verticalForce;
+    local forceSum=forceBefore+downAmount;
+    local carry=forceSum>>8;
+    actor.verticalDummy=(actor.verticalDummy+forceBefore)&0xff;
+    actor.verticalY+=world13SignedByte(actor.verticalSpeed)+carry;
+    actor.verticalForce=forceSum&0xff;
+    actor.verticalSpeed=(actor.verticalSpeed+carry)&0xff;
+    if(world13SignedByte(actor.verticalSpeed)>=maxSpeed &&
+       actor.verticalForce<0x80) {
+        actor.verticalSpeed=maxSpeed;
+        actor.verticalForce=0;
+    }
+    if(!upward) return;
+    local subtract=actor.verticalForce-upAmount;
+    local borrow=subtract<0?1:0;
+    actor.verticalForce=subtract&0xff;
+    actor.verticalSpeed=(actor.verticalSpeed-borrow)&0xff;
+    if(world13SignedByte(actor.verticalSpeed) < -maxSpeed) {
+        if(actor.verticalForce<0x80) {
+            actor.verticalSpeed=(-maxSpeed)&0xff;
+            actor.verticalForce=0xff;
+        }
+    }
+}
+
 function updateWorld13Platforms(g) {
     local p=g.player;
     foreach(platform in g.platforms) {
@@ -189,31 +234,36 @@ function updateWorld13Platforms(g) {
         platform.previousX=platform.x;platform.previousY=platform.y;
         local oldX=platform.x,oldY=platform.y,newX=oldX,newY=oldY;
         if(platform.motion=="vertical") {
-            // InitVertPlatform uses the ROM Y as the top and +$40 as center.
             local center=platform.initialY+64.0;
-            if(platform.counter==0) {
-                if((g.nesFrameCounter&7)==0) {
-                    newY=oldY+1.0;
-                    if(newY>center) newY=center;
+            if((platform.verticalSpeed|platform.verticalForce)==0) {
+                platform.verticalDummy=0;
+                if(platform.verticalY<platform.initialY.tointeger()) {
+                    if((g.nesFrameCounter&7)==0) platform.verticalY+=1;
+                } else {
+                    world13ImposeGravity(platform,5,10,3,
+                        platform.verticalY>=center);
                 }
             } else {
-                platform.fraction+=platform.up?-10.0/256.0:10.0/256.0;
-                while(platform.fraction<0.0) {platform.fraction+=1.0;newY-=1.0;}
-                while(platform.fraction>=1.0) {platform.fraction-=1.0;newY+=1.0;}
-                if(newY>=center) {newY=center;platform.up=false;}
-                if(newY<=platform.initialY) {newY=platform.initialY;platform.up=true;}
+                world13ImposeGravity(platform,5,10,3,
+                    platform.verticalY>=center);
             }
-            if(oldY>platform.initialY) platform.counter=1;
+            newY=platform.verticalY.tofloat();
         } else if(platform.motion=="horizontal") {
             if((g.nesFrameCounter&3)==0) {
-                if(platform.right) platform.counter+=1;else platform.counter-=1;
-                if(platform.counter>=14) platform.right=false;
-                if(platform.counter<=0) platform.right=true;
+                if((platform.primaryCounter&1)==0) {
+                    if(platform.secondaryCounter==14)
+                        platform.primaryCounter=(platform.primaryCounter+1)&0xff;
+                    else platform.secondaryCounter+=1;
+                } else {
+                    if(platform.secondaryCounter==0)
+                        platform.primaryCounter=(platform.primaryCounter+1)&0xff;
+                    else platform.secondaryCounter-=1;
+                }
             }
-            local speed=(platform.right?platform.counter:-platform.counter)/16.0;
-            platform.fraction+=speed;
-            while(platform.fraction<0.0) {platform.fraction+=1.0;newX-=1.0;}
-            while(platform.fraction>=1.0) {platform.fraction-=1.0;newX+=1.0;}
+            local direction=(platform.primaryCounter&2)!=0?1:-1;
+            platform.fraction+=direction*platform.secondaryCounter;
+            while(platform.fraction<0.0) {platform.fraction+=16.0;newX-=1.0;}
+            while(platform.fraction>=16.0) {platform.fraction-=16.0;newX+=1.0;}
         } else {
             platform.fraction+=platform.speed;
             while(platform.fraction<0.0) {platform.fraction+=1.0;newY-=1.0;}
@@ -256,16 +306,24 @@ function updateWorld13Bullets(g) {
 function updateWorld13Actors(g) {
     foreach(e in g.goombas) {
         if(!e.alive || !("paratroopa" in e)) continue;
-        if(!e.awake) {
-            local boundary=floor((g.cameraX+LOGICAL_WIDTH-1.0+48.0)/16.0)*16.0;
-            if(e.x>boundary) continue;
-            e.awake=true;
+        if(!e.awake || e.state!="walking") {
+            e.anchorX=e.x;e.verticalY=e.y.tointeger();
+            e.verticalSpeed=0;e.verticalForce=0;e.verticalDummy=0;
+            continue;
         }
-        e.flightTick+=1;
-        local phase=(e.flightTick%96);
-        local offset=phase<48?phase:96-phase;
-        e.y=e.baseY-offset;
-        e.vy=0.0;e.grounded=false;
+        // ProcMoveRedPTroopa has no horizontal movement routine. updateGoombas
+        // runs first for shared collisions, so undo its generic walk step.
+        e.x=e.anchorX;e.vx=0.0;
+        if((e.verticalSpeed|e.verticalForce)==0) {
+            e.verticalDummy=0;
+            if(e.verticalY<e.originalY && (g.nesFrameCounter&7)==0)
+                e.verticalY+=1;
+            else if(e.verticalY>=e.originalY)
+                world13ImposeGravity(e,3,6,2,e.verticalY>=e.centerY);
+        } else {
+            world13ImposeGravity(e,3,6,2,e.verticalY>=e.centerY);
+        }
+        e.y=e.verticalY.tofloat();e.vy=0.0;e.grounded=false;
     }
     updateWorld13Platforms(g);
     updateWorld13Bullets(g);
@@ -293,8 +351,13 @@ function runWorld13SelfTest() {
     requireSelfTest(g.player.big && g.player.fire && g.score==12000 &&
         g.coins==17 && g.lives==3,"1-3 entry preserves persistent progress");
     requireSelfTest(g.player.x==40.0 && g.player.grounded &&
-        g.nesFrameCounter==0x1a && g.gameTimerControl==23,
+        g.nesFrameCounter==0x1a && g.gameTimerControl==23 &&
+        g.time==300 && g.displayTime==300,
         "1-3 canonical entrance state");
+    initializeWorld13Parity(g);
+    requireSelfTest(!g.player.big && !g.player.fire &&
+        g.player.height==16.0 && g.player.grounded,
+        "1-3 parity fixup must start small despite a prior power-up");
     requireSelfTest(getTile(g,0,13)==TILE_GROUND &&
         isSolidAt(g,0,13),"1-3 ROM ground collision");
     requireSelfTest(g.world13Blocks[tileIndex(154,7)]==0,
@@ -311,13 +374,13 @@ function runWorld13SelfTest() {
     }
     requireSelfTest(g.platforms.len()==4 && g.goombas.len()==8 &&
         goombaCount==3 && redCount==5 && paratroopaCount==2 &&
-        g.world13BulletSources.len()==2,
+        g.world13BulletSources.len()==0,
         "1-3 E_GroundArea7 actor decode");
     local vertical=g.platforms[0],horizontal=g.platforms[1];
     vertical.awake=true;horizontal.awake=true;
     local oldY=vertical.y,oldX=horizontal.x;
     local verticalMoved=false,horizontalMoved=false;
-    for(local i=0;i<12;i+=1) {
+    for(local i=0;i<80;i+=1) {
         g.nesFrameCounter=(g.nesFrameCounter+1)&0xff;
         updateWorld13Platforms(g);
         if(vertical.y!=oldY) verticalMoved=true;
@@ -330,8 +393,9 @@ function runWorld13SelfTest() {
     g.player.previousY=g.player.y;
     g.player.grounded=true;g.player.nesYSpeed=0;
     oldY=vertical.y;
-    for(local i=0;i<3;i+=1) {
+    for(local i=0;i<64;i+=1) {
         g.nesFrameCounter=(g.nesFrameCounter+1)&0xff;
+        g.player.previousY=g.player.y;
         updateWorld13Platforms(g);
     }
     requireSelfTest(g.player.grounded && abs(g.player.y+g.player.height-vertical.y)<0.1,
