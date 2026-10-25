@@ -128,7 +128,7 @@ function startWorld14(g) {
     g.player.entranceFalling = false;
     g.cameraX = 0.0; g.displayCameraX = 0.0; g.previousScrollAmount = 0.0;
     g.checkpointPage = 0;
-    g.time = 400; g.displayTime = 400; g.gameTimerControl = 23; g.hurryActive = false;
+    g.time = 300; g.displayTime = 300; g.gameTimerControl = 23; g.hurryActive = false;
     g.state = "playing"; g.stateTimer = 0.0;
     g.soundEvents.append("resume_music");
     return g;
@@ -507,7 +507,7 @@ function runWorld14SelfTest() {
     for(local frame = 0; frame < 760 && clear.state != "worldComplete"; frame += 1)
         updateWorld14Transition(clear);
     requireSelfTest(clear.world14.bridgeRight < 128 && clear.world14.rescued &&
-        clear.state == "worldComplete" && clear.time == 0 && clear.score == 20000,
+        clear.state == "worldComplete" && clear.time == 0 && clear.score == 15000,
         "1-4 clear must collapse the bridge, save the mushroom retainer and stop at worldComplete");
     requireSelfTest(clear.player.x < clear.areaWidth * 16.0,
         "1-4 clear must remain bounded to the castle map");
