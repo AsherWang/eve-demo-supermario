@@ -219,6 +219,24 @@ function startWorld12(g, stage="intro") {
     g.soundEvents.append("resume_music");
 }
 
+function respawnWorld12(g) {
+    local page=g.checkpointPage;
+    // ContinueGame resets PlayerSize and PlayerStatus. Area transitions keep
+    // power-ups, but a new life must start with a fresh small player.
+    g.player=createPlayer();
+    startWorld12(g,"underground");
+    if(page==0) return;
+    g.checkpointPage=page;
+    g.cameraX=page*256.0;g.displayCameraX=g.cameraX;
+    // InitializeArea selects PlayerEntranceCtrl $02 at the halfway page:
+    // canonical Y $b0, default X $28, rather than the ceiling entrance.
+    resetPlayerForArea(g,page*256+40,176);
+    g.player.grounded=true;
+    g.player.entranceFalling=false;
+    foreach(enemy in g.goombas)
+        if(enemy.x<g.cameraX+LOGICAL_WIDTH-1.0) enemy.alive=false;
+}
+
 function startWorld12Transition(g,target,mode) {
     g.world12Target=target;g.world12PipeMode=mode;
     g.world12TransitionFrames=0;g.state="world12Pipe";
@@ -542,7 +560,53 @@ function runWorld12SelfTest() {
                         "1-2 intro pipe right shaft must reach the floor");
     runWorld12PlantSelfTest();
     runWorld12EnemyPipeSelfTest();
+    runWorld12RespawnSelfTest();
     print("World 1-2 simulation self-test passed.\n");
+}
+
+function runWorld12RespawnSelfTest() {
+    foreach(camera in [1535.0,1536.0,2100.0]) {
+        foreach(status in [0,1,2]) {
+            local g=createGame();startWorld12(g,"underground");
+            g.cameraX=camera;g.displayCameraX=camera;
+            local p=g.player;
+            p.big=status>0;p.fire=status==2;p.height=p.big?32.0:16.0;
+            p.x=camera+112.0;p.y=LOGICAL_HEIGHT+33.0;
+            g.score=12300;g.coins=42;g.lives=3;
+            // Fall into the pit through normal physics, then complete the
+            // death animation and reload through simulateFixed.
+            simulateFixed(g,FIXED_DT);
+            requireSelfTest(p.dead,"1-2 pit fall must trigger death for every power-up state");
+            local frames=0;
+            while(frames<600 && !(g.state=="playing" && !g.player.dead)) {
+                simulateFixed(g,FIXED_DT);frames+=1;
+            }
+            local page=camera>=1536.0?6:0;
+            requireSelfTest(frames<600 && g.lives==2 &&
+                g.level==2 && g.stage=="underground",
+                "1-2 death must finish once and consume exactly one life");
+            requireSelfTest(g.cameraX==page*256.0 &&
+                g.player.x==page*256.0+40.0 &&
+                g.player.y==(page==0?48.0:192.0),
+                "1-2 death must select the ROM halfway threshold and entrance position");
+            requireSelfTest(!g.player.big && !g.player.fire &&
+                g.player.height==16.0 && g.player.starTimer==0.0 &&
+                g.player.invulnerable==0.0 && g.player.transformFrames==0,
+                "a new 1-2 life must clear size, fire and transient power-up state");
+            requireSelfTest(g.score==12300 && g.coins==42 && g.time==400,
+                "1-2 respawn must retain score and coins but reset the timer");
+        }
+    }
+    local over=createGame();startWorld12(over,"underground");
+    over.lives=1;finishPlayerDeath(over);updateDeathReload(over);
+    requireSelfTest(over.lives==0 && over.state=="gameOver",
+        "the last 1-2 life must end the game instead of respawning");
+    local transition=createGame();startWorld12(transition,"underground");
+    transition.player.big=true;transition.player.fire=true;
+    resetPlayerForArea(transition,40,32);
+    requireSelfTest(transition.player.big && transition.player.fire,
+        "ordinary area transitions must still retain power-up state");
+    print("World 1-2 respawn self-test passed.\n");
 }
 
 function runWorld12PlantSelfTest() {

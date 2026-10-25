@@ -1,5 +1,5 @@
 function resetRound(g) {
-    if (g.level == 2) { startWorld12(g); return; }
+    if (g.level == 2) { g.player=createPlayer(); startWorld12(g); return; }
     local checkpointPage = g.checkpointPage;
     g.player = createPlayer();
     g.cameraX = checkpointPage * 256.0;
@@ -2446,10 +2446,14 @@ function updateDeathReload(g) {
     if (g.level == 2) {
         g.deathReloadFrames += 1;
         if (g.deathReloadFrames == 1) {
+            // PlayerLoseLife reads the current area's ScreenLeft_PageLoc.
+            // World 1-2 uses the low nybble of HalfwayPageNybbles $56.
+            g.checkpointPage=(g.stage!="bonus" && g.stage!="intro" &&
+                g.cameraX>=6.0*256.0)?6:0;
             g.lives -= 1;
             if (g.lives <= 0) {g.state="gameOver";emitSound(g,"game_over");return;}
         }
-        if (g.deathReloadFrames >= 166) startWorld12(g,"underground");
+        if (g.deathReloadFrames >= 166) respawnWorld12(g);
         return;
     }
     g.deathReloadFrames += 1;
