@@ -25,6 +25,7 @@ def main() -> int:
     parser.add_argument('--report', type=Path, required=True)
     parser.add_argument('--expect-failure', action='store_true')
     parser.add_argument('--expected-error', help='Failure text that must appear in game.log')
+    parser.add_argument('--expected-title', default='Super Mario Bros. World 1-1 / 1-2 - EVEngine')
     args = parser.parse_args()
     kernel = ctypes.WinDLL('kernel32', use_last_error=True)
     user = ctypes.WinDLL('user32', use_last_error=True)
@@ -42,6 +43,9 @@ def main() -> int:
     user.GetClassNameW.argtypes = [wt.HWND, wt.LPWSTR, ctypes.c_int]
     user.IsWindowVisible.argtypes = [wt.HWND]
     user.PostMessageW.argtypes = [wt.HWND, wt.UINT, wt.WPARAM, wt.LPARAM]
+    user.GetWindowTextW.argtypes = [wt.HWND, wt.LPWSTR, ctypes.c_int]
+    user.SendMessageW.argtypes = [wt.HWND, wt.UINT, wt.WPARAM, wt.LPARAM]
+    user.SendMessageW.restype = ctypes.c_ssize_t
 
     def descendants(parent: int) -> set[int]:
         snapshot = kernel.CreateToolhelp32Snapshot(2, 0)
@@ -124,11 +128,23 @@ def main() -> int:
             # The pinned SDK ignores quit during its first 45 frames. Test
             # normal close after that guard, not immediately at first present.
             time.sleep(1)
+            title = ctypes.create_unicode_buffer(256)
+            user.GetWindowTextW(game_window, title, len(title))
+            result['window_title'] = title.value
+            result['small_icon'] = bool(user.SendMessageW(game_window, 0x007F, 0, 0))
+            result['large_icon'] = bool(user.SendMessageW(game_window, 0x007F, 1, 0))
+            shell = ctypes.WinDLL('shell32', use_last_error=True)
+            shell.ExtractIconExW.argtypes = [wt.LPCWSTR, ctypes.c_int,
+                                            ctypes.POINTER(wt.HICON), ctypes.POINTER(wt.HICON), wt.UINT]
+            shell.ExtractIconExW.restype = wt.UINT
+            result['exe_icon_count'] = shell.ExtractIconExW(str(package / 'SuperMario.exe'), -1, None, None, 0)
+            result['passed'] &= (title.value == args.expected_title and result['small_icon']
+                                 and result['large_icon'] and result['exe_icon_count'] > 0)
             user.PostMessageW(game_window, 0x0112, 0xF060, 0)  # Native title-bar SC_CLOSE.
             try:
                 process.wait(timeout=5)
                 result['close_exit_code'] = process.returncode
-                result['passed'] = process.returncode == 0
+                result['passed'] &= process.returncode == 0
             except subprocess.TimeoutExpired:
                 result['passed'] = False
                 result['close_exit_code'] = 'timeout'

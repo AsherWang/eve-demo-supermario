@@ -105,6 +105,13 @@ $env:MESEN_AGENT = 'C:\tools\mesen\mesen-agent.exe'
 
 ## 引擎源码及验证边界
 
+Windows 启动器在首帧显示前为引擎子窗口设置游戏标题及大小图标，避免只修改
+启动器而未修改真正可见的 SDL 窗口。`native/audio/Launcher.rc` 将
+`SuperMario.ico` 嵌入 EXE；图标来自现有 `assets/items/mushroom.png`，提供
+16、24、32、48、64、128、256 像素尺寸并按最近邻缩放保留像素风格。
+`tools/check_windows_startup.py` 同时验证显示时机、标题、两种窗口图标、EXE
+图标资源以及关闭退出码。此变更不修改已发布的 0.0.5 附件。
+
 1-1 死亡重载第 165 帧除了记录原版语义音乐事件，还必须向运行时声音队列加入
 `resume_music`。语义事件只服务离线对照，不会启动原生音频模块；此前因此出现
 下一命没有背景音乐，而死亡回放对照仍通过的情况。

@@ -69,6 +69,21 @@ bool revealAfterFirstPresent(const PROCESS_INFORMATION& process, const std::wstr
             GameWindow game{process.dwProcessId};
             EnumWindows(findGameWindow, reinterpret_cast<LPARAM>(&game));
             if (game.handle != nullptr) {
+                // The visible window belongs to the engine child, not this
+                // launcher. Apply the game's identity before revealing it.
+                SetWindowTextW(game.handle, L"Super Mario Bros. World 1-1 / 1-2 - EVEngine");
+                const HINSTANCE module = GetModuleHandleW(nullptr);
+                for (const int size : {ICON_SMALL, ICON_BIG}) {
+                    const int metric = size == ICON_SMALL ? SM_CXSMICON : SM_CXICON;
+                    const int heightMetric = size == ICON_SMALL ? SM_CYSMICON : SM_CYICON;
+                    const auto icon = static_cast<HICON>(LoadImageW(module, MAKEINTRESOURCEW(1),
+                        IMAGE_ICON, GetSystemMetrics(metric), GetSystemMetrics(heightMetric), LR_SHARED));
+                    if (icon != nullptr) {
+                        DWORD_PTR ignored = 0;
+                        SendMessageTimeoutW(game.handle, WM_SETICON, static_cast<WPARAM>(size),
+                            reinterpret_cast<LPARAM>(icon), SMTO_ABORTIFHUNG, 1000, &ignored);
+                    }
+                }
                 ShowWindow(game.handle, SW_SHOW);
                 SetForegroundWindow(game.handle);
                 revealed = IsWindowVisible(game.handle) != FALSE;

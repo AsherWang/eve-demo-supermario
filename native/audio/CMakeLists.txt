@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.21)
-project(MarioNativeAudio LANGUAGES CXX)
+project(MarioNativeAudio LANGUAGES CXX RC)
 if(NOT WIN32)
     message(FATAL_ERROR "The native playback backend currently requires Windows")
 endif()
@@ -15,7 +15,8 @@ add_test(NAME audio_mixer COMMAND audio_mixer_test)
 
 # Players launch this GUI-subsystem wrapper. The EVEngine host remains a
 # console-subsystem executable but is started with CREATE_NO_WINDOW.
-add_executable(SuperMario WIN32 Launcher.cpp)
+add_executable(SuperMario WIN32 Launcher.cpp Launcher.rc)
+target_include_directories(SuperMario PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
 target_compile_features(SuperMario PRIVATE cxx_std_20)
 target_compile_options(SuperMario PRIVATE /W4 /WX /utf-8)
 target_link_libraries(SuperMario PRIVATE user32)
