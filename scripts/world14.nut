@@ -11,6 +11,29 @@ world14AudioAssets <- {
     bowserFall = "assets/audio/bowser_fall.wav"
 };
 
+// SMBDIS FirebarPosLookupTbl, FirebarTblOffsets and FirebarMirrorData.
+// The ROM rotates a 16.8 spin state and indexes this quarter-circle table;
+// it does not use a floating-point sine.
+WORLD14_FIREBAR_POS <- [
+    0,1,3,4,5,6,7,7,8,
+    0,3,6,9,11,13,14,15,16,
+    0,4,9,13,16,19,22,23,24,
+    0,6,12,18,22,26,29,31,32,
+    0,7,15,22,28,33,37,39,40,
+    0,9,18,27,33,39,44,47,48,
+    0,11,21,31,39,46,51,55,56,
+    0,12,24,36,45,53,59,62,64,
+    0,14,27,40,50,59,66,70,72,
+    0,15,31,45,56,66,74,78,80,
+    0,17,34,49,62,73,81,86,88
+];
+WORLD14_FIREBAR_OFFSETS <- [0,9,18,27,36,45,54,63,72,81,90,99];
+WORLD14_FIREBAR_MIRROR <- [1,3,2,0];
+WORLD14_FIREBAR_SPEED <- [0x28,0x38,0x28,0x38,0x28];
+WORLD14_FIREBAR_DIRECTION <- [0,0,0x10,0x10,0];
+WORLD14_FLAME_TIMERS <- [0xbf,0x40,0xbf,0xbf,0xbf,0x40,0x40,0xbf];
+WORLD14_FLAME_Y <- [0x90,0x80,0x70,0x90];
+
 function loadWorld14Assets() {
     local metatiles = {};
     foreach(column in ROM_WORLD_1_4_METATILES)
@@ -76,13 +99,18 @@ function world14ParseCastleObjects(g) {
                 unit = unit, row = row, id = id,
                 x = unit * 16.0 + 4.0, y = row * 16.0 + 4.0,
                 length = longBar ? 12 : 6,
-                degreesPerFrame = (id == 0x1C || id == 0x1E) ? 1.72 : 1.30
+                spinLow = 0, spinHigh = 0,
+                spinSpeed = WORLD14_FIREBAR_SPEED[id - 0x1B],
+                spinDirection = WORLD14_FIREBAR_DIRECTION[id - 0x1B]
             });
         } else if(id == 0x2D) {
             bowser = {
                 x = unit * 16.0, y = row * 16.0, width = 32.0, height = 32.0,
                 originX = unit * 16.0, direction = -1, hp = 5, defeated = false,
-                falling = false, vy = 0.0, fireTimer = 180, feetTimer = 32, feetFrame = 0
+                falling = false, hidden = false, vy = 0.0, ySpeed = 0.0,
+                fireTimer = 0xDF, feetTimer = 32, faceTimer = 32, feetFrame = 0,
+                bodyControls = 0, movementSpeed = 2, movingDir = 2,
+                maxRange = 0x21, flameTimerCtrl = 0, flameYOffset = 0
             };
         } else if(id == 0x35) {
             retainer = {x = unit * 16.0, y = row * 16.0, width = 16.0, height = 24.0};
@@ -116,7 +144,8 @@ function startWorld14(g) {
         firebars = [], bowser = null, retainer = null, podoboo = null,
         projectiles = [], flames = [], bridgeRight = 140,
         axeX = 141.0 * 16.0, stateFrames = 0, clearStarted = false,
-        rescued = false, completeFrames = 0, axeSparkle = 0
+        rescued = false, completeFrames = 0, axeSparkle = 0,
+        bridgeOffset = 0, axeGone = false, chainGone = false
     };
     if("world14" in g) g.world14 = resetWorld; else g.world14 <- resetWorld;
     world14BuildCollision(g);
@@ -145,6 +174,8 @@ function world14TileTexture(g, tx, ty, tile) {
         return null;
     local row = ty - 2, meta = g.world14.metatiles[tx][row];
     if(meta == 0) return null;
+    if(g.world14.axeGone && meta == 0xC5) return null;
+    if(g.world14.chainGone && meta == 0x0C) return null;
     if(meta == 0x89 && tx > g.world14.bridgeRight) {
         return null;
     }
@@ -164,22 +195,67 @@ function world14OverlapPlayer(g, x, y, width, height) {
                                x, y, width, height);
 }
 
-function world14FirebarPoint(bar, index, frame) {
-    local radians = (frame * bar.degreesPerFrame + bar.unit * 17.0) * PI / 180.0;
+function world14FirebarPoint(bar, index) {
+    local horizontalNibble = bar.spinHigh & 0x0F;
+    if(horizontalNibble >= 9)
+        horizontalNibble = 16 - horizontalNibble;
+    local verticalNibble = (bar.spinHigh + 8) & 0x0F;
+    if(verticalNibble >= 9)
+        verticalNibble = 16 - verticalNibble;
+    local offset = WORLD14_FIREBAR_OFFSETS[index];
+    local horizontal = WORLD14_FIREBAR_POS[offset + horizontalNibble];
+    local vertical = WORLD14_FIREBAR_POS[offset + verticalNibble];
+    local mirror = WORLD14_FIREBAR_MIRROR[(bar.spinHigh >> 3) & 0x03];
+    if((mirror & 0x01) == 0) horizontal = -horizontal;
+    if((mirror & 0x02) == 0) vertical = -vertical;
     return {
-        x = bar.x + cos(radians) * index * 8.0,
-        y = bar.y + sin(radians) * index * 8.0
+        x = bar.x + horizontal,
+        y = bar.y + vertical
     };
+}
+
+function world14ToggleBit(value, mask) {
+    return (value & mask) != 0 ? value - mask : value + mask;
+}
+
+function world14TickFirebar(bar) {
+    local low = bar.spinLow;
+    local high = bar.spinHigh;
+    if(bar.spinDirection == 0) {
+        low += bar.spinSpeed;
+        if(low > 0xFF) {
+            low = low & 0xFF;
+            high += 1;
+        }
+    } else {
+        low -= bar.spinSpeed;
+        if(low < 0) {
+            low = low & 0xFF;
+            high -= 1;
+        }
+    }
+    high = high & 0x1F;
+    if(bar.id == 0x1F && high == 0x08) high += 1;
+    if(bar.id == 0x1F && high == 0x18) high += 1;
+    bar.spinLow = low;
+    bar.spinHigh = high;
+}
+
+function world14NextFlameTimer(b) {
+    local timer = WORLD14_FLAME_TIMERS[b.flameTimerCtrl & 0x07];
+    b.flameTimerCtrl = (b.flameTimerCtrl + 1) & 0x07;
+    return timer;
 }
 
 function world14SpawnBowserFlame(g) {
     local b = g.world14.bowser;
     if(b == null || b.defeated) return;
-    local lane = g.nesFrameCounter & 1;
+    local lane = b.flameYOffset & 0x03;
+    b.flameYOffset = (b.flameYOffset + 1) & 0x03;
     g.world14.projectiles.append({
-        x = b.x - 14.0, y = b.y + 8.0 + lane * 8.0,
-        width = 24.0, height = 8.0, vx = -1.0,
-        vy = lane == 0 ? -0.12 : 0.12, active = true
+        x = b.x, y = WORLD14_FLAME_Y[lane] - 16.0,
+        width = 24.0, height = 8.0, vx = -0.25, vy = 0.0,
+        targetY = WORLD14_FLAME_Y[lane] - 16.0, active = true
     });
     emitSound(g, "bowser_fire");
 }
@@ -188,7 +264,6 @@ function world14HurtBowser(g) {
     local b = g.world14.bowser;
     if(b == null || b.defeated) return;
     b.hp -= 1;
-    g.score += 100; g.queuedScore = g.score;
     if(b.hp <= 0) {
         b.defeated = true; b.falling = true; b.vy = -2.0;
         emitSound(g, "bowser_fall");
@@ -203,8 +278,9 @@ function updateWorld14Actors(g) {
 
     foreach(bar in w.firebars) {
         if(bar.x < g.cameraX - 32.0 || bar.x > g.cameraX + 288.0) continue;
+        world14TickFirebar(bar);
         for(local index = 0; index < bar.length; index += 1) {
-            local point = world14FirebarPoint(bar, index, frame);
+            local point = world14FirebarPoint(bar, index);
             if(world14OverlapPlayer(g, point.x, point.y, 8.0, 8.0)) {
                 hurtPlayer(g, {kind="firebar", x=point.x});
                 if(p.dead) return;
@@ -216,11 +292,39 @@ function updateWorld14Actors(g) {
     if(b != null) {
         if(!b.defeated && b.x < g.cameraX + 320.0) {
             b.feetTimer -= 1;
-            if(b.feetTimer <= 0) { b.feetTimer = 32; b.feetFrame = 1 - b.feetFrame; }
-            if(b.x > b.originX - 48.0 && b.x > p.x + 40.0) b.x -= 0.5;
-            else if(b.x < b.originX + 32.0 && b.x < p.x - 40.0) b.x += 0.5;
+            if(b.feetTimer <= 0) {
+                b.feetTimer = 32;
+                b.feetFrame = 1 - b.feetFrame;
+                b.bodyControls = world14ToggleBit(b.bodyControls, 0x01);
+            }
+            if((frame & 0x0F) == 0) b.movingDir = 2;
+            if(b.faceTimer > 0) {
+                if(b.originX > p.x + 48.0) {
+                    b.movingDir = 2;
+                    b.movementSpeed = 2;
+                    b.faceTimer = 32;
+                    b.fireTimer = 32;
+                }
+                b.faceTimer -= 1;
+            }
+            if((frame & 0x03) == 0) {
+                local delta = b.x - b.originX;
+                if(b.movingDir == 1) b.x += b.movementSpeed;
+                else b.x -= b.movementSpeed;
+                delta = b.x - b.originX;
+                if(delta < 0) delta = -delta;
+                if(delta >= b.maxRange)
+                    b.movingDir = b.x > b.originX ? 2 : 1;
+            }
             b.fireTimer -= 1;
-            if(b.fireTimer <= 0) { b.fireTimer = 160; world14SpawnBowserFlame(g); }
+            if(b.fireTimer <= 0) {
+                b.fireTimer = 32;
+                b.bodyControls = world14ToggleBit(b.bodyControls, 0x80);
+                if((b.bodyControls & 0x80) == 0) {
+                    b.fireTimer = world14NextFlameTimer(b);
+                    world14SpawnBowserFlame(g);
+                }
+            }
             if(world14OverlapPlayer(g, b.x + 3.0, b.y + 3.0, 26.0, 29.0)) {
                 hurtPlayer(g, {kind="bowser", x=b.x});
                 if(p.dead) return;
@@ -238,7 +342,9 @@ function updateWorld14Actors(g) {
 
     for(local index = w.projectiles.len() - 1; index >= 0; index -= 1) {
         local shot = w.projectiles[index];
-        shot.x += shot.vx; shot.y += shot.vy;
+        shot.x += shot.vx;
+        if(shot.y < shot.targetY) shot.y += 0.25;
+        else if(shot.y > shot.targetY) shot.y -= 0.25;
         if(world14OverlapPlayer(g, shot.x, shot.y, shot.width, shot.height)) {
             shot.active = false;
             hurtPlayer(g, {kind="bowser_flame", x=shot.x});
@@ -284,11 +390,23 @@ function updateWorld14Actors(g) {
 
 function world14RemoveBridgeSection(g) {
     local w = g.world14;
-    if(w.bridgeRight < 128) return false;
-    for(local x = w.bridgeRight; x >= 128 && x >= w.bridgeRight - 1; x -= 1)
-        setTile(g, x, 10, TILE_EMPTY);
-    w.bridgeRight -= 2;
-    if((w.stateFrames & 0x03) == 0) emitSound(g, "blast");
+    if(w.bridgeOffset >= 15) return false;
+    local offset = w.bridgeOffset;
+    if(offset == 0) {
+        w.axeGone = true;
+    } else if(offset == 1) {
+        w.chainGone = true;
+    } else {
+        // SMBDIS BridgeCollapseData: bridge columns $98..$80, one ROM
+        // metatile (16 pixels) every four frames.
+        local column = 140 - (offset - 2);
+        for(local row = 0; row < 13; row += 1)
+            if(w.metatiles[column][row] == 0x89)
+                setTile(g, column, row + 2, TILE_EMPTY);
+        w.bridgeRight = column - 1;
+    }
+    emitSound(g, "blast");
+    w.bridgeOffset += 1;
     return true;
 }
 
@@ -297,34 +415,60 @@ function updateWorld14Transition(g) {
     local w = g.world14, p = g.player;
     if(g.state == "world14Axe") {
         w.stateFrames += 1;
-        if(w.stateFrames == 24 || (w.stateFrames > 24 && (w.stateFrames - 24) % 4 == 0))
-            world14RemoveBridgeSection(g);
-        if(w.bridgeRight < 128 && w.stateFrames > 96) {
+        local b = w.bowser;
+        if(b != null && !b.defeated) {
+            b.feetTimer -= 1;
+            if(b.feetTimer <= 0) {
+                b.feetTimer = 4;
+                b.bodyControls = world14ToggleBit(b.bodyControls, 0x01);
+                world14RemoveBridgeSection(g);
+            }
+        }
+        if(b != null && b.defeated && !b.hidden) {
+            // BridgeCollapse -> MoveEnemySlowVert: force $0f, maximum speed $02.
+            b.vy += 15.0 / 256.0;
+            if(b.vy > 2.0) b.vy = 2.0;
+            b.y += b.vy;
+            if(b.y >= 224.0) {
+                b.hidden = true;
+                b.falling = false;
+                if(!w.clearStarted) {
+                    w.clearStarted = true;
+                    // VictoryMode task 1 (SetupVictoryMode) is reached only
+                    // after defeated Bowser falls below the $e0 threshold.
+                    emitSound(g, "castle_clear");
+                    parityRecordEvent(g, "music", "end_castle");
+                }
+                g.state = "world14VictoryWalk";
+                w.stateFrames = 0;
+            }
+        }
+        if(b == null && w.bridgeOffset >= 15) {
             if(!w.clearStarted) {
                 w.clearStarted = true;
-                // HandleAxeMetatile enters VictoryMode. Once the bridge and
-                // Bowser have fallen, SetupVictoryMode queues $08 EndOfCastle.
                 emitSound(g, "castle_clear");
                 parityRecordEvent(g, "music", "end_castle");
             }
-            local b = w.bowser;
-            if(b != null && !b.defeated) {
-                b.defeated = true; b.falling = true; b.vy = -2.0;
-                emitSound(g, "bowser_fall");
-                parityRecordEvent(g, "sound", "bowser_fall");
+            if(w.stateFrames >= 64) {
+                g.state = "world14VictoryWalk";
+                w.stateFrames = 0;
             }
-            g.state = "world14VictoryWalk";
-            w.stateFrames = 0;
+        }
+        if(w.bridgeOffset == 15 && b != null && !b.defeated) {
+            // The final BridgeCollapseData entry changes Bowser to state $40
+            // and queues Sfx_BowserFall in the same frame.
+            b.defeated = true;
+            b.falling = true;
+            b.vy = 0.0;
+            b.ySpeed = 0.0;
+            emitSound(g, "bowser_fall");
+            parityRecordEvent(g, "sound", "bowser_fall");
         }
         return true;
     }
     if(g.state == "world14VictoryWalk") {
         w.stateFrames += 1;
         local b = w.bowser;
-        if(b != null && b.falling) {
-            b.y += b.vy; b.vy += 0.10;
-            if(b.y > LOGICAL_HEIGHT + 40.0) b.falling = false;
-        }
         p.facing = 1; p.vx = NES_FRAME_RATE;
         p.x += 1.0;
         local maximum = g.areaWidth * TILE_SIZE - LOGICAL_WIDTH;
@@ -396,6 +540,7 @@ function world14TextRows(character) {
     if(character == "1") return ["00100","01100","00100","00100","00100","00100","01110"];
     if(character == "4") return ["00010","00110","01010","10010","11111","00010","00010"];
     if(character == "!") return ["00100","00100","00100","00100","00100","00000","00100"];
+    if(character == "-") return ["00000","00000","00000","11111","00000","00000","00000"];
     return null;
 }
 
@@ -423,14 +568,14 @@ function drawWorld14Actors(g, behind) {
     local fireTexture = world14Assets.firebar[(frame >> 2) & 1];
     foreach(bar in w.firebars)
         for(local index = 0; index < bar.length; index += 1) {
-            local point = world14FirebarPoint(bar, index, frame);
+            local point = world14FirebarPoint(bar, index);
             worldTexture(g, fireTexture, point.x, point.y, 8.0, 8.0);
         }
     local b = w.bowser;
-    if(b != null && !b.falling) {
+    if(b != null && !b.hidden && !b.falling) {
         local texture = world14Assets.bowser[(frame >> 4) & 1];
         worldTexture(g, texture, b.x, b.y, 32.0, 32.0);
-    } else if(b != null && b.falling) {
+    } else if(b != null && !b.hidden && b.falling) {
         worldTexture(g, world14Assets.bowser[1], b.x, b.y, 32.0, 32.0);
     }
     foreach(shot in w.projectiles)
@@ -438,11 +583,18 @@ function drawWorld14Actors(g, behind) {
     if(w.podoboo != null && w.podoboo.timer <= 0)
         worldTexture(g, world14Assets.firebar[(frame >> 1) & 1],
                      w.podoboo.x, w.podoboo.y, 8.0, 12.0);
-    if(g.state == "world14Rescue")
-        world14DrawText(g, "THANK YOU MARIO!", w.retainer.x - 48.0, 48.0, 2.0);
+    if(g.state == "world14Rescue") {
+        if(w.stateFrames < 48)
+            world14DrawText(g, "THANK YOU MARIO!", g.cameraX + 38.0, 48.0, 2.0);
+        else {
+            world14DrawText(g, "BUT OUR PRINCESS IS IN", g.cameraX + 24.0, 44.0, 1.5);
+            world14DrawText(g, "ANOTHER CASTLE!", g.cameraX + 64.0, 72.0, 2.0);
+        }
+    }
     if(g.state == "worldComplete") {
-        world14DrawText(g, "BUT OUR PRINCESS IS IN", w.retainer.x - 66.0, 48.0, 1.5);
-        world14DrawText(g, "ANOTHER CASTLE!", w.retainer.x - 52.0, 76.0, 2.0);
+        world14DrawText(g, "BUT OUR PRINCESS IS IN", g.cameraX + 24.0, 44.0, 1.5);
+        world14DrawText(g, "ANOTHER CASTLE!", g.cameraX + 64.0, 72.0, 2.0);
+        world14DrawText(g, "WORLD 2-1 PENDING", g.cameraX + 46.0, 108.0, 1.0);
     }
 }
 
@@ -470,7 +622,7 @@ function runWorld14SelfTest() {
 
     local hazard = createGame(); startWorld14(hazard);
     local first = hazard.world14.firebars[0];
-    local point = world14FirebarPoint(first, 1, hazard.nesFrameCounter);
+    local point = world14FirebarPoint(first, 1);
     hazard.cameraX = first.x - 128.0;
     hazard.player.x = point.x - 4.0; hazard.player.y = point.y - 6.0;
     updateWorld14Actors(hazard);
@@ -486,11 +638,18 @@ function runWorld14SelfTest() {
 
     local boss = createGame(); startWorld14(boss);
     boss.cameraX = boss.world14.bowser.x - 128.0;
+    boss.player.x = boss.world14.bowser.x + 64.0;
+    boss.world14.bowser.faceTimer = 0;
+    boss.world14.bowser.fireTimer = 1;
+    updateWorld14Actors(boss);
+    requireSelfTest(boss.world14.projectiles.len() == 0 &&
+        (boss.world14.bowser.bodyControls & 0x80) != 0,
+        "Bowser must open his mouth before firing");
     boss.world14.bowser.fireTimer = 1;
     updateWorld14Actors(boss);
     requireSelfTest(boss.world14.projectiles.len() == 1 &&
         boss.world14.projectiles[0].vx < 0.0,
-        "Bowser must fire a left-moving projectile");
+        "Bowser must fire a left-moving projectile when his mouth closes");
     boss.fireballs = [{x=boss.world14.bowser.x + 4.0, y=boss.world14.bowser.y + 8.0,
         width=8.0,height=8.0,vx=0.0,vy=0.0,active=true,exploding=false,
         explosionFrames=0,nesYSpeed=0,nesYMoveForce=0,nesYDummy=0,bouncing=false}];
@@ -504,7 +663,7 @@ function runWorld14SelfTest() {
     updateWorld14Actors(clear);
     requireSelfTest(clear.state == "world14Axe",
         "touching the ROM axe must enter automatic castle clear");
-    for(local frame = 0; frame < 760 && clear.state != "worldComplete"; frame += 1)
+    for(local frame = 0; frame < 2000 && clear.state != "worldComplete"; frame += 1)
         updateWorld14Transition(clear);
     requireSelfTest(clear.world14.bridgeRight < 128 && clear.world14.rescued &&
         clear.state == "worldComplete" && clear.time == 0 && clear.score == 15000,
