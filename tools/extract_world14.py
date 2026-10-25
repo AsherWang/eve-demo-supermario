@@ -4,11 +4,13 @@ The verified ROM is read offline. No ROM or emulator enters the game runtime.
 """
 from __future__ import annotations
 
+import argparse
 import hashlib
 import json
-import math
-import struct
+import shutil
+import subprocess
 import wave
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 from extract_smb_assets import (
@@ -20,6 +22,7 @@ from extract_smb_assets import (
     tile_image,
 )
 from PIL import Image
+from tool_paths import tool_path
 
 ROOT = Path(__file__).resolve().parents[1]
 EXPECTED_ROM_SHA256 = "f61548fdf1670cffefcc4f0b7bdcdd9eaba0c226e3b74f8666071496988248de"
@@ -69,30 +72,161 @@ def stream(prg: bytes, start: int, terminator: int = 0xFD) -> bytes:
     return prg[start : end + 1]
 
 
-def write_wav(path: Path, notes: list[tuple[float, float]], gain: float = 0.16) -> None:
-    sample_rate = 48_000
-    samples: list[int] = []
-    for frequency, seconds in notes:
-        count = int(sample_rate * seconds)
-        if frequency <= 0.0:
-            samples.extend([0] * count)
+AUDIO_CLIPS = {
+    # Name: (SMBDIS queue address, queued value, emulated frames, semantic,
+    #        hurry note-length table adder)
+    "castle_theme": (0xFB, 0x08, 10820, "area_music.castle", 0),
+    "castle_fast": (0xFB, 0x08, 3600, "area_music.castle_hurry", 8),
+    "castle_clear": (0xFC, 0x08, 480, "event_music.end_castle", 0),
+    "bowser_fire": (0xFD, 0x02, 90, "noise_sfx.bowser_flame", 0),
+    "bowser_fall": (0xFE, 0x80, 90, "square2_sfx.bowser_fall", 0),
+}
+
+
+def file_sha256(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def mesen_summary(stdout: str) -> dict:
+    summaries = []
+    for line in stdout.splitlines():
+        try:
+            value = json.loads(line)
+        except json.JSONDecodeError:
             continue
-        release = max(1, min(count, int(sample_rate * 0.018)))
-        for index in range(count):
-            envelope = min(1.0, index / 24.0, (count - index) / release)
-            phase = (index * frequency / sample_rate) % 1.0
-            square = 1.0 if phase < 0.25 else -1.0
-            samples.append(int(32767 * gain * envelope * square))
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with wave.open(str(path), "wb") as output:
-        output.setnchannels(1)
-        output.setsampwidth(2)
-        output.setframerate(sample_rate)
-        output.writeframes(struct.pack("<" + "h" * len(samples), *samples))
+        if value.get("event") == "summary":
+            summaries.append(value)
+    if not summaries or not summaries[-1].get("ok"):
+        raise RuntimeError("Mesen did not report a successful run")
+    return summaries[-1]
+
+
+def capture_world14_audio(rom: Path, origin_state: Path, mesen: Path,
+                          output: Path, work: Path) -> dict:
+    """Capture original SoundEngine output twice and prove identical PCM."""
+    work.mkdir(parents=True, exist_ok=True)
+    output.mkdir(parents=True, exist_ok=True)
+    freeze = """local frame = 0
+emu.addEventCallback(function()
+  frame = frame + 1
+  if frame > 700 then
+    emu.write(0x0787, 0xff, emu.memType.nesInternalRam)
+  end
+end, emu.eventType.endFrame)
+"""
+    silent_script = work / "silence.lua"
+    silent_script.write_text(
+        "emu.write(0xfc, 0x80, emu.memType.nesInternalRam)\n" + freeze,
+        encoding="utf-8",
+    )
+    silent_state = work / "silent-origin.mss"
+    silent_home = work / "home-silence"
+    silent_home.mkdir(parents=True, exist_ok=True)
+    silent = subprocess.run([
+        str(mesen), str(rom), "--home", str(silent_home),
+        "--load-state", str(origin_state), "--frames", "120", "--timeout", "120",
+        "--lua", str(silent_script), "--lua-allow-io", "--save-state", str(silent_state),
+    ], capture_output=True, text=True, encoding="utf-8", timeout=150)
+    (work / "silence.log").write_text(silent.stdout + silent.stderr, encoding="utf-8")
+    if silent.returncode or not silent_state.is_file():
+        raise RuntimeError(f"World 1-4 silent origin capture failed: {work / 'silence.log'}")
+    mesen_summary(silent.stdout)
+
+    def capture_once(name: str, reference: str) -> dict:
+        queue, value, frames, semantic, adder = AUDIO_CLIPS[name]
+        script = work / f"{name}-{reference}.lua"
+        source = ""
+        if adder:
+            source += f"emu.write(0x07c4, {adder}, emu.memType.nesInternalRam)\n"
+        source += f"emu.write(0x{queue:02x}, 0x{value:02x}, emu.memType.nesInternalRam)\n"
+        script.write_text(source + freeze, encoding="utf-8")
+        clip = work / f"{name}-{reference}.wav"
+        home = work / f"home-{name}-{reference}"
+        home.mkdir(parents=True, exist_ok=True)
+        completed = subprocess.run([
+            str(mesen), str(rom), "--home", str(home),
+            "--load-state", str(silent_state), "--frames", str(frames),
+            "--timeout", "300", "--lua", str(script), "--lua-allow-io",
+            "--audio", str(clip),
+        ], capture_output=True, text=True, encoding="utf-8", timeout=320)
+        (work / f"{name}-{reference}.log").write_text(
+            completed.stdout + completed.stderr, encoding="utf-8"
+        )
+        if completed.returncode:
+            raise RuntimeError(f"World 1-4 audio capture failed: {work / f'{name}-{reference}.log'}")
+        mesen_summary(completed.stdout)
+        with wave.open(str(clip), "rb") as source_wav:
+            params = source_wav.getparams()
+            if (params.framerate, params.sampwidth, params.nchannels) != (48000, 2, 2):
+                raise RuntimeError(f"Unexpected Mesen PCM format for {clip}: {params}")
+        return {
+            "reference": reference,
+            "sha256": file_sha256(clip),
+            "sample_frames": params.nframes,
+            "queue_address": f"0x{queue:02x}",
+            "queue_value": f"0x{value:02x}",
+            "emulated_frames": frames,
+            "semantic": semantic,
+            "note_length_table_adder": adder,
+            "timer_freeze_after_frame": 700,
+            "path": clip,
+        }
+
+    jobs = [(name, reference) for name in AUDIO_CLIPS for reference in ("reference-a", "reference-b")]
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        rows = list(pool.map(lambda job: capture_once(*job), jobs))
+    records: dict[str, dict] = {}
+    for name, (_, _, frames, semantic, adder) in AUDIO_CLIPS.items():
+        pair = [row for row in rows if row["path"].name.startswith(name + "-")]
+        if len(pair) != 2 or pair[0]["sha256"] != pair[1]["sha256"]:
+            raise RuntimeError(f"Mesen PCM references disagree for {name}")
+        destination = output / f"{name}.wav"
+        shutil.copyfile(pair[0]["path"], destination)
+        records[name] = {
+            "asset": destination.relative_to(ROOT).as_posix(),
+            "semantic": semantic,
+            "queue_address": pair[0]["queue_address"],
+            "queue_value": pair[0]["queue_value"],
+            "emulated_frames": frames,
+            "note_length_table_adder": adder,
+            "timer_freeze_after_frame": 700,
+            "references": [
+                {key: value for key, value in row.items() if key != "path"}
+                for row in pair
+            ],
+            "references_match": True,
+            "sha256": pair[0]["sha256"],
+            "sample_frames": pair[0]["sample_frames"],
+        }
+    manifest = {
+        "schema": "smb-world14-audio-v2",
+        "rom_sha256": file_sha256(rom),
+        "mesen_sha256": file_sha256(mesen),
+        "origin_state_sha256": file_sha256(origin_state),
+        "sample_rate": 48000,
+        "channels": 2,
+        "sample_width": 2,
+        "method": "Offline original SMBDIS SoundEngine and Mesen 2A03; unmodified captured PCM",
+        "limitation": "Isolated original clips; runtime song resume and channel stealing remain separate gates",
+        "clips": records,
+    }
+    (ROOT / "assets/world14/audio-manifest.json").write_text(
+        json.dumps(manifest, indent=2) + "\n", encoding="utf-8"
+    )
+    return manifest
 
 
 def main() -> None:
-    raw = (ROOT / "roms/Super Mario Bros. (World).nes").read_bytes()
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--rom", type=Path,
+                        default=ROOT / "roms/Super Mario Bros. (World).nes")
+    parser.add_argument("--origin-state", type=Path,
+                        help="Mesen state at normal World 1-4 player control; required for audio")
+    parser.add_argument("--mesen", type=Path, default=tool_path("mesen"))
+    parser.add_argument("--audio-work", type=Path,
+                        default=ROOT / "local-parity/world14-audio-capture")
+    args = parser.parse_args()
+    raw = args.rom.read_bytes()
     digest = hashlib.sha256(raw).hexdigest()
     if digest != EXPECTED_ROM_SHA256:
         raise SystemExit("ROM does not match the verified baseline")
@@ -212,16 +346,16 @@ def main() -> None:
         )
     flame.save(out / "bowser-flame.png")
 
-    audio = ROOT / "assets/audio"
-    # Small runtime cues, generated locally and kept separate from shared PCM.
-    notes = [220.0, 261.63, 293.66, 329.63, 293.66, 261.63]
-    write_wav(audio / "castle_theme.wav", [(note, 0.16) for note in notes])
-    write_wav(
-        audio / "castle_clear.wav",
-        [(0.0, 0.10), (523.25, 0.10), (659.25, 0.10), (783.99, 0.18), (1046.5, 0.32)],
+    if args.origin_state is None:
+        parser.error("--origin-state is required; capture must use the original SoundEngine, not synthesized notes")
+    if not args.origin_state.is_file():
+        parser.error(f"origin state does not exist: {args.origin_state}")
+    if not args.mesen.is_file():
+        parser.error(f"Mesen agent does not exist: {args.mesen}")
+    audio_manifest = capture_world14_audio(
+        args.rom.resolve(), args.origin_state.resolve(), args.mesen.resolve(),
+        ROOT / "assets/audio", args.audio_work.resolve(),
     )
-    write_wav(audio / "bowser_fire.wav", [(92.5, 0.035), (73.4, 0.045), (61.7, 0.06)])
-    write_wav(audio / "bowser_fall.wav", [(185.0, 0.12), (146.8, 0.12), (110.0, 0.18)])
 
     metadata["generated_textures"] = {
         "metatiles": "assets/world14/metatile-*.png",
@@ -231,11 +365,9 @@ def main() -> None:
         "flame": "assets/world14/bowser-flame.png",
     }
     metadata["audio"] = {
-        "castle_theme": "assets/audio/castle_theme.wav",
-        "castle_clear": "assets/audio/castle_clear.wav",
-        "bowser_fire": "assets/audio/bowser_fire.wav",
-        "bowser_fall": "assets/audio/bowser_fall.wav",
+        name: record["asset"] for name, record in audio_manifest["clips"].items()
     }
+    metadata["audio_manifest"] = "assets/world14/audio-manifest.json"
     (out / "manifest.json").write_text(json.dumps(metadata, indent=2) + "\n", encoding="utf-8")
     print(f"world14 area={metadata['streams']['AREA']['cpu_address']} "
           f"enemy={metadata['streams']['ENEMY']['cpu_address']}")

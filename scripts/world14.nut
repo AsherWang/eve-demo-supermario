@@ -5,6 +5,7 @@ if(!("ROM_WORLD_1_4_METATILES" in getroottable())) dofile("scripts/generated/wor
 world14Assets <- null;
 world14AudioAssets <- {
     theme = "assets/audio/castle_theme.wav",
+    fast = "assets/audio/castle_fast.wav",
     clear = "assets/audio/castle_clear.wav",
     bowserFire = "assets/audio/bowser_fire.wav",
     bowserFall = "assets/audio/bowser_fall.wav"

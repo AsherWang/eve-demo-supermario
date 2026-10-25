@@ -1,0 +1,193 @@
+{
+  "schema": "smb-world14-audio-v2",
+  "rom_sha256": "f61548fdf1670cffefcc4f0b7bdcdd9eaba0c226e3b74f8666071496988248de",
+  "mesen_sha256": "4143766f2b900e63663ea000655f24fd824f2ce5324c2575025f8bb68030a910",
+  "origin_state_sha256": "46aac8aea5feda1f7d6a9145d1fca35e50a0a1a1a5169d960e3220990e5a1ddf",
+  "sample_rate": 48000,
+  "channels": 2,
+  "sample_width": 2,
+  "method": "Offline original SMBDIS SoundEngine and Mesen 2A03; unmodified captured PCM",
+  "limitation": "Isolated original clips; runtime song resume and channel stealing remain separate gates",
+  "clips": {
+    "castle_theme": {
+      "asset": "assets/audio/castle_theme.wav",
+      "semantic": "area_music.castle",
+      "queue_address": "0xfb",
+      "queue_value": "0x08",
+      "emulated_frames": 10820,
+      "note_length_table_adder": 0,
+      "timer_freeze_after_frame": 700,
+      "references": [
+        {
+          "reference": "reference-a",
+          "sha256": "d7ed6312a95782f2e9361b32c99164e5e1b6a34873030804e58f1fef497aef64",
+          "sample_frames": 8641699,
+          "queue_address": "0xfb",
+          "queue_value": "0x08",
+          "emulated_frames": 10820,
+          "semantic": "area_music.castle",
+          "note_length_table_adder": 0,
+          "timer_freeze_after_frame": 700
+        },
+        {
+          "reference": "reference-b",
+          "sha256": "d7ed6312a95782f2e9361b32c99164e5e1b6a34873030804e58f1fef497aef64",
+          "sample_frames": 8641699,
+          "queue_address": "0xfb",
+          "queue_value": "0x08",
+          "emulated_frames": 10820,
+          "semantic": "area_music.castle",
+          "note_length_table_adder": 0,
+          "timer_freeze_after_frame": 700
+        }
+      ],
+      "references_match": true,
+      "sha256": "d7ed6312a95782f2e9361b32c99164e5e1b6a34873030804e58f1fef497aef64",
+      "sample_frames": 8641699
+    },
+    "castle_fast": {
+      "asset": "assets/audio/castle_fast.wav",
+      "semantic": "area_music.castle_hurry",
+      "queue_address": "0xfb",
+      "queue_value": "0x08",
+      "emulated_frames": 3600,
+      "note_length_table_adder": 8,
+      "timer_freeze_after_frame": 700,
+      "references": [
+        {
+          "reference": "reference-a",
+          "sha256": "3f93f9c629b6c2e0cb0c012ee73130e068f42d097bf8f75e8ab1c8c407d0087e",
+          "sample_frames": 2875196,
+          "queue_address": "0xfb",
+          "queue_value": "0x08",
+          "emulated_frames": 3600,
+          "semantic": "area_music.castle_hurry",
+          "note_length_table_adder": 8,
+          "timer_freeze_after_frame": 700
+        },
+        {
+          "reference": "reference-b",
+          "sha256": "3f93f9c629b6c2e0cb0c012ee73130e068f42d097bf8f75e8ab1c8c407d0087e",
+          "sample_frames": 2875196,
+          "queue_address": "0xfb",
+          "queue_value": "0x08",
+          "emulated_frames": 3600,
+          "semantic": "area_music.castle_hurry",
+          "note_length_table_adder": 8,
+          "timer_freeze_after_frame": 700
+        }
+      ],
+      "references_match": true,
+      "sha256": "3f93f9c629b6c2e0cb0c012ee73130e068f42d097bf8f75e8ab1c8c407d0087e",
+      "sample_frames": 2875196
+    },
+    "castle_clear": {
+      "asset": "assets/audio/castle_clear.wav",
+      "semantic": "event_music.end_castle",
+      "queue_address": "0xfc",
+      "queue_value": "0x08",
+      "emulated_frames": 480,
+      "note_length_table_adder": 0,
+      "timer_freeze_after_frame": 700,
+      "references": [
+        {
+          "reference": "reference-a",
+          "sha256": "5f6f126cbce8515068ece082f10504d8e145f94f5a956a2c30771e65a3604414",
+          "sample_frames": 383301,
+          "queue_address": "0xfc",
+          "queue_value": "0x08",
+          "emulated_frames": 480,
+          "semantic": "event_music.end_castle",
+          "note_length_table_adder": 0,
+          "timer_freeze_after_frame": 700
+        },
+        {
+          "reference": "reference-b",
+          "sha256": "5f6f126cbce8515068ece082f10504d8e145f94f5a956a2c30771e65a3604414",
+          "sample_frames": 383301,
+          "queue_address": "0xfc",
+          "queue_value": "0x08",
+          "emulated_frames": 480,
+          "semantic": "event_music.end_castle",
+          "note_length_table_adder": 0,
+          "timer_freeze_after_frame": 700
+        }
+      ],
+      "references_match": true,
+      "sha256": "5f6f126cbce8515068ece082f10504d8e145f94f5a956a2c30771e65a3604414",
+      "sample_frames": 383301
+    },
+    "bowser_fire": {
+      "asset": "assets/audio/bowser_fire.wav",
+      "semantic": "noise_sfx.bowser_flame",
+      "queue_address": "0xfd",
+      "queue_value": "0x02",
+      "emulated_frames": 90,
+      "note_length_table_adder": 0,
+      "timer_freeze_after_frame": 700,
+      "references": [
+        {
+          "reference": "reference-a",
+          "sha256": "80eda5eae3c5c510dc2dd2f3935bd7ccad4a5f90c49b7f83854c9b954983fea5",
+          "sample_frames": 71814,
+          "queue_address": "0xfd",
+          "queue_value": "0x02",
+          "emulated_frames": 90,
+          "semantic": "noise_sfx.bowser_flame",
+          "note_length_table_adder": 0,
+          "timer_freeze_after_frame": 700
+        },
+        {
+          "reference": "reference-b",
+          "sha256": "80eda5eae3c5c510dc2dd2f3935bd7ccad4a5f90c49b7f83854c9b954983fea5",
+          "sample_frames": 71814,
+          "queue_address": "0xfd",
+          "queue_value": "0x02",
+          "emulated_frames": 90,
+          "semantic": "noise_sfx.bowser_flame",
+          "note_length_table_adder": 0,
+          "timer_freeze_after_frame": 700
+        }
+      ],
+      "references_match": true,
+      "sha256": "80eda5eae3c5c510dc2dd2f3935bd7ccad4a5f90c49b7f83854c9b954983fea5",
+      "sample_frames": 71814
+    },
+    "bowser_fall": {
+      "asset": "assets/audio/bowser_fall.wav",
+      "semantic": "square2_sfx.bowser_fall",
+      "queue_address": "0xfe",
+      "queue_value": "0x80",
+      "emulated_frames": 90,
+      "note_length_table_adder": 0,
+      "timer_freeze_after_frame": 700,
+      "references": [
+        {
+          "reference": "reference-a",
+          "sha256": "3d44b537e683d548a5189d4a3b9361aa3eed6c5c14be7500d1f062f7b7c82580",
+          "sample_frames": 71814,
+          "queue_address": "0xfe",
+          "queue_value": "0x80",
+          "emulated_frames": 90,
+          "semantic": "square2_sfx.bowser_fall",
+          "note_length_table_adder": 0,
+          "timer_freeze_after_frame": 700
+        },
+        {
+          "reference": "reference-b",
+          "sha256": "3d44b537e683d548a5189d4a3b9361aa3eed6c5c14be7500d1f062f7b7c82580",
+          "sample_frames": 71814,
+          "queue_address": "0xfe",
+          "queue_value": "0x80",
+          "emulated_frames": 90,
+          "semantic": "square2_sfx.bowser_fall",
+          "note_length_table_adder": 0,
+          "timer_freeze_after_frame": 700
+        }
+      ],
+      "references_match": true,
+      "sha256": "3d44b537e683d548a5189d4a3b9361aa3eed6c5c14be7500d1f062f7b7c82580",
+      "sample_frames": 71814
+    }
+  }
+}

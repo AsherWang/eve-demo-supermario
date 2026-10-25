@@ -38,8 +38,10 @@
   },
   "audio": {
     "castle_theme": "assets/audio/castle_theme.wav",
+    "castle_fast": "assets/audio/castle_fast.wav",
     "castle_clear": "assets/audio/castle_clear.wav",
     "bowser_fire": "assets/audio/bowser_fire.wav",
     "bowser_fall": "assets/audio/bowser_fall.wav"
-  }
+  },
+  "audio_manifest": "assets/world14/audio-manifest.json"
 }
