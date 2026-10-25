@@ -25,10 +25,13 @@ owns them. The capture manifest records these two continuation conflicts.
 
 The generated map is SHA-256
 `6726a96e34e81a7408d752fc7f9d658bde3bf3abbd125f2512240387757c8445`.
-The extractor also writes 110 exact PNGs under `assets/world13/`: all ROM
+The extractor also writes 120 exact PNGs under `assets/world13/`: all ROM
 overworld metatiles, six question-mark color rotations, the 48-by-8 platform,
-and Bullet Bill sprite data. `assets/world13/manifest.json` records source
-addresses and stream hashes.
+Bullet Bill, and red Koopa, Paratroopa, and shell frames. The red enemies use
+the shared Koopa/Paratroopa graphics indices 2/3 and 4/5 with sprite palette
+entry 2; the shell uses indices 17/18 with the shell-specific OAM flips.
+`assets/world13/manifest.json` records source addresses, palette bytes, and
+stream hashes.
 
 Rebuild and compare:
 
@@ -54,6 +57,15 @@ Red Koopas retain the shared ledge-aware movement. Red Paratroopas do not walk:
 they remain at their spawn X and use `ProcMoveRedPTroopa`/`ImposeGravity` with
 the original byte-sized vertical speed, force, and dummy accumulators.
 
+`world13EnemyTexture(g,e,visualState)` returns the exact red walking, winged,
+and shell texture and returns null for normal enemies. Shared `drawEnemy`
+should substitute that texture while retaining its existing positioning,
+clipping, upside-down shell, and course-clear branches. A first stomp calls
+`demoteWorld13Paratroopa(g,e)` before `enterKoopaShell`. A successful demotion
+changes the ID to red Koopa `$03`, clears vertical state, faces Mario, and
+resumes ordinary walking at `$08/$f8`; it must not enter shell state. Later
+stomps of that red Koopa use the shared shell behavior.
+
 The four platforms are decoded from `$25` and `$28` objects. The `$25` platform
 uses `InitVertPlatform` plus `YMovingPlatform` and `ImposeGravity`; the three
 `$28` platforms use the primary/secondary counter cycle and 1/16-pixel stepping
@@ -78,10 +90,19 @@ stage for a level-3 parity movie. Shared rendering calls
 the tile pass. Shared simulation calls `updateWorld13Actors(g)` after
 `updateGoombas(g,dt)`.
 
+The red-enemy renderer hook belongs near the start of `drawEnemy`, after it has
+computed `visualState` but before the shared branch picks a green texture.
+Only the texture is replaced. Before a walking Koopa calls `enterKoopaShell`,
+shared collision code should call `demoteWorld13Paratroopa(g,e)`; when it
+returns true, award the source 400-point demotion result and follow the normal
+stomp bounce path without entering the shell.
+
 ## Current evidence
 
-Native data, entry, actor-count, hard-mode filtering, Paratroopa 8.8 motion,
-platform motion, rider, decorative tile hook, and goal geometry checks run in
+Native data, entry, actor-count, hard-mode filtering, red texture selection,
+Paratroopa 8.8 motion and first-stomp demotion, platform motion, rider,
+decorative tile hook, shared red-Koopa shell behavior, and goal geometry checks
+run in
 
 ```powershell
 & 'D:/workspace/eve-demos/super-mario/.tools/evengine/eve-sdk/win32/bin/eve.exe' `

@@ -22,7 +22,17 @@ function loadWorld13Assets() {
             loadTexture("assets/world13/question-4.png"),
             loadTexture("assets/world13/question-5.png")],
         platform = loadTexture("assets/world13/platform.png"),
-        bulletBill = loadTexture("assets/world13/bullet-bill.png")
+        bulletBill = loadTexture("assets/world13/bullet-bill.png"),
+        redKoopaRight = [loadTexture("assets/world13/red-koopa-0-right.png"),
+            loadTexture("assets/world13/red-koopa-1-right.png")],
+        redKoopaLeft = [loadTexture("assets/world13/red-koopa-0-left.png"),
+            loadTexture("assets/world13/red-koopa-1-left.png")],
+        redParatroopaRight = [loadTexture("assets/world13/red-paratroopa-0-right.png"),
+            loadTexture("assets/world13/red-paratroopa-1-right.png")],
+        redParatroopaLeft = [loadTexture("assets/world13/red-paratroopa-0-left.png"),
+            loadTexture("assets/world13/red-paratroopa-1-left.png")],
+        redShell = [loadTexture("assets/world13/red-shell-0.png"),
+            loadTexture("assets/world13/red-shell-1.png")]
     };
 }
 
@@ -31,6 +41,50 @@ function drawWorld13Background(g) {
     // are decoded into the map and drawn by the owned tile hook.
     screenRect(0.0,0.0,LOGICAL_WIDTH,LOGICAL_HEIGHT,
                146.0/255.0,144.0/255.0,1.0);
+}
+
+// Return the ROM-palette sprite for red Koopas and Paratroopas. The shared
+// renderer owns positioning, clipping, and flipped/shell coordinate fixes; it
+// substitutes this texture while retaining those branches. Normal enemies
+// return null so their existing path remains unchanged.
+function world13EnemyTexture(g,e,visualState) {
+    if(g.level!=3 || e.kind!="koopa" || !("red" in e) || !e.red)
+        return null;
+    if(visualState=="flipped" || visualState=="shell" ||
+       visualState=="shellMoving") {
+        local frame=visualState=="shellMoving" ? 0 : e.displayShellFrame;
+        if(frame<0 || frame>=assets.world13.redShell.len()) frame=0;
+        return assets.world13.redShell[frame];
+    }
+    local facing=("world13Facing" in e) ? e.world13Facing :
+        (e.vx<0.0 ? -1 : (e.vx>0.0 ? 1 : -1));
+    // EnemyGfxHandler checks FrameCounter bit 3 before selecting the second
+    // six-tile frame. Render-side RAM is two gameplay counts ahead, matching
+    // the shared Goomba animation hook.
+    local frame=(((g.nesFrameCounter+254)&0xff)&0x08)==0 ? 1 : 0;
+    if("paratroopa" in e && e.paratroopa)
+        return facing<0 ? assets.world13.redParatroopaLeft[frame] :
+                          assets.world13.redParatroopaRight[frame];
+    return facing<0 ? assets.world13.redKoopaLeft[frame] :
+                      assets.world13.redKoopaRight[frame];
+}
+
+// ChkForDemoteKoopa: the first stomp removes a red Paratroopa's wings and
+// returns it to ordinary walking state. It remains a 24px-tall enemy, clears
+// its vertical 8.8 accumulators, faces Mario, and uses DemotedKoopaXSpdData
+// ($08/$f8, the same half-pixel walking speed as a normal Koopa).
+function demoteWorld13Paratroopa(g,e) {
+    if(g.level!=3 || e.kind!="koopa" || !e.alive || e.state!="walking" ||
+       !("red" in e) || !e.red || !("paratroopa" in e) || !e.paratroopa)
+        return false;
+    e.paratroopa=false;
+    e.verticalSpeed=0;e.verticalForce=0;e.verticalDummy=0;
+    e.vy=0.0;e.grounded=false;
+    local direction=g.player.x<e.x ? -1 : 1;
+    e.world13Facing=direction;
+    e.vx=direction*KOOPA_WALK_SPEED;
+    e.shellDirection=direction;
+    return true;
 }
 
 function world13TileTexture(g,tx,ty,tile) {
@@ -99,7 +153,7 @@ function decodeWorld13Enemies(g) {
         local x=(page*16+(a>>4))*16.0;
         if(id==0x0f) {
             local e=makeEnemyAt(x,row+1,"koopa");
-            e.red <- true;e.paratroopa <- true;
+            e.red <- true;e.paratroopa <- true;e.world13Facing <- -1;
             local enemyY=e.y.tointeger();
             e.anchorX <- x;e.verticalY <- enemyY;
             e.originalY <- enemyY;
@@ -108,7 +162,9 @@ function decodeWorld13Enemies(g) {
             g.goombas.append(e);
         } else if(id==0x00 || id==0x03 || id==0x06) {
             local e=makeEnemyAt(x,row+1,id==0x06?"goomba":"koopa");
-            e.red <- id==0x03;g.goombas.append(e);
+            e.red <- id==0x03;
+            if(e.red) e.world13Facing <- -1;
+            g.goombas.append(e);
         } else if(id==0x25) {
             local platformY=row*16;
             g.platforms.append({x=x,y=platformY.tofloat(),initialY=platformY.tofloat(),
@@ -305,7 +361,9 @@ function updateWorld13Bullets(g) {
 
 function updateWorld13Actors(g) {
     foreach(e in g.goombas) {
-        if(!e.alive || !("paratroopa" in e)) continue;
+        if(!e.alive || !("paratroopa" in e) || !e.paratroopa) continue;
+        if(("world13Facing" in e) && e.vx<0.0) e.world13Facing=-1;
+        if(("world13Facing" in e) && e.vx>0.0) e.world13Facing=1;
         if(!e.awake || e.state!="walking") {
             e.anchorX=e.x;e.verticalY=e.y.tointeger();
             e.verticalSpeed=0;e.verticalForce=0;e.verticalDummy=0;
@@ -395,6 +453,33 @@ function runWorld13SelfTest() {
             redParatroopa=enemy;break;
         }
     requireSelfTest(redParatroopa!=null,"1-3 must load red Paratroopas");
+    local walkingTexture=world13EnemyTexture(g,redParatroopa,"walking");
+    requireSelfTest(walkingTexture==assets.world13.redParatroopaLeft[0] ||
+        walkingTexture==assets.world13.redParatroopaLeft[1],
+        "red Paratroopa hook must select a red sprite");
+    local redKoopa=null;
+    foreach(enemy in g.goombas)
+        if(enemy.red && enemy.kind=="koopa" &&
+           !("paratroopa" in enemy && enemy.paratroopa)) {
+            redKoopa=enemy;break;
+        }
+    requireSelfTest(redKoopa!=null,"1-3 must load a red Koopa");
+    walkingTexture=world13EnemyTexture(g,redKoopa,"walking");
+    requireSelfTest(walkingTexture==assets.world13.redKoopaLeft[0] ||
+        walkingTexture==assets.world13.redKoopaLeft[1],
+        "red Koopa hook must select a red walking sprite");
+    local normalEnemy=null;
+    foreach(enemy in g.goombas)
+        if(enemy.kind=="goomba") {normalEnemy=enemy;break;}
+    requireSelfTest(normalEnemy!=null &&
+        world13EnemyTexture(g,normalEnemy,"walking")==null,
+        "normal enemy hook must defer to the shared renderer");
+    redKoopa.displayShellFrame=1;
+    requireSelfTest(world13EnemyTexture(g,redKoopa,"shell")==
+        assets.world13.redShell[1] &&
+        world13EnemyTexture(g,redKoopa,"shellMoving")==
+        assets.world13.redShell[0],
+        "red shell hook must select exact shell frames");
     redParatroopa.awake=true;
     local paratroopaX=redParatroopa.anchorX,paratroopaY=redParatroopa.originalY;
     for(local i=0;i<86;i+=1) {
@@ -404,6 +489,25 @@ function runWorld13SelfTest() {
     requireSelfTest(redParatroopa.x==paratroopaX && redParatroopa.vx==0.0 &&
         redParatroopa.y==paratroopaY+1,
         "red Paratroopa must use the ROM vertical 8.8 motion without walking");
+    g.player.x=redParatroopa.x+64.0;
+    requireSelfTest(demoteWorld13Paratroopa(g,redParatroopa) &&
+        !redParatroopa.paratroopa && redParatroopa.state=="walking" &&
+        redParatroopa.y==paratroopaY+1 &&
+        redParatroopa.vx==KOOPA_WALK_SPEED &&
+        redParatroopa.verticalSpeed==0 && redParatroopa.verticalForce==0,
+        "first Paratroopa stomp must demote it to a walking red Koopa");
+    local demotedX=redParatroopa.x,demotedY=redParatroopa.y;
+    for(local i=0;i<8;i+=1) {
+        g.nesFrameCounter=(g.nesFrameCounter+1)&0xff;
+        updateWorld13Actors(g);
+    }
+    requireSelfTest(redParatroopa.x==demotedX && redParatroopa.y==demotedY,
+        "owned Paratroopa flight must not resume after demotion");
+    requireSelfTest(!demoteWorld13Paratroopa(g,redParatroopa),
+        "Paratroopa demotion must occur only once");
+    updateGoombas(g,FIXED_DT);
+    requireSelfTest(redParatroopa.x>demotedX,
+        "demoted Paratroopa must resume shared red Koopa walking");
     startWorld13(g);vertical=g.platforms[0];vertical.awake=true;
     g.player.x=vertical.x+12.0;g.player.y=vertical.y-g.player.height;
     g.player.previousY=g.player.y;
@@ -416,8 +520,31 @@ function runWorld13SelfTest() {
     }
     requireSelfTest(g.player.grounded && abs(g.player.y+g.player.height-vertical.y)<0.1,
         "vertical platform must carry a rider");
+    startWorld13(g);horizontal=g.platforms[1];horizontal.awake=true;
+    g.player.x=horizontal.x+12.0;g.player.y=horizontal.y-g.player.height;
+    g.player.previousY=g.player.y;g.player.grounded=true;g.player.nesYSpeed=0;
+    local riderX=g.player.x;
+    for(local i=0;i<80;i+=1) {
+        g.nesFrameCounter=(g.nesFrameCounter+1)&0xff;
+        g.player.previousY=g.player.y;
+        updateWorld13Platforms(g);
+    }
+    requireSelfTest(abs(g.player.x-horizontal.x-12.0)<0.1 &&
+        abs(g.player.y+g.player.height-horizontal.y)<0.1,
+        "horizontal platform must carry a rider");
     requireSelfTest(world13TileTexture(g,154,7,TILE_EMPTY)!=null,
         "tile hook must draw decorative ROM metatiles");
     requireSelfTest(world13TileTexture(g,152,3,TILE_EMPTY)==null,
         "flag artwork must defer to shared renderer");
+    foreach(enemy in g.goombas)
+        if(enemy.red && enemy.kind=="koopa" &&
+           !("paratroopa" in enemy && enemy.paratroopa)) {
+            redKoopa=enemy;break;
+        }
+    enterKoopaShell(redKoopa);
+    requireSelfTest(redKoopa.state=="shell" && redKoopa.height==14.0,
+        "ordinary red Koopa must retain shared shell stomp behavior");
+    startWorld13(g);beginFlagSequence(g);
+    requireSelfTest(g.state=="endLevel" && g.player.x==g.flagX-7.0,
+        "1-3 flag contact must enter the shared course-clear routine");
 }

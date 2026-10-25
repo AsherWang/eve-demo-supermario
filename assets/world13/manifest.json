@@ -120,6 +120,24 @@
     ],
     "question_frames": 6,
     "platform_cpu_tile": "$5b",
-    "bullet_bill_enemy_graphics_index": 39
+    "bullet_bill_enemy_graphics_index": 39,
+    "red_koopa_enemy_graphics_indices": [
+      2,
+      3
+    ],
+    "red_paratroopa_enemy_graphics_indices": [
+      4,
+      5
+    ],
+    "red_shell_enemy_graphics_indices": [
+      17,
+      18
+    ],
+    "red_enemy_sprite_palette": [
+      15,
+      22,
+      48,
+      39
+    ]
   }
 }

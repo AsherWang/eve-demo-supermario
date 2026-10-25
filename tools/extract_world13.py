@@ -11,6 +11,7 @@ from PIL import Image
 from extract_smb_assets import (
     METATILE_COUNTS,
     compose_metatile,
+    compose_koopa_shell,
     compose_sprite,
     find_once,
     tile_image,
@@ -129,6 +130,34 @@ def main() -> None:
         out / "bullet-bill.png"
     )
 
+    def enemy_frame(enemy_index):
+        return prg[
+            enemy_graphics + enemy_index * 6 : enemy_graphics + (enemy_index + 1) * 6
+        ]
+
+    def save_enemy_pair(filename, enemy_index):
+        frame = prg[
+            enemy_graphics + enemy_index * 6 : enemy_graphics + (enemy_index + 1) * 6
+        ]
+        image = compose_sprite(chr_data, frame, sprite_palettes[2], 3)
+        image.save(out / (filename + "-right.png"))
+        image.transpose(Image.Transpose.FLIP_LEFT_RIGHT).save(
+            out / (filename + "-left.png")
+        )
+
+    # EnemyGfxTableOffsets uses the same koopa and paratroopa CHR frames for
+    # green and red objects; EnemyAttributeData selects sprite palette 2 for
+    # RedKoopa and RedParatroopa.
+    for frame, enemy_index in enumerate((2, 3)):
+        save_enemy_pair(f"red-koopa-{frame}", enemy_index)
+    for frame, enemy_index in enumerate((4, 5)):
+        save_enemy_pair(f"red-paratroopa-{frame}", enemy_index)
+    for frame, enemy_index in enumerate((17, 18)):
+        compose_koopa_shell(
+            chr_data, enemy_frame(enemy_index), sprite_palettes[2],
+            right_side_up=False,
+        ).save(out / f"red-shell-{frame}.png")
+
     metadata["graphics"] = {
         "palette_cpu_address": hex(0x8000 + palette_offset),
         "metatile_cpu_address": hex(0x8000 + graphics_offset),
@@ -140,6 +169,10 @@ def main() -> None:
         "question_frames": len(colors),
         "platform_cpu_tile": "$5b",
         "bullet_bill_enemy_graphics_index": 39,
+        "red_koopa_enemy_graphics_indices": [2, 3],
+        "red_paratroopa_enemy_graphics_indices": [4, 5],
+        "red_shell_enemy_graphics_indices": [17, 18],
+        "red_enemy_sprite_palette": sprite_palettes[2],
     }
     (out / "manifest.json").write_text(
         json.dumps(metadata, indent=2) + "\n", encoding="utf-8", newline="\n"
