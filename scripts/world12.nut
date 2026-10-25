@@ -336,6 +336,11 @@ function updateWorld12Platforms(g) {
         if(platform.y>=256.0) platform.y-=256.0;
 
         if(p.dead || p.nesYSpeed<0.0) continue;
+        // LargePlatformCollision calls CheckPlayerVertical: the player's
+        // canonical Y must be on screen and below $d0. Offscreen riders no
+        // longer collide with the lift when its low Y byte cycles around.
+        local canonicalY=p.big && !p.crouching ? p.y : p.y-16.0;
+        if(canonicalY<0.0 || canonicalY>=208.0) continue;
         local previousFeet=p.previousY+p.height;
         local currentFeet=p.y+p.height;
         local wasRiding=abs(previousFeet-previousY)<=2.0;
@@ -345,9 +350,11 @@ function updateWorld12Platforms(g) {
         if(p.x+p.width<=platform.x || p.x>=platform.x+platform.width) continue;
 
         // PositionPlayerOnVPlat clears Player_Y_Speed and MoveForce. The low
-        // Y byte wraps at 256, so the rider crosses the same screen boundary.
-        p.y=platform.y-p.height;
+        // Carry the rider by this frame's displacement, never by the lift's
+        // wrapped coordinate. CheckPlayerVertical detaches offscreen players.
+        p.y=unwrappedY-p.height;
         p.grounded=true;
+        p.entranceFalling=false;
         p.vy=0.0;
         p.nesYSpeed=0;
         p.nesYMoveForce=0;
@@ -423,9 +430,7 @@ function runWorld12LiftSelfTest() {
     requireSelfTest(activate.awake && abs(activate.y-(112.0+15.0/16.0))<0.001,
         "1-2 lift must activate and move at the ROM parser boundary");
 
-    // Run an ascending lift through several 256-pixel cycles while Mario is
-    // attached. The old 32-pixel seed put his feet 32 pixels inside or below
-    // the lift, and the old one-way contact test dropped him on descent.
+    // Exercise actual player physics and animation on a moving lift.
     startWorld12(g,"underground");
     g.goombas=[];g.plants=[];g.state="playing";g.cameraX=0.0;
     local rising=g.platforms[3];
@@ -434,33 +439,71 @@ function runWorld12LiftSelfTest() {
     p.x=rising.x+16.0;p.y=rising.y-p.height;
     p.previousX=p.x;p.previousY=p.y;
     p.grounded=true;p.vy=0.0;p.nesYSpeed=0;p.nesYMoveForce=0;
-    local risingWraps=0;
-    for(local frame=0;frame<720;frame+=1) {
+    rising.y=160.0;p.y=rising.y-p.height;
+    g.platforms=[rising];g.cameraX=p.x-112.0;
+    p.entranceFalling=true;g.input.right=true;
+    local walkFrames={};
+    for(local frame=0;frame<18;frame+=1) {
         simulateFixed(g,FIXED_DT);
-        requireSelfTest(abs((p.y+p.height)-rising.y)<0.001,
-            "rider must stay attached to a rising 1-2 lift");
-        if(rising.previousY<32.0 && rising.y>224.0) risingWraps+=1;
+        requireSelfTest(p.grounded && !p.entranceFalling &&
+            abs((p.y+p.height)-rising.y)<0.001,
+            "on-screen lift contact must restore normal ground animation");
+        walkFrames[p.animationFrame] <- true;
     }
-    requireSelfTest(risingWraps>=2 && abs(rising.x-(154*16.0+12.0))<0.001,
-        "rising 1-2 lift must wrap repeatedly without horizontal drift");
+    requireSelfTest(walkFrames.len()>1,"walking on a lift must animate");
+    g.input.right=false;g.input.left=true;
+    p.x=rising.x+24.0;p.nesXSpeed=0;p.nesXMoveForce=0;p.nesXForce=0;
+    walkFrames={};
+    for(local frame=0;frame<18;frame+=1) {
+        simulateFixed(g,FIXED_DT);
+        requireSelfTest(p.grounded && !p.entranceFalling,
+            "leftward lift walking must retain normal ground state");
+        walkFrames[p.animationFrame] <- true;
+    }
+    requireSelfTest(walkFrames.len()>1,"leftward lift walking must animate");
+    g.input.left=false;p.nesXSpeed=0;p.nesXMoveForce=0;p.nesXForce=0;
+    simulateFixed(g,FIXED_DT);
+    requireSelfTest(p.grounded && p.animationFrame==-1,
+        "an idle lift rider must use the standing animation");
+    g.input.jumpQueued=true;g.input.jumpDown=true;
+    simulateFixed(g,FIXED_DT);
+    requireSelfTest(!p.grounded && p.nesYSpeed<0 && p.animationFrame==-2,
+        "jumping from a lift must detach and select the jump animation");
 
-    // Drive a descending lift through its wrap in the opposite direction.
-    startWorld12(g,"underground");
-    g.goombas=[];g.plants=[];g.state="playing";g.cameraX=0.0;
-    local falling=g.platforms[0];
-    falling.awake=true;
-    p=g.player;
-    p.x=falling.x+16.0;p.y=falling.y-p.height;
-    p.previousX=p.x;p.previousY=p.y;
-    p.grounded=true;p.vy=0.0;p.nesYSpeed=0;p.nesYMoveForce=0;
-    local fallingWraps=0;
-    for(local frame=0;frame<400;frame+=1) {
-        simulateFixed(g,FIXED_DT);
-        requireSelfTest(abs((p.y+p.height)-falling.y)<0.001,
-            "rider must stay attached to a descending 1-2 lift");
-        if(falling.previousY>224.0 && falling.y<32.0) fallingWraps+=1;
+    // CheckPlayerVertical rejects canonical Y outside [0,$d0). Test both
+    // player sizes and both lift directions; a cycling lift must never take
+    // an offscreen rider to the opposite edge of the screen.
+    foreach(big in [false,true]) {
+        foreach(direction in [-1,1]) {
+            startWorld12(g,"underground");
+            local lift=g.platforms[direction<0?3:0];
+            lift.awake=true;g.platforms=[lift];
+            p=g.player;p.big=big;p.height=big?32.0:16.0;
+            p.x=lift.x+16.0;lift.y=direction<0?0.25:255.75;
+            p.y=lift.y-p.height;p.previousY=p.y;
+            p.grounded=false;p.nesYSpeed=0;
+            local before=p.y;
+            updateWorld12Platforms(g);
+            requireSelfTest(p.y==before && !p.grounded,
+                "offscreen Mario must not wrap with either direction of lift");
+            requireSelfTest(direction<0?lift.y>255.0:lift.y<1.0,
+                "the lift itself must keep cycling independently");
+            lift.y=direction<0?48.0:200.0;
+            p.y=lift.y-p.height;
+            local detached=false,wrapped=false;
+            for(local frame=0;frame<80;frame+=1) {
+                p.previousY=p.y;p.grounded=false;
+                before=p.y;
+                updateWorld12Platforms(g);
+                requireSelfTest(abs(p.y-before)<=1.0,
+                    "boundary traversal must never teleport a rider 256 pixels");
+                if(!p.grounded) detached=true;
+                if(abs(lift.y-lift.previousY)>200.0) wrapped=true;
+            }
+            requireSelfTest(detached && wrapped,
+                "each player size must detach before either lift cycles");
+        }
     }
-    requireSelfTest(fallingWraps>=1,"descending 1-2 lift must cross the Y wrap");
     print("World 1-2 lift self-test passed.\n");
 }
 
