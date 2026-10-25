@@ -722,6 +722,13 @@ function handlePlayerBackgroundSides(g, p) {
                    canonicalY>=(offset==8.0?228.0:208.0)) continue;
                 local tx=floor((p.x+(side==0?2.0:13.0))/TILE_SIZE).tointeger();
                 local ty=floor((canonicalY+offset)/TILE_SIZE).tointeger();
+                // The pipe's end is an entrance, not an ordinary wall.
+                // The +13 side probe reaches it one pixel before movePlayerX
+                // sets sidePipeCollision. Let tryWorld12Pipe consume that
+                // contact instead of nudging Mario out of its entry range.
+                if(side==1 && tx==g.sidePipeX && p.grounded && g.input.right &&
+                   ty>=g.world12SidePipeBottomRow-1 &&
+                   ty<=g.world12SidePipeBottomRow) return;
                 if(isSolidAt(g,tx,ty)) {
                     impedePlayerMove(g,p,side==0?2:1);
                     return;

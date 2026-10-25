@@ -562,7 +562,39 @@ function runWorld12SelfTest() {
     runWorld12EnemyPipeSelfTest();
     runWorld12RespawnSelfTest();
     runWorld12WallSelfTest();
+    runWorld12PipeApproachSelfTest();
     print("World 1-2 simulation self-test passed.\n");
+}
+
+function runWorld12PipeApproachSelfTest() {
+    foreach(stage in ["bonus","underground"]) {
+        foreach(big in [false,true]) {
+            local g=createGame();startWorld12(g,stage);
+            g.goombas=[];g.plants=[];g.platforms=[];
+            local p=g.player;p.big=big;p.fire=big;p.height=big?32.0:16.0;
+            p.x=g.sidePipeX*16.0-40.0;
+            p.y=(g.world12SidePipeBottomRow+1)*16.0-p.height;
+            p.previousX=p.x;p.previousY=p.y;
+            p.grounded=true;p.entranceFalling=false;
+            g.cameraX=p.x-112.0;g.input.right=true;
+            local frame=0;
+            while(frame<100 && g.state=="playing") {
+                simulateFixed(g,FIXED_DT);frame+=1;
+            }
+            requireSelfTest(g.state=="world12Pipe" && g.world12PipeMode=="side",
+                "walking into a real 1-2 side-pipe mouth must enter without getting blocked");
+            local target=stage=="bonus"?"underground":"exit";
+            frame=0;
+            while(frame<400 && !(g.state=="playing" && g.stage==target)) {
+                simulateFixed(g,FIXED_DT);frame+=1;
+            }
+            requireSelfTest(frame<400 && g.stage==target && g.state=="playing",
+                "entering a side pipe must complete the real destination transition");
+            requireSelfTest(g.player.big==big && g.player.fire==big,
+                "side-pipe travel must retain the player's current power-up state");
+        }
+    }
+    print("World 1-2 pipe approach self-test passed.\n");
 }
 
 function runWorld12WallSelfTest() {
