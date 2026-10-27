@@ -352,8 +352,12 @@ def main() -> None:
         out / "toad.png"
     )
 
+    # DrawFirebar writes OAM attribute $02: sprite palette 2 ($3f18),
+    # not Bowser's sprite palette. Castle palette groups 0..3 are BG,
+    # groups 4..7 are sprites; group 6 uses red $16 rather than green $1a.
+    firebar_palette = castle_palettes[6]
     for frame, tile in enumerate((0x64, 0x65)):
-        tile_image(chr_data, tile, bowser_palette, 0, True).save(
+        tile_image(chr_data, tile, firebar_palette, 0, True).save(
             out / f"firebar-{frame}.png"
         )
     flame = Image.new("RGBA", (24, 8), (0, 0, 0, 0))
