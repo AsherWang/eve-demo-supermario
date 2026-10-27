@@ -1,6 +1,6 @@
-# Super Mario Bros. World 1-1 / 1-2 — EVEngine
+# Super Mario Bros. World 1-1 ~ 1-4 — EVEngine
 
-Personal-study, ROM-data-driven reconstruction of NES World 1-1 and 1-2 in EVEngine.
+Personal-study, ROM-data-driven reconstruction of NES World 1-1 through 1-4 in EVEngine.
 The packaged game does not include a ROM. Runtime assets were extracted locally
 from a user-provided ROM for this study build.
 
