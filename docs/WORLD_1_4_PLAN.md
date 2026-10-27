@@ -58,7 +58,7 @@ Implemented rules include:
   original four-frame cadence. There is no fixed 5000-point Toad award.
 
 World 2-1 is not implemented. The module ends at an explicit `worldComplete`
-state after rescue and displays `WORLD 2-1 PENDING`; this bounded endpoint is not
+state after rescue, retaining the original thank-you messages; this bounded endpoint is not
 a claim that the original World 2 transition is complete.
 
 ## Audio provenance
@@ -244,3 +244,36 @@ triggered at 1811 and teleported Mario to the axe. Player X/Y now match through
 The host still needs exact Bowser vertical motion/fall timing and the shared
 player physics during victory walking. State and event gates remain failed.
 The earlier failed route remains historical evidence.
+
+
+## Ending presentation fixes (2026-10-28)
+
+The castle transition returned before the common player presentation queue and
+animation update, leaving the displayed Mario pose at the axe while logical X
+continued walking. The victory walk also advanced X without gravity or floor
+collision. It now uses shared automatic player movement, refreshes the shared
+OAM presentation queue, animates walking, and stops beside Toad on the room floor.
+
+InitRetainerObj fixes Y to $b8 (184), irrespective of the enemy-stream row.
+The Toad canvas now uses OAM palette 2 and mirrored right-hand CHR columns.
+Its sprites are drawn in front of background tiles, preserving the last foot
+scanline. Victory messages use the ROM HUD font at nametable positions $2548,
+$25c5 and $2605, including room scroll. The first message stays when the second
+arrives; the enlarged substitute font and development placeholder were removed.
+
+`runWorld14SelfTest()` now drives the complete simulateFixed path for small,
+big and fire Mario through walking, landing, rescue and the stationary endpoint.
+It checks final X 2431, feet Y 208, camera-relative X 126, sprite-origin Y 176,
+preserved powers, Toad Y 184 and changing walk animation. A separate 2800-frame
+host replay extends the existing input route with neutral frames through the
+stationary endpoint. This is a presentation regression, not a new claim of
+strict whole-level ROM equivalence. Bowser and complete victory timing remain
+pending as described above.
+
+
+The final 2800-frame replay is `local-parity/world14-ending-fix/final`.
+It reaches `worldComplete` with three lives and no death, Mario at canonical
+(2431,176). At its stationary endpoint, pixel comparisons of all three message
+regions and the complete 16x24 Toad region match original-ROM frame 2399.
+`local-parity/world14-ending-fix/verification.json` records those scoped checks;
+this does not imply the entire scene or timing passes strict parity.

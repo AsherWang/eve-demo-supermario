@@ -344,11 +344,11 @@ def main() -> None:
 
     # Original World 1-4 saves the mushroom retainer/Toad, not the princess.
     # This is the exact six-tile entry at EnemyGraphicsTable $a2. Castle sprite
-    # palette 0 is the object's unmodified Enemy_SprAttrib palette.
+    # palette 2 and mirrored right column come from EnemyGfxHandler's OAM.
     retainer_tiles = bytes.fromhex("cdcdcececfcf")
     if retainer_tiles not in enemy_gfx:
         raise SystemExit("mushroom retainer graphics row missing")
-    compose_sprite(chr_data, retainer_tiles, castle_palettes[4], 3).save(
+    compose_sprite(chr_data, retainer_tiles, castle_palettes[6], 3, mirror_right=True).save(
         out / "toad.png"
     )
 

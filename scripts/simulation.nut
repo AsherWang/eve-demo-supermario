@@ -2824,6 +2824,29 @@ function updateNextWorld1StageLoad(g) {
     }
 }
 
+function preparePlayerPresentation(g) {
+    // Player OAM is prepared after gameplay and transferred on the following
+    // NMI.  The captured PPU frame therefore displays the relative position
+    // and graphics selection from two simulation stages earlier.
+    g.player.displayRelX = g.player.preparedRelX;
+    g.player.displayRelY = g.player.preparedRelY;
+    g.player.queuedRelX = g.player.preparedRelX;
+    g.player.queuedRelY = g.player.preparedRelY;
+    g.player.preparedRelX = floor(g.player.x - g.cameraX).tofloat();
+    local canonicalPlayerY = g.player.big && !g.player.crouching ?
+        g.player.y : g.player.y - 16.0;
+    g.player.preparedRelY = floor(canonicalPlayerY).tofloat();
+    g.player.displayAnimationFrame = g.player.preparedAnimationFrame;
+    g.player.queuedAnimationFrame = g.player.preparedAnimationFrame;
+    g.player.preparedAnimationFrame = g.player.animationFrame;
+    // Facing is read while PlayerGfxHandler builds OAM, then traverses the
+    // staging page and DMA page.  A direction flip is therefore visible two
+    // rendered frames after the RAM-facing byte changes.
+    g.player.displayFacing = g.player.preparedFacing;
+    g.player.queuedFacing = g.player.preparedFacing;
+    g.player.preparedFacing = g.player.facing;
+}
+
 function simulateFixed(g, dt) {
     g.simTime += dt;
     if (g.state == "nextStageLoad") {
@@ -2841,7 +2864,16 @@ function simulateFixed(g, dt) {
         return;
     }
     if (g.level == 2 && updateWorld12Transition(g)) return;
-    if (g.level == 4 && updateWorld14Transition(g)) return;
+    if (g.level == 4 && updateWorld14Transition(g)) {
+        if(g.player.playerAnimTimer>0) g.player.playerAnimTimer-=1;
+        updatePlayerAnimationState(g);
+        preparePlayerPresentation(g);
+        g.displayScore = g.queuedScore;
+        g.queuedScore = g.score;
+        g.displayTime = g.time;
+        g.nesFrameCounter = (g.nesFrameCounter + 1) & 0xFF;
+        return;
+    }
     // A sprite retained from the preceding pass is consumed by this pass's
     // render. Values set later below therefore survive until the next call.
     foreach (enemy in g.goombas) {
@@ -3038,26 +3070,7 @@ function simulateFixed(g, dt) {
     // after ScrollHandler keeps jumping-coin world X and relative OAM X in
     // lockstep with the ROM instead of lagging alternating 2/3px scrolls.
     updateEffects(g, dt);
-    // Player OAM is prepared after gameplay and transferred on the following
-    // NMI.  The captured PPU frame therefore displays the relative position
-    // and graphics selection from two simulation stages earlier.
-    g.player.displayRelX = g.player.preparedRelX;
-    g.player.displayRelY = g.player.preparedRelY;
-    g.player.queuedRelX = g.player.preparedRelX;
-    g.player.queuedRelY = g.player.preparedRelY;
-    g.player.preparedRelX = floor(g.player.x - g.cameraX).tofloat();
-    local canonicalPlayerY = g.player.big && !g.player.crouching ?
-        g.player.y : g.player.y - 16.0;
-    g.player.preparedRelY = floor(canonicalPlayerY).tofloat();
-    g.player.displayAnimationFrame = g.player.preparedAnimationFrame;
-    g.player.queuedAnimationFrame = g.player.preparedAnimationFrame;
-    g.player.preparedAnimationFrame = g.player.animationFrame;
-    // Facing is read while PlayerGfxHandler builds OAM, then traverses the
-    // staging page and DMA page.  A direction flip is therefore visible two
-    // rendered frames after the RAM-facing byte changes.
-    g.player.displayFacing = g.player.preparedFacing;
-    g.player.queuedFacing = g.player.preparedFacing;
-    g.player.preparedFacing = g.player.facing;
+    preparePlayerPresentation(g);
     // Flagpole sprites use the same object-OAM handoff as Mario. Keep the raw
     // object coordinates separate from the DMA page currently being shown.
     g.displayFlagY = g.preparedFlagY;

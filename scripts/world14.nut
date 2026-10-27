@@ -121,7 +121,7 @@ function world14ParseCastleObjects(g) {
                 maxRange = 0x21, flameTimerCtrl = 0, flameYOffset = 0
             };
         } else if(id == 0x35) {
-            retainer = {x = unit * 16.0, y = row * 16.0, width = 16.0, height = 24.0};
+            retainer = {x = unit * 16.0, y = 184.0, width = 16.0, height = 24.0};
         } else if(id == 0x0C) {
             // E_CastleArea1 also contains one Podoboo slot immediately before
             // Bowser. It uses the lava column as its cycle origin.
@@ -536,14 +536,16 @@ function updateWorld14Transition(g) {
     if(g.state == "world14VictoryWalk") {
         w.stateFrames += 1;
         local b = w.bowser;
-        p.facing = 1; p.vx = NES_FRAME_RATE;
-        p.x += 1.0;
-        local maximum = g.areaWidth * TILE_SIZE - LOGICAL_WIDTH;
-        g.cameraX = clampValue(p.x - 120.0, 0.0, maximum.tofloat());
+        p.facing = 1;
+        autoControlPlayerEndLevel(g, FIXED_DT);
+        // VictoryMode scrolls to the retainer's page, then stops scrolling.
+        local maximum = floor(w.retainer.x / 256.0) * 256.0 + 1.0;
+        g.cameraX = clampValue(p.x - 120.0, 0.0, maximum);
         g.displayCameraX = g.cameraX;
-        p.grounded = true; p.entranceFalling = false;
-        if(p.x >= w.retainer.x - 8.0) {
-            p.x = w.retainer.x - 8.0; p.nesXSpeed = 0; p.vx = 0.0;
+        local stopX = w.retainer.x - 17.0;
+        if(p.x >= stopX && p.grounded) {
+            p.x = stopX; p.nesXSpeed = 0; p.vx = 0.0;
+            p.previousX = p.x; p.previousY = p.y;
             w.rescued = true;
             g.state = "world14Rescue";
             w.stateFrames = 0;
@@ -601,61 +603,29 @@ function updateWorld14Transition(g) {
     return false;
 }
 
-function world14TextRows(character) {
-    if(character == "A") return ["01110","10001","10001","11111","10001","10001","10001"];
-    if(character == "B") return ["11110","10001","10001","11110","10001","10001","11110"];
-    if(character == "C") return ["01111","10000","10000","10000","10000","10000","01111"];
-    if(character == "D") return ["11110","10001","10001","10001","10001","10001","11110"];
-    if(character == "E") return ["11111","10000","10000","11110","10000","10000","11111"];
-    if(character == "F") return ["11111","10000","10000","11110","10000","10000","10000"];
-    if(character == "G") return ["01111","10000","10000","10111","10001","10001","01110"];
-    if(character == "H") return ["10001","10001","10001","11111","10001","10001","10001"];
-    if(character == "I") return ["11111","00100","00100","00100","00100","00100","11111"];
-    if(character == "J") return ["00111","00010","00010","00010","10010","10010","01100"];
-    if(character == "K") return ["10001","10010","10100","11000","10100","10010","10001"];
-    if(character == "L") return ["10000","10000","10000","10000","10000","10000","11111"];
-    if(character == "M") return ["10001","11011","10101","10101","10001","10001","10001"];
-    if(character == "N") return ["10001","11001","10101","10011","10001","10001","10001"];
-    if(character == "O") return ["01110","10001","10001","10001","10001","10001","01110"];
-    if(character == "P") return ["11110","10001","10001","11110","10000","10000","10000"];
-    if(character == "Q") return ["01110","10001","10001","10001","10101","10010","01101"];
-    if(character == "R") return ["11110","10001","10001","11110","10100","10010","10001"];
-    if(character == "S") return ["01111","10000","10000","01110","00001","00001","11110"];
-    if(character == "T") return ["11111","00100","00100","00100","00100","00100","00100"];
-    if(character == "U") return ["10001","10001","10001","10001","10001","10001","01110"];
-    if(character == "V") return ["10001","10001","10001","10001","10001","01010","00100"];
-    if(character == "W") return ["10001","10001","10001","10101","10101","10101","01010"];
-    if(character == "X") return ["10001","10001","01010","00100","01010","10001","10001"];
-    if(character == "Y") return ["10001","10001","01010","00100","00100","00100","00100"];
-    if(character == "Z") return ["11111","00001","00010","00100","01000","10000","11111"];
-    if(character == "1") return ["00100","01100","00100","00100","00100","00100","01110"];
-    if(character == "4") return ["00010","00110","01010","10010","11111","00010","00010"];
-    if(character == "!") return ["00100","00100","00100","00100","00100","00000","00100"];
-    if(character == "-") return ["00000","00000","00000","11111","00000","00000","00000"];
-    return null;
-}
-
-function world14DrawText(g, text, x, y, scale = 2.0) {
-    for(local index = 0; index < text.len(); index += 1) {
-        local rows = world14TextRows(text.slice(index, index + 1));
-        if(rows != null)
-            for(local row = 0; row < rows.len(); row += 1)
-                for(local column = 0; column < rows[row].len(); column += 1)
-                    if(rows[row].slice(column, column + 1) == "1")
-                        worldRect(g, x + index * 6.0 * scale + column * scale,
-                                  y + row * scale, scale, scale, 0.96, 0.93, 0.84, 1.0);
+function world14DrawText(g, text, x, y) {
+    local glyphs=[];
+    foreach(character in text) {
+        local glyph=0x24;
+        if(character>=65 && character<=90) glyph=character-65+0x0A;
+        else if(character>=48 && character<=57) glyph=character-48;
+        else if(character==33) glyph=0x2B;
+        else if(character==45) glyph=0x28;
+        glyphs.append(glyph);
     }
+    local roomPage=floor(g.world14.retainer.x/256.0)*256.0;
+    drawHudGlyphs(glyphs,roomPage+x-visualCameraX(g),y);
 }
 
 function drawWorld14Actors(g, behind) {
     if(world14Assets == null) loadWorld14Assets();
     if(!("world14" in g) || world14Assets == null) return;
     local w = g.world14, frame = (g.nesFrameCounter + w.stateFrames) & 0xFF;
-    if(behind) {
-        if(w.retainer != null)
-            worldTexture(g, world14Assets.retainer, w.retainer.x, w.retainer.y + 8.0, 16.0, 24.0);
-        return;
-    }
+    if(behind) return;
+    // Retainer OAM attribute $02 has no background-priority bit. Drawing
+    // behind metatiles clips the last sprite scanline into the floor.
+    if(w.retainer != null)
+        worldTexture(g, world14Assets.retainer, w.retainer.x, w.retainer.y + 1.0, 16.0, 24.0);
     local fireTexture = world14Assets.firebar[(frame >> 2) & 1];
     foreach(bar in w.firebars) {
         if(!bar.awake || bar.retired) continue;
@@ -676,22 +646,15 @@ function drawWorld14Actors(g, behind) {
     if(w.podoboo != null && w.podoboo.timer <= 0)
         worldTexture(g, world14Assets.firebar[(frame >> 1) & 1],
                      w.podoboo.x, w.podoboo.y, 8.0, 12.0);
-    if(g.state == "world14Rescue") {
-        if(w.primaryMsgCounter < 2)
-            world14DrawText(g, "THANK YOU MARIO!", g.cameraX + 38.0, 48.0, 2.0);
-        else {
-            world14DrawText(g, "BUT OUR PRINCESS IS IN", g.cameraX + 24.0, 44.0, 1.5);
-            world14DrawText(g, "ANOTHER CASTLE!", g.cameraX + 64.0, 72.0, 2.0);
+    if(g.state == "world14Rescue" || g.state == "world14EndWorld" ||
+       g.state == "worldComplete") {
+        // Nametable addresses $2548, $25c5 and $2605 in the original ROM.
+        // The first message remains visible when the second message arrives.
+        world14DrawText(g,"THANK YOU MARIO!",64.0,80.0);
+        if(w.primaryMsgCounter>=2) {
+            world14DrawText(g,"BUT OUR PRINCESS IS IN",40.0,112.0);
+            world14DrawText(g,"ANOTHER CASTLE!",40.0,128.0);
         }
-    }
-    if(g.state == "world14EndWorld") {
-        world14DrawText(g, "BUT OUR PRINCESS IS IN", g.cameraX + 24.0, 44.0, 1.5);
-        world14DrawText(g, "ANOTHER CASTLE!", g.cameraX + 64.0, 72.0, 2.0);
-    }
-    if(g.state == "worldComplete") {
-        world14DrawText(g, "BUT OUR PRINCESS IS IN", g.cameraX + 24.0, 44.0, 1.5);
-        world14DrawText(g, "ANOTHER CASTLE!", g.cameraX + 64.0, 72.0, 2.0);
-        world14DrawText(g, "WORLD 2-1 PENDING", g.cameraX + 46.0, 108.0, 1.0);
     }
 }
 
@@ -774,5 +737,27 @@ function runWorld14SelfTest() {
         "1-4 clear must collapse the bridge, save the mushroom retainer and stop at worldComplete");
     requireSelfTest(clear.player.x < clear.areaWidth * 16.0,
         "1-4 clear must remain bounded to the castle map");
+    for(local form=0;form<3;form+=1) {
+        local ending=createGame(); startWorld14(ending);
+        ending.player.big=form>0; ending.player.fire=form==2;
+        resetPlayerForArea(ending,2260,96);
+        ending.player.grounded=false; ending.player.nesYSpeed=4;
+        ending.player.nesXSpeed=24;
+        ending.state="world14VictoryWalk";
+        local sawAnimationChange=false,firstAnimation=-100;
+        for(local frame=0;frame<1200;frame+=1) {
+            simulateFixed(ending,FIXED_DT);
+            if(ending.state=="world14VictoryWalk" && ending.player.grounded) {
+                if(firstAnimation==-100) firstAnimation=ending.player.displayAnimationFrame;
+                else if(firstAnimation!=ending.player.displayAnimationFrame) sawAnimationChange=true;
+            }
+        }
+        requireSelfTest(ending.state=="worldComplete" && ending.world14.rescued &&
+            ending.player.x==2431.0 && ending.player.y+ending.player.height==208.0 &&
+            ending.player.displayRelX==126.0 && ending.player.displayRelY==176.0 &&
+            ending.player.big==(form>0) && ending.player.fire==(form==2) &&
+            ending.world14.retainer.y==184.0 && sawAnimationChange,
+            "castle ending must animate, land and refresh OAM for small, big and fire Mario");
+    }
     print("World 1-4 simulation self-test passed.\n");
 }
