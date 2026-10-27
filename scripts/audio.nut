@@ -12,7 +12,8 @@ function loadAudio() {
         "jump", "jump_big", "coin", "bump", "break", "powerup", "powerup_reveal",
         "oneup", "stomp", "kick", "fireball", "pipe", "death", "flag",
         "course_clear", "game_over", "blast", "overworld", "star", "underground",
-        "hurry", "overworld_fast", "underground_fast", "star_fast", "timer_tick"
+        "hurry", "overworld_fast", "underground_fast", "star_fast", "timer_tick",
+        "castle_theme", "castle_fast", "castle_clear", "bowser_fire", "bowser_fall"
     ];
     foreach (name in names)
         nativeAudio.loadClip(name, root + "/assets/audio/" + name + ".wav");
@@ -40,7 +41,7 @@ function emitSound(g, name, variant = null) {
 
 function playSound(name) {
     if (nativeAudio == null) return;
-    if (name == "death" || name == "course_clear" || name == "game_over")
+    if (name == "death" || name == "course_clear" || name == "game_over" || name == "castle_clear")
         nativeAudio.playMusic(name);
     else
         nativeAudio.playEffect(name);
@@ -57,9 +58,10 @@ function resumeMusic(useStarMusic = false) {
     hurryMusicTime = 0.0;
     if (nativeAudio == null) return;
     local name = useStarMusic ? "star" :
-        ((game != null && game.area == "castle") ? "castle" :
+        ((game != null && game.area == "castle") ? "castle_theme" :
          ((game != null && game.area == "underground") ? "underground" : "overworld"));
-    if (game != null && game.hurryActive) name += "_fast";
+    if (game != null && game.hurryActive)
+        name = name == "castle_theme" ? "castle_fast" : name + "_fast";
     nativeAudio.playMusic(name);
     musicState = useStarMusic ? "star" : "ground";
 }
@@ -97,7 +99,7 @@ function flushSoundEvents(g) {
         if (name == "silence_music") { stopMusic(); continue; }
         if (name == "resume_music") { resumeMusic(g.player.starMusicActive); continue; }
         if (name == "star_music") { startStarMusic(); continue; }
-        if (name == "death" || name == "flag" || name == "course_clear" ||
+        if (name == "death" || name == "flag" || name == "course_clear" || name == "castle_clear" ||
             name == "game_over" || name == "pipe") stopMusic();
         playSound(name);
     }

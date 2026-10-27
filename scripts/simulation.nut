@@ -580,6 +580,10 @@ function hitBlock(g, tx, ty) {
 function movePlayerX(g, p, dt) {
     local nextX = p.x + p.vx * dt;
     p.sidePipeCollision = false;
+    // ROM stages move first and resolve background samples after vertical
+    // movement. A geometric wall snap here would impede the same contact
+    // twice and erase the horizontal fractional accumulators.
+    if(g.romBackgroundCollision) {p.x=nextX;return;}
     local sideOffsets = p.height > 16.0 ? [8.0, 24.0] : [p.height * 0.5];
     if (p.vx > 0.0) {
         if (g.area == "underground" && g.sidePipeX >= 0 &&
@@ -628,6 +632,7 @@ function movePlayerY(g, p, dt, fallingOrStationary = false) {
     local nextY = p.y + p.vy * dt;
     p.grounded = false;
     p.headCollision = false;
+    p.headCollisionSpeed = 0;
     p.deepFootCollision = false;
 
     if (p.vy > 0.0 || (p.vy == 0.0 && fallingOrStationary)) {
@@ -669,13 +674,22 @@ function movePlayerY(g, p, dt, fallingOrStationary = false) {
         // The two-pixel difference decides the canonical corner bump frame.
         local tx = floor((p.x + 8.0) / TILE_SIZE).tointeger();
         local tile = getTile(g, tx, ty);
-        if (isSolidTile(tile) || tile == TILE_HIDDEN_ONEUP || tile == TILE_HIDDEN_COIN) {
+        local headWithinBlock=(floor(nextY+headYOffset).tointeger()&15)>=4;
+        if ((!g.romBackgroundCollision || headWithinBlock) &&
+            (isSolidTile(tile) || tile == TILE_HIDDEN_ONEUP || tile == TILE_HIDDEN_COIN)) {
             // SMB samples the head point after applying the integer vertical
             // displacement and does not snap Player_Y_Position to the tile
             // boundary.  For this block the canonical result is $8d (141),
             // not the hand-authored 16 px boundary at 144.
             p.vy = 0.0;
             p.headCollision = true;
+            if(g.romBackgroundCollision && (tile==TILE_SOLID || tile==TILE_GROUND)) {
+                // SolidOrClimb sets +1 rather than PlayerHeadCollision's 0.
+                p.headCollisionSpeed=1;
+                parityRecordEvent(g,"gameplay","block_hit",
+                    ",\"tile_x\":"+tx+",\"tile_y\":"+ty+",\"tile\":"+tile);
+                emitSound(g,"bump");
+            }
             hitBlock(g, tx, ty);
         }
     }
@@ -711,7 +725,7 @@ function handlePlayerBackgroundSides(g, p) {
         impedePlayerMove(g, p, p.movingDir);
         return;
     }
-    if (g.level >= 2 && (g.area == "underground" || g.area == "castle") && g.state == "playing") {
+    if ((g.romBackgroundCollision || (g.level==2 && g.area=="underground")) && g.state == "playing") {
         // The ROM runs DoPlayerSideCheck after the head/feet pass in every
         // area. The old implementation only ran this pass above ground,
         // leaving the inclusive +12 foot sample supported by a wall's side.
@@ -724,6 +738,12 @@ function handlePlayerBackgroundSides(g, p) {
                    canonicalY>=(offset==8.0?228.0:208.0)) continue;
                 local tx=floor((p.x+(side==0?2.0:13.0))/TILE_SIZE).tointeger();
                 local ty=floor((canonicalY+offset)/TILE_SIZE).tointeger();
+                if(g.area=="main" && tx==floor(g.flagX/TILE_SIZE).tointeger() &&
+                   ty>=2 && ty<=11) {
+                    local xLow=floor(p.x).tointeger()&15;
+                    if(xLow>=6 && xLow<10) beginFlagSequence(g);
+                    return;
+                }
                 // The pipe's end is an entrance, not an ordinary wall.
                 // The +13 side probe reaches it one pixel before movePlayerX
                 // sets sidePipeCollision. Let tryWorld12Pipe consume that
@@ -895,8 +915,7 @@ function updateNesHorizontalPhysics(g, p, direction) {
     } else if (!p.grounded && speedAbsolute >= 0x19) {
         maximum = 0x28;
         force = 0xE4;
-    } else if (p.grounded &&
-               (p.runningSpeed != 0 || speedAbsolute >= 0x21)) {
+    } else if (p.runningSpeed != 0 || speedAbsolute >= 0x21) {
         maximum = 0x18;
         force = 0xD0;
     }
@@ -1042,10 +1061,17 @@ function setCrouching(g, p, crouching) {
 
 function updatePlayer(g, dt) {
     local p = g.player;
+    local pendingPlatformXScroll = p.pendingPlatformXScroll;
+    p.pendingPlatformXScroll = 0;
     p.previousX = p.x;
     p.previousY = p.y;
     p.sideCollisionFramesAtStart = p.sideCollisionFrames;
     if (p.sideCollisionFrames > 0) p.sideCollisionFrames -= 1;
+    // ScrollHandler runs before this frame's background collision can set a
+    // new SideCollisionTimer. Snapshot the already-decremented NMI value so
+    // the collision frame itself scrolls, following timer frames suppress
+    // scroll, and the frame where the timer reaches zero resumes it.
+    p.scrollSideCollisionTimer = p.sideCollisionFrames > 0;
     if (p.invulnerable > 0.0) {
         p.invulnerable -= dt;
         if (p.invulnerable < 0.0) p.invulnerable = 0.0;
@@ -1129,7 +1155,10 @@ function updatePlayer(g, dt) {
         (p.nesXSpeed < 0 ? 2 : 0);
     // MovePlayerHorizontally returns this signed integer displacement for the
     // same frame's ScrollHandler.
-    p.nesXScroll = deltaX;
+    // A horizontal moving platform writes Platform_X_Scroll after this
+    // frame's ScrollHandler, so its pixel displacement is added to the next
+    // frame's Player_X_Scroll.
+    p.nesXScroll = deltaX + pendingPlatformXScroll;
     p.vx = deltaX / dt;
     movePlayerX(g, p, dt);
     if (p.vx == 0.0 && deltaX != 0) {
@@ -1163,7 +1192,7 @@ function updatePlayer(g, dt) {
         p.vy = deltaY / dt;
         movePlayerY(g, p, dt, p.nesYSpeed >= 0);
         if (p.vy == 0.0 && deltaY != 0) {
-            p.nesYSpeed = 0;
+            p.nesYSpeed = p.headCollision ? p.headCollisionSpeed : 0;
             // PlayerHeadCollision nulls only Player_Y_Speed.  The two fractional
             // vertical accumulators continue, which controls the first falling
             // pixels after a block bump.
@@ -1207,6 +1236,7 @@ function updateLevelCoins(g) {
             if (floor(coin.x / TILE_SIZE).tointeger() == tx &&
                 floor(coin.y / TILE_SIZE).tointeger() == ty) {
                 coin.active = false;
+                if(g.level==3) coin.visualErasePending <- true;
                 // EraseCoinMetatile writes through the second VRAM buffer.
                 g.vramBufferAddrCtrl = 6;
                 awardCoin(g);
@@ -1514,13 +1544,57 @@ function updateFireballs(g, dt) {
 }
 
 function moveEnemyBody(g, e, dt) {
-    if ("red" in e && e.red && e.state == "walking" && e.grounded) {
+    local collisionX = e.x;
+    if (g.level != 3 && "red" in e && e.red && e.state == "walking" && e.grounded) {
         local footX=e.vx<0?e.x:e.x+e.width;
         if(!isSolidAt(g,floor(footX/16).tointeger(),floor((e.y+e.height+1)/16).tointeger()))
             e.vx=-e.vx;
     }
-    e.vy += 857.8125 * dt;
-    if (e.vy > 180.0) e.vy = 180.0;
+    local world13GroundWalker = g.level == 3 &&
+        (e.kind == "goomba" ||
+         (e.kind == "koopa" && e.state != "shell" &&
+          e.state != "shellMoving" && e.state != "flipped" &&
+          !("paratroopa" in e && e.paratroopa)));
+    if (world13GroundWalker) {
+        local supportRow = floor((e.y + e.height) / TILE_SIZE).tointeger();
+        local supportColumn = floor((collisionX + 8.0) / TILE_SIZE).tointeger();
+        if (isSolidAt(g, supportColumn, supportRow)) {
+            if (e.state == "falling") {
+                // EnemyToBGCollisionDet runs before EnemyMovementSubs. Its
+                // foot probe uses the current Y coordinate; EnemyLanding only
+                // snaps while the ROM origin's low nibble is $08-$0c. This
+                // leaves the transient overshoot visible for one falling
+                // pass and lands the enemy on the following pass.
+                local originY = floor(e.y).tointeger() - 10;
+                local landingNibble = originY & 0x0f;
+                if (landingNibble >= 8 && landingNibble <= 12) {
+                    local landedOrigin = (originY & 0xf0) | 8;
+                    e.y = (landedOrigin + 10).tofloat();
+                    e.nesYSpeed = 0;
+                    e.nesYMoveForce = 0;
+                    e.vy = 0.0;
+                }
+                e.state = "walking";
+                e.grounded = true;
+            }
+        } else if (e.state == "walking" && e.kind=="koopa" &&
+                   e.red && !("paratroopa" in e)) {
+            // ChkForRedKoopa turns an ordinary red Koopa at its bottom-middle
+            // probe instead of allowing the walking state to become falling.
+            e.vx=-e.vx;
+            e.grounded=true;
+        } else if (e.state == "walking") {
+            // EnemyBGCollision runs before EnemyMovementSubs. A ground walker
+            // with no bottom-middle support enters state $01 and therefore
+            // spends this pass in the falling routine.
+            e.state = "falling";
+            e.grounded = false;
+        }
+    }
+    if (!world13GroundWalker) {
+        e.vy += 857.8125 * dt;
+        if (e.vy > 180.0) e.vy = 180.0;
+    }
 
     // RunNormalEnemies checks background at the current actor position and
     // only then dispatches movement.  Side samples are x+$00 and x+$10.
@@ -1555,16 +1629,38 @@ function moveEnemyBody(g, e, dt) {
     e.x += e.vx * dt;
 
     local nextY = e.y + e.vy * dt;
-    if (e.vy >= 0.0) {
+    if (e.state == "falling" && world13GroundWalker) {
+        // MoveD_EnemyVertically uses downward force $3d and maximum speed $03.
+        // The first pass consumes only the byte-sized movement force, so the
+        // integer Y remains unchanged until its accumulator carries.
+        local positionSum = e.nesYDummy + e.nesYMoveForce;
+        e.nesYDummy = positionSum & 0xFF;
+        local delta = e.nesYSpeed + floor(positionSum / 256).tointeger();
+        local forceSum = e.nesYMoveForce + 0x3D;
+        e.nesYMoveForce = forceSum & 0xFF;
+        e.nesYSpeed += floor(forceSum / 256).tointeger();
+        if (e.nesYSpeed >= 3 && e.nesYMoveForce >= 0x80) {
+            e.nesYSpeed = 3;
+            e.nesYMoveForce = 0;
+        }
+        nextY = e.y + delta;
+        e.vy = e.nesYSpeed * NES_FRAME_RATE;
+    }
+    if (nextY >= e.y && !world13GroundWalker) {
         local floorTy = floor((nextY + e.height) / TILE_SIZE).tointeger();
-        local left = floor((e.x + 1.0) / TILE_SIZE).tointeger();
-        local right = floor((e.x + e.width - 1.0) / TILE_SIZE).tointeger();
-        for (local floorTx = left; floorTx <= right; floorTx += 1) {
-            if (isSolidAt(g, floorTx, floorTy)) {
-                nextY = floorTy * TILE_SIZE - e.height;
-                e.vy = 0.0;
-                e.grounded = true;
-                break;
+        // BlockBufferChk_Enemy checks the bottom-middle probe (X+8, Y+18),
+        // not both edges. A trailing edge touching an adjacent column must not
+        // keep a Goomba walking over a ledge.
+        local floorTx = floor((collisionX + 8.0) / TILE_SIZE).tointeger();
+        if (isSolidAt(g, floorTx, floorTy)) {
+            nextY = floorTy * TILE_SIZE - e.height;
+            e.vy = 0.0;
+            e.grounded = true;
+            if (e.state == "falling") {
+                e.state = "walking";
+                e.nesYSpeed = 0;
+                e.nesYMoveForce = 0;
+                e.nesYDummy = 0;
             }
         }
     }
@@ -1667,20 +1763,24 @@ function awardScoreControl(g, control) {
     g.queuedScore = g.score;
 }
 
-function awardStomp(g, enemy) {
-    g.stompChain += 1;
+function awardStomp(g, enemy, scoreControl=-1) {
+    if(scoreControl<0) {g.stompChain+=1;scoreControl=g.stompChain;}
     // SetupFloateyNumber writes $30.  FloateyNumbersRoutine awards when the
     // pre-decrement value reaches $2b, which is five subsequent game frames
     // after the collision in the captured NTSC execution.
     // The reference capture has already run the first routine pass at the
     // collision boundary: timer $2f and Y one pixel above Enemy_Y_Position.
-    local scoreY = enemy.y - 11.0;
+    local walkingKoopa=enemy.kind=="koopa" && enemy.state!="shell" &&
+        enemy.state!="shellMoving";
+    local scoreY = enemy.y - (walkingKoopa ? 1.0 : 11.0);
     g.floatingScores.append({
         frames = 5,
         timer = 47,
-        control = g.stompChain,
+        control = scoreControl,
         awarded = false,
         age = 0,
+        owner = enemy,
+        erasedAge = 0,
         x = floor(enemy.x - g.cameraX).tofloat(),
         y = scoreY,
         displayY = scoreY
@@ -1691,15 +1791,18 @@ function updateFloatingScores(g) {
     for (local i = g.floatingScores.len() - 1; i >= 0; i -= 1) {
         local floating = g.floatingScores[i];
         floating.age += 1;
+        // EraseEnemyObject also clears its floatey control. Keep only the
+        // two prepared OAM passes after the owning slot is released.
+        if(!floating.owner.alive) floating.erasedAge += 1;
         floating.displayY = floating.y;
-        floating.y -= 1.0;
+        if(floating.y>=24.0) floating.y -= 1.0;
         floating.timer -= 1;
         if (!floating.awarded) floating.frames -= 1;
         if (!floating.awarded && floating.frames <= 0) {
             awardScoreControl(g, floating.control);
             floating.awarded = true;
         }
-        if (floating.timer <= 0) g.floatingScores.remove(i);
+        if (floating.timer <= -2 || floating.erasedAge >= 1) g.floatingScores.remove(i);
     }
 }
 
@@ -1761,7 +1864,38 @@ function allocateEnemySlot(g, enemy) {
                 break;
             }
         }
+        if (g.level == 3 && "world13Bullets" in g) {
+            foreach (bullet in g.world13Bullets) {
+                if (bullet.active && bullet.slot == slot) {
+                    occupied = true;
+                    break;
+                }
+            }
+        }
+        if (g.level == 3 && "platforms" in g) {
+            foreach (platform in g.platforms) {
+                if (platform.awake && !platform.retired &&
+                    platform.slot == slot) {
+                    occupied = true;
+                    break;
+                }
+            }
+        }
         if (!occupied) {
+            if (g.level == 3 && "platforms" in g) {
+                foreach (platform in g.platforms) {
+                    if (platform.retired && platform.lastSlot == slot &&
+                        "fraction" in platform)
+                        enemy.x+=platform.fraction/256.0;
+                    if (platform.retired && platform.lastSlot == slot &&
+                        "verticalDummy" in platform) {
+                        // Enemy object slots retain the vertical fractional
+                        // accumulator after EraseEnemyObject. InitVStf clears
+                        // speed and move force, but not this dummy byte.
+                        enemy.nesYDummy = platform.verticalDummy & 0xff;
+                    }
+                }
+            }
             enemy.slot = slot;
             enemy.enemyCollisionMask = 0;
             return true;
@@ -1828,7 +1962,7 @@ function updateGoombas(g, dt) {
     // Enemy stream parsing follows ScrollHandler in the original frame.  Use
     // the screen edge that this frame's pending scroll will expose.
     local projectedCameraX = g.cameraX;
-    if (p.nesXScroll > 0 && p.sideCollisionFramesAtStart == 0) {
+    if (p.nesXScroll > 0 && !p.scrollSideCollisionTimer) {
         local positionForScroll = p.previousX - g.cameraX;
         if (positionForScroll >= 80.0) {
             local scroll = p.nesXScroll;
@@ -1842,6 +1976,10 @@ function updateGoombas(g, dt) {
     foreach (e in g.goombas) {
         if (!e.alive) continue;
         if (p.dead) continue;
+        e.previousX=e.x;e.previousY=e.y;
+        e.previousFacing=e.vx<0?-1:(e.vx>0?1:
+            (("world13Facing" in e)?e.world13Facing:-1));
+        e.previousParatroopa=("paratroopa" in e) && e.paratroopa;
         // Sample before player collision, then retain OAM presentation latency.
         e.queuedShellFrame = koopaShellAnimationFrame(e.state,e.intervalTimer,g.nesFrameCounter);
         local playerWasDead = p.dead;
@@ -1851,13 +1989,19 @@ function updateGoombas(g, dt) {
         }
         if (e.state == "defeated") {
             if (e.intervalTimer == 0x0E) {
-                // EnemyGfxHandler has already written this slot's flattened
-                // sprite to OAM for the current pass. Preserve that prepared
-                // OAM image while removing the gameplay object immediately.
-                e.erasedDisplayFrames = 1;
-                e.erasedSlot = e.slot;
-                e.alive = false;
-                releaseEnemySlot(e);
+                if (g.level == 3 && !e.eraseDelayPending) {
+                    // The Goomba remains active for the pass that first
+                    // observes $0e; EraseEnemyObject is exposed on the
+                    // following game frame in the captured route.
+                    e.eraseDelayPending = true;
+                } else {
+                    // Keep the two prepared OAM images after the gameplay
+                    // slot is erased; its floatey control clears separately.
+                    e.erasedDisplayFrames = 2;
+                    e.erasedSlot = e.slot;
+                    e.alive = false;
+                    releaseEnemySlot(e);
+                }
             }
             continue;
         }
@@ -1930,13 +2074,17 @@ function updateGoombas(g, dt) {
                 // HandlePECollisions kicks a stationary shell even when
                 // Mario is descending. Only a moving shell is stomped again.
                 kickKoopaShell(g,e);
-            } else if (p.nesYSpeed > 0) {
+            } else if (p.nesYSpeed > 0 ||
+                       (e.kind=="koopa" && p.nesYSpeed<=0 &&
+                        (p.big && !p.crouching ? p.y : p.y-16.0)+12.0<e.y)) {
+                local demotedParatroopa=false;
                 parityRecordEvent(g, "gameplay", "enemy_stomp",
                     ",\"enemy\":\"" + e.kind + "\",\"enemy_state\":\"" + e.state + "\"");
                 if (e.kind == "goomba") {
                     stompGoomba(e);
                 } else if (e.state == "walking") {
-                    enterKoopaShell(e);
+                    demotedParatroopa=g.level==3 && demoteWorld13Paratroopa(g,e);
+                    if(!demotedParatroopa) enterKoopaShell(e);
                 } else if (e.state == "shellMoving") {
                     stopKoopaShell(e);
                 } else {
@@ -1953,7 +2101,8 @@ function updateGoombas(g, dt) {
                 // incorporated the pending ScrollHandler result for this pass.
                 local savedCameraX = g.cameraX;
                 g.cameraX = projectedCameraX;
-                awardStomp(g, e);
+                awardStomp(g,e,demotedParatroopa?3:
+                    (g.level==3 && e.kind=="koopa"?2:-1));
                 g.cameraX = savedCameraX;
                 // HandleStompedShellE changes the state before
                 // EnemyMovementSubs is dispatched, so a stomped enemy does
@@ -1962,7 +2111,7 @@ function updateGoombas(g, dt) {
                 // relative-X value already prepared for OAM can nevertheless
                 // carry the preceding half-pixel phase for one more image.
                 e.stompDisplayLead = e.x > floor(e.x) ? 1.0 : 0.0;
-                e.x = floor(e.x).tofloat();
+                if(!demotedParatroopa) e.x = floor(e.x).tofloat();
                 stompedThisFrame = true;
             } else if (e.kind == "koopa" || e.collisionCooldown <= 0.0) {
                 hurtPlayer(g, e);
@@ -2058,7 +2207,7 @@ function updateCamera(g) {
          g.flagContactScrollPending ||
          (g.state == "endLevel" && !g.endLevelScrollLocked)) &&
         (!p.dead || p.deadTimer == 0.0) &&
-        p.nesXScroll > 0 && p.sideCollisionFramesAtStart == 0) {
+        p.nesXScroll > 0 && !p.scrollSideCollisionTimer) {
         // Player_Pos_ForScroll is prepared from the preceding frame's player
         // position. ScrollHandler starts at $50; below $70 it removes one
         // pixel from displacements of two or more pixels.
@@ -2096,6 +2245,11 @@ function updateVramAreaParserScheduler(g) {
     // Replaying this state machine from the ROM source reproduces the exact
     // buffer-selection trace, including palette packets deferred by scrolling.
     g.vramScrollThirtyTwo += g.previousScrollAmount.tointeger();
+    // UpdScrollVar accumulates ScrollThirtyTwo before testing whether another
+    // gameplay pass has already selected VRAM buffer 2. A coin erased in this
+    // same frame queues $06 there, so the parser waits one pass but the scroll
+    // accumulator still advances.
+    if (g.vramBufferAddrCtrl == 6) return;
     if (g.vramAreaParserTask == 0) {
         if (g.vramScrollThirtyTwo < 32) return;
         g.vramScrollThirtyTwo -= 32;
@@ -2244,9 +2398,8 @@ function updateCourseClear(g, dt) {
             if (g.endLevelScrollLocked && canonicalY >= 0xAE) {
                 if (g.endLevelUnlockFrames == 0) {
                     // EndLevel clears ScrollLock after this frame's
-                    // ScrollHandler; the trace exposes the first scroll two
-                    // comparison frames later.
-                    g.endLevelUnlockFrames = 2;
+                    // ScrollHandler; the next pass unlocks and scrolls.
+                    g.endLevelUnlockFrames = 1;
                     emitSound(g, "course_clear");
                 }
             }
@@ -2274,7 +2427,6 @@ function updateCourseClear(g, dt) {
             local positionSum = p.nesYDummy + p.nesYMoveForce;
             p.nesYDummy = positionSum & 0xFF;
             p.y += p.nesYSpeed + floor(positionSum / 256).tointeger();
-            if (p.y > targetY) p.y = targetY;
         } else {
             p.nesYSpeed = 0;
             p.nesYMoveForce = 0;
@@ -2289,7 +2441,6 @@ function updateCourseClear(g, dt) {
             if (g.flagScoreY < 52.0) g.flagScoreY = 52.0;
         }
         if (p.y >= targetY && flagWasAtBottom) {
-            p.y = targetY;
             // FlagpoleRoutine advances to PlayerEndLevel. Its first forced-
             // right climbing pass switches Mario to the pole's far side;
             // a second switch 24 frames later releases him to fall/walk.
@@ -2339,7 +2490,11 @@ function updateCourseClear(g, dt) {
             if (g.fireworksRemaining > 0) {
                 g.state = "fireworks";
             } else {
-                g.clearDelayFrames = 6 * 21;
+                // World 1-3 enters DelayToAreaEnd with IntervalTimerControl at
+                // $0c. Its six interval-bank reloads land on frames 1702,
+                // 1723, 1744, 1765, 1786 and 1807; task 5 is visible on the
+                // following pass at 1808.
+                g.clearDelayFrames = g.level == 3 ? 118 : 6 * 21;
                 g.state = "postClearDelay";
             }
         }
@@ -2357,7 +2512,7 @@ function updateCourseClear(g, dt) {
             });
             g.fireworkSpawnFrames = 32;
         } else if (g.fireworksRemaining == 0 && g.fireworks.len() == 0) {
-            g.clearDelayFrames = 6 * 21;
+            g.clearDelayFrames = g.level == 3 ? 118 : 6 * 21;
             g.state = "postClearDelay";
         }
     } else if (g.state == "postClearDelay") {
@@ -2558,14 +2713,131 @@ function updateDeathReload(g) {
     }
 }
 
+function beginNextWorld1StageLoad(g, dt) {
+    // PlayerEndLevel task 5 increments LevelNumber and returns after
+    // ChgAreaMode. The current player, camera and frame counter remain
+    // observable for this pass; the loader begins on the next frame.
+    // Task 5 runs AutoControlPlayer and PlayerBGCollision before incrementing
+    // LevelNumber. Perform that final player-physics pass first so the task's
+    // visible speed and integration fractions are preserved.
+    autoControlPlayerEndLevel(g, dt);
+    g.loadingRenderCameraX <- g.cameraX;
+    g.loadingPlayerBig <- g.player.big;
+    g.loadingPlayerFire <- g.player.fire;
+    g.level += 1;
+    g.state = "nextStageLoad";
+    g.stageLoadFrames = 0;
+    g.stateTimer = 0.0;
+    g.nesFrameCounter = (g.nesFrameCounter + 1) & 0xFF;
+    parityRecordEvent(g, "music", "silence");
+}
+
+function updateNextWorld1StageLoad(g) {
+    g.vramBufferAddrCtrl = 0;
+    if (g.stageLoadFrames == 0) {
+        // ChgAreaMode has selected OperMode_Task 0 but the screen is still
+        // disabled. ResetSpritesAndScreenTimer clears the visible camera and
+        // the player's integration fractions while preserving raw X/speed.
+        g.cameraX = 0.0;
+        g.displayCameraX = 0.0;
+        g.previousScrollAmount = 0.0;
+        g.player.nesYDummy = 0;
+        g.player.nesXForce = 0;
+        g.player.nesXMoveForce = 0;
+        g.colorRotateOffset = 0;
+        g.pendingColorPhase = 0;
+        g.colorPhasePending = false;
+        g.nesFrameCounter = (g.nesFrameCounter + 1) & 0xFF;
+        g.stageLoadFrames = 1;
+        return;
+    }
+    if (g.stageLoadFrames == 1) {
+        // InitializeArea replaces the player object with zeroed RAM before the
+        // entrance routine places it on the new stage. Keep the level data
+        // loaded now so the draw path remains valid during the loading screen.
+        startWorld1Stage(g, g.level);
+        g.soundEvents.clear();
+        g.state = "nextStageLoad";
+        g.stageLoadFrames = 2;
+        g.cameraX = 0.0;
+        g.displayCameraX = 0.0;
+        g.previousScrollAmount = 0.0;
+        g.player = createPlayer();
+        g.player.x = 0.0;
+        // Player_Y_Position becomes zero before the entrance routine; the
+        // host stores small Mario's collision origin 16 pixels below that OAM
+        // origin.
+        g.player.y = 16.0;
+        g.player.previousX = 0.0;
+        g.player.previousY = 16.0;
+        g.player.preparedRelX = 0.0;
+        g.player.preparedRelY = 0.0;
+        // parityRecordState exposes the pre-increment FrameCounter as
+        // (nesFrameCounter - 1) & $ff. One therefore reports zero here.
+        g.nesFrameCounter = 1;
+        g.time = 0;
+        g.displayTime = 0;
+        g.colorRotateOffset = 0;
+        parityRecordEvent(g, "music", "silence");
+        return;
+    }
+    g.stageLoadFrames += 1;
+    g.nesFrameCounter = (g.nesFrameCounter + 1) & 0xFF;
+    if (g.stageLoadFrames == 3) {
+        // ScreenRoutineTask queues the initialized area's palette packet
+        // once. NMI consumes it on the following pass.
+        g.vramBufferAddrCtrl = 3;
+    }
+    if (g.stageLoadFrames >= 148 && g.stageLoadFrames <= 159)
+        g.vramBufferAddrCtrl = 6;
+    else if (g.stageLoadFrames == 160)
+        g.vramBufferAddrCtrl = 4;
+    if (g.stageLoadFrames == 164) {
+        parityRecordEvent(g, "music", "castle");
+        g.soundEvents.append("resume_music");
+    }
+    if (g.stageLoadFrames == 165) {
+        // ScreenRoutines and SecondaryGameSetup finish before InitializeGame
+        // places the player. Preserve the NMI counter across host setup.
+        local frameCounter = g.nesFrameCounter;
+        local stage = g.level;
+        g.player.big = g.loadingPlayerBig;
+        g.player.fire = g.loadingPlayerFire;
+        startWorld1Stage(g, stage);
+        g.soundEvents.clear();
+        g.nesFrameCounter = frameCounter;
+        g.colorRotateOffset = 0;
+        g.pendingColorPhase = 0;
+        g.displayColorPhase = 0;
+        g.colorPhasePending = false;
+        g.state = "nextStageLoad";
+        g.stageLoadFrames = 165;
+        g.time = 301;
+        g.displayTime = 301;
+        return;
+    }
+    if (g.stageLoadFrames == 166) {
+        g.state = "playing";
+        g.time = 300;
+        g.displayTime = 300;
+        g.gameTimerControl = 24;
+    }
+}
+
 function simulateFixed(g, dt) {
     g.simTime += dt;
+    if (g.state == "nextStageLoad") {
+        updateNextWorld1StageLoad(g);
+        return;
+    }
+    if (g.stageLoadFrames == 166) g.stageLoadFrames = 167;
     if (g.level <= 3 && g.state == "levelComplete") {
-        g.stateTimer += dt;
         // Preserve the established 1-1 parity endpoint; newer whole-route
         // movies include the next stage and therefore must cross this edge.
-        if(g.stateTimer>=1.0 && !(g.level==1 && parityIsEnabled()))
-            startWorld1Stage(g,g.level+1);
+        if(!(g.level==1 && parityIsEnabled())) {
+            if (g.level == 3) beginNextWorld1StageLoad(g, dt);
+            else startWorld1Stage(g,g.level+1);
+        }
         return;
     }
     if (g.level == 2 && updateWorld12Transition(g)) return;
@@ -2579,14 +2851,21 @@ function simulateFixed(g, dt) {
     // NMI consumes exactly one selected VRAM buffer.  Preserve the selection
     // made by the preceding gameplay pass before preparing this pass's state.
     local secondaryBufferWasSelected = g.vramBufferAddrCtrl == 6;
+    g.displayBackgroundYOffset = 0.0;
+    if(g.level==3 && !secondaryBufferWasSelected && g.vramPrimaryBytes>=64)
+        g.displayBackgroundYOffset=1.0;
+    if(!secondaryBufferWasSelected) g.vramPrimaryBytes=0;
+    local scoreBeforeVram=g.score,timeBeforeVram=g.time;
     g.vramBufferAddrCtrl = 0;
     // UpdateScreen consumes the status and metatile VRAM work prepared by the
     // preceding gameplay pass.  The capture adapter observes one additional
     // frame of latency between RAM mutation and visible PPU output.
-    g.displayScore = g.queuedScore;
+    if(!secondaryBufferWasSelected) g.displayScore = g.queuedScore;
     g.queuedScore = g.score;
-    g.displayCoins = g.queuedCoins;
+    if(!secondaryBufferWasSelected) g.displayCoins = g.queuedCoins;
     g.queuedCoins = g.coins;
+    foreach(coin in g.levelCoins)
+        if("visualErasePending" in coin) coin.visualErasePending=false;
     for (local overrideIndex = g.displayTileOverrides.len() - 1;
          overrideIndex >= 0; overrideIndex -= 1) {
         local entry = g.displayTileOverrides[overrideIndex];
@@ -2608,6 +2887,9 @@ function simulateFixed(g, dt) {
     // until buffer 1 is consumed on a later frame.
     if (!secondaryBufferWasSelected) g.displayTime = g.time;
     local animationState = g.state;
+    g.player.courseClearHidden=animationState=="timeBonus" ||
+        animationState=="raiseFlag" || animationState=="fireworks" ||
+        animationState=="postClearDelay" || animationState=="levelComplete";
     local processPlayerAnimation = !g.player.dead &&
         (animationState == "playing" || animationState == "pipeDown" ||
          animationState == "pipeSide" || animationState == "areaEntrance" ||
@@ -2724,6 +3006,14 @@ function simulateFixed(g, dt) {
         enemy.displayState = enemy.preparedState;
         enemy.preparedState = enemy.queuedState;
         enemy.queuedState = enemy.state;
+        enemy.displayY = enemy.preparedY;
+        enemy.preparedY = enemy.previousY;
+        enemy.displayX = enemy.preparedX;
+        enemy.preparedX = enemy.previousX;
+        enemy.displayFacing=enemy.preparedFacing;
+        enemy.preparedFacing=enemy.previousFacing;
+        enemy.displayParatroopa=enemy.preparedParatroopa;
+        enemy.preparedParatroopa=enemy.previousParatroopa;
         enemy.displayShellFrame = enemy.preparedShellFrame;
         enemy.preparedShellFrame = enemy.queuedShellFrame;
     }
@@ -2776,7 +3066,13 @@ function simulateFixed(g, dt) {
     g.preparedFlagScoreY = g.flagScoreY;
     // ColorRotation reads FrameCounter before the common end-of-frame
     // increment.  Area initialization/lives display skip the routine.
-    if (ranGameEngine && (g.nesFrameCounter & 0x07) == 0) {
+    if(g.level==3) {
+        if(g.score!=scoreBeforeVram) g.vramPrimaryBytes+=9;
+        if(g.time!=timeBeforeVram) g.vramPrimaryBytes+=6;
+    }
+    if (ranGameEngine && (g.nesFrameCounter & 0x07) == 0 &&
+        (g.level!=3 || g.vramPrimaryBytes<0x31)) {
+        if(g.level==3) g.vramPrimaryBytes+=7;
         g.pendingColorPhase = g.colorRotateOffset;
         g.colorPhasePending = true;
         g.colorRotateOffset += 1;

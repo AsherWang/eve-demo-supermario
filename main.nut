@@ -5,6 +5,8 @@ persist nativeAudioCaptureTime = 0.0
 persist musicState = null
 persist hurryMusicTime = 0.0
 persist levelTwoKeyDown = false
+persist levelThreeKeyDown = false
+persist levelFourKeyDown = false
 
 dofile("scripts/core.nut");
 dofile("scripts/generated/rom_data.nut");
@@ -17,6 +19,10 @@ dofile("scripts/level.nut");
 dofile("scripts/audio.nut");
 dofile("scripts/simulation.nut");
 dofile("scripts/world12.nut");
+dofile("scripts/generated/world13_data.nut");
+dofile("scripts/generated/world13_map.nut");
+dofile("scripts/world13.nut");
+dofile("scripts/world14.nut");
 dofile("scripts/levels.nut");
 dofile("scripts/render.nut");
 dofile("scripts/parity.nut");
@@ -30,10 +36,15 @@ eve_init = function() {
     // reference palette exactly so frame comparisons measure scene output.
     gfx.setBackgroundColor(146.0 / 255.0, 144.0 / 255.0, 1.0, 1.0);
     loadAssets();
+    loadWorld13Assets();
+    loadWorld14Assets();
     loadAudio();
     if (!("startupSelfTests" in config) || config.startupSelfTests || parityIsEnabled()) {
         runSimulationSelfTest();
         runWorld12SelfTest();
+        runWorld13SelfTest();
+        runWorld14SelfTest();
+        runWorld1StageFlowSelfTest();
         runKoopaBounceSelfTest();
         runPowerUpGapSelfTest();
         runShellDefeatSelfTest();
@@ -41,8 +52,16 @@ eve_init = function() {
     game = createGame();
     if ("startLevel" in config && config.startLevel == 2)
         startWorld12(game, ("startArea" in config) ? config.startArea : "intro");
+    if ("startLevel" in config && config.startLevel == 3) startWorld1Stage(game,3);
+    if ("startLevel" in config && config.startLevel == 4) startWorld1Stage(game,4);
     if (parityIsEnabled() && "PARITY_START_LEVEL" in getroottable() && PARITY_START_LEVEL == 2)
         initializeWorld12Parity(game);
+    if (parityIsEnabled() && "PARITY_START_LEVEL" in getroottable() && PARITY_START_LEVEL == 3) {
+        startWorld1Stage(game,3);
+        initializeWorld13Parity(game);
+    }
+    if (parityIsEnabled() && "PARITY_START_LEVEL" in getroottable() && PARITY_START_LEVEL == 4)
+        startWorld1Stage(game,4);
     parityInitialize(game);
     if (config.previewScenario == "world12-pipes" || config.previewScenario == "world12-lifts") {
         setupWorld12ActorPreview(game,config.previewScenario);
@@ -136,6 +155,12 @@ eve_update = function(dt) {
     local levelTwoKey=keyboard.isDown("F2");
     if(levelTwoKey && !levelTwoKeyDown) startWorld12(game);
     levelTwoKeyDown=levelTwoKey;
+    local levelThreeKey=keyboard.isDown("F3");
+    if(levelThreeKey && !levelThreeKeyDown) startWorld1Stage(game,3);
+    levelThreeKeyDown=levelThreeKey;
+    local levelFourKey=keyboard.isDown("F4");
+    if(levelFourKey && !levelFourKeyDown) startWorld1Stage(game,4);
+    levelFourKeyDown=levelFourKey;
     game.accumulator += frameDt;
 
     local steps = 0;
@@ -156,8 +181,10 @@ eve_update = function(dt) {
 };
 
 eve_render = function() {
-    renderGame(game);
+    // saveFramePng reads the last presented buffer. Consume that buffer
+    // before preparing the next one, including the initial OAM/VRAM page.
     if (parityIsEnabled()) parityCaptureRenderedFrame(game);
+    renderGame(game);
     if (config.capturePreview && !game.previewCaptured && game.simTime > 0.5) {
         local previewName = "world-1-" + game.level + "-" + config.previewScenario + "-preview.png";
         if (gfx.saveFramePng(previewName)) game.previewCaptured = true;

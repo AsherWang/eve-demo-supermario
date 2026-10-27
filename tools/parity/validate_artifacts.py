@@ -317,6 +317,15 @@ def main() -> int:
     actual_manifest = validate_manifest(
         actual / "manifest.json", "evengine-remake", movie, movie_hash, errors
     )
+    if reference_manifest is not None and "continuous_video_passed" in reference_manifest:
+        proof_path = reference / "continuous-video" / "proof.json"
+        proof = load_json(proof_path, errors)
+        if (not reference_manifest["continuous_video_passed"] or not proof or
+                not proof.get("passed") or proof.get("movie_sha256") != movie_hash or
+                proof.get("state_frames") != movie["frames"]):
+            errors.append("continuous reference video proof is incomplete or does not match the movie")
+        if proof_path.is_file() and reference_manifest.get("continuous_video_proof_sha256") != sha256_file(proof_path):
+            errors.append("continuous reference video proof hash mismatch")
     expected_captures = set(movie.get("capture_frames", range(movie["frames"])))
     checks = {
         "reference_frames": validate_frame_set(

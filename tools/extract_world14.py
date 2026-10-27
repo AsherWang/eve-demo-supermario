@@ -25,6 +25,22 @@ from PIL import Image
 from tool_paths import tool_path
 
 ROOT = Path(__file__).resolve().parents[1]
+
+def extract_castle_hud_coins(raw: bytes, output: Path) -> None:
+    """Compose the HUD background glyph and overlapping coin OAM sprite."""
+    prg, chr_data = raw[16:32784], raw[32784:40976]
+    offset = find_once(prg, CASTLE_PALETTE_SIGNATURE, "CastlePaletteData")
+    palettes = [list(prg[offset+3+i*4:offset+7+i*4]) for i in range(8)]
+    colors_at = find_once(prg, bytes.fromhex("272727170717"), "ColorRotatePalette")
+    output.mkdir(parents=True, exist_ok=True)
+    for frame, color in enumerate(prg[colors_at:colors_at+6]):
+        palette = list(palettes[3])
+        palette[1] = color
+        image = Image.new("RGBA", (8, 8))
+        image.alpha_composite(tile_image(chr_data, 0xFF, palettes[7], 0, True), (0, 1))
+        image.alpha_composite(tile_image(chr_data, 0x2E, palette, 1, True), (0, 0))
+        image.save(output / f"hud-coin-{frame}.png")
+
 EXPECTED_ROM_SHA256 = "f61548fdf1670cffefcc4f0b7bdcdd9eaba0c226e3b74f8666071496988248de"
 
 # World1Areas entry 4 is area pointer $60 (castle type). EnemyAddrHOffsets
@@ -286,6 +302,7 @@ def main() -> None:
 
     out = ROOT / "assets/world14"
     out.mkdir(parents=True, exist_ok=True)
+    extract_castle_hud_coins(raw, out)
     castle_palettes = [
         list(prg[palette_at + 3 + row * 4 : palette_at + 7 + row * 4])
         for row in range(8)

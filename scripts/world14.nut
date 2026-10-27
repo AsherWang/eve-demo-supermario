@@ -41,6 +41,12 @@ function loadWorld14Assets() {
             if(meta != 0 && !(meta in metatiles))
                 metatiles[meta] <- loadTexture("assets/world14/metatile-" + meta + ".png");
     world14Assets = {
+        hudCoins = [loadTexture("assets/world14/hud-coin-0.png"),
+            loadTexture("assets/world14/hud-coin-1.png"),
+            loadTexture("assets/world14/hud-coin-2.png"),
+            loadTexture("assets/world14/hud-coin-3.png"),
+            loadTexture("assets/world14/hud-coin-4.png"),
+            loadTexture("assets/world14/hud-coin-5.png")],
         metatiles = metatiles,
         bowser = [loadTexture("assets/world14/bowser-0.png"),
                   loadTexture("assets/world14/bowser-1.png")],
@@ -93,6 +99,7 @@ function world14ParseCastleObjects(g) {
         }
         local unit = page * 16 + (a >> 4);
         local id = b & 0x3F;
+        if((b&0x40)!=0) {cursor+=2;pageSelected=false;continue;}
         if(id >= 0x1B && id <= 0x1F) {
             local longBar = id == 0x1F;
             firebars.append({
@@ -100,6 +107,7 @@ function world14ParseCastleObjects(g) {
                 x = unit * 16.0 + 4.0, y = row * 16.0 + 4.0,
                 length = longBar ? 12 : 6,
                 spinLow = 0, spinHigh = 0,
+                awake = false, retired = false, slot = -1,
                 spinSpeed = WORLD14_FIREBAR_SPEED[id - 0x1B],
                 spinDirection = WORLD14_FIREBAR_DIRECTION[id - 0x1B]
             });
@@ -133,6 +141,7 @@ function startWorld14(g) {
     g.level = 4;
     g.stage = "world14";
     g.area = "castle";
+    g.romBackgroundCollision = true;
     g.areaWidth = ROM_WORLD_1_4_METATILES.len();
     clearAreaObjects(g);
     g.plants = []; g.platforms = []; g.enterablePipes = []; g.sidePipeX = -1;
@@ -142,6 +151,7 @@ function startWorld14(g) {
         metatiles = ROM_WORLD_1_4_METATILES,
         baseMetatiles = ROM_WORLD_1_4_METATILES,
         firebars = [], bowser = null, retainer = null, podoboo = null,
+        firebarSlots = array(5,null), firebarSlotHigh = array(5,0),
         projectiles = [], flames = [], bridgeRight = 140,
         axeX = 141.0 * 16.0, stateFrames = 0, clearStarted = false,
         rescued = false, completeFrames = 0, axeSparkle = 0,
@@ -156,6 +166,7 @@ function startWorld14(g) {
     resetPlayerForArea(g, 40, 80);
     g.player.grounded = true;
     g.player.entranceFalling = false;
+    g.player.fallForce = 0x28;
     g.cameraX = 0.0; g.displayCameraX = 0.0; g.previousScrollAmount = 0.0;
     g.checkpointPage = 0;
     g.time = 300; g.displayTime = 300; g.gameTimerControl = 23; g.hurryActive = false;
@@ -197,13 +208,16 @@ function world14OverlapPlayer(g, x, y, width, height) {
 }
 
 function world14FirebarPoint(bar, index) {
+    // ProcFirebar draws the fixed origin first, then five radius-table
+    // entries for a short bar. The origin is not lookup-table radius eight.
+    if(index==0) return {x=bar.x,y=bar.y};
     local horizontalNibble = bar.spinHigh & 0x0F;
     if(horizontalNibble >= 9)
         horizontalNibble = 16 - horizontalNibble;
     local verticalNibble = (bar.spinHigh + 8) & 0x0F;
     if(verticalNibble >= 9)
         verticalNibble = 16 - verticalNibble;
-    local offset = WORLD14_FIREBAR_OFFSETS[index];
+    local offset = WORLD14_FIREBAR_OFFSETS[index-1];
     local horizontal = WORLD14_FIREBAR_POS[offset + horizontalNibble];
     local vertical = WORLD14_FIREBAR_POS[offset + verticalNibble];
     local mirror = WORLD14_FIREBAR_MIRROR[(bar.spinHigh >> 3) & 0x03];
@@ -276,13 +290,50 @@ function updateWorld14Actors(g) {
     if(!("world14" in g) || g.state != "playing" || g.player.dead) return;
     local w = g.world14, p = g.player;
     local frame = g.nesFrameCounter;
+    local actorCamera=g.cameraX;
+    if(p.nesXScroll>0 && !p.scrollSideCollisionTimer) {
+        local position=p.previousX-g.cameraX;
+        if(position>=80.0) {
+            local scroll=p.nesXScroll;
+            if(position<112.0 && scroll>=2) scroll-=1;
+            actorCamera+=scroll;
+        }
+    }
+    local parserBoundary=floor((actorCamera+303.0)/16.0)*16.0;
 
     foreach(bar in w.firebars) {
-        if(bar.x < g.cameraX - 32.0 || bar.x > g.cameraX + 288.0) continue;
+        if(bar.retired) continue;
+        if(bar.awake && bar.x<actorCamera-73.0) {
+            w.firebarSlots[bar.slot]=null;bar.retired=true;continue;
+        }
+        if(!bar.awake) {
+            if(bar.x-4.0>parserBoundary) continue;
+            local slot=-1;
+            for(local index=0;index<5;index+=1)
+                if(w.firebarSlots[index]==null) {slot=index;break;}
+            if(slot<0) continue;
+            bar.slot=slot;bar.awake=true;
+            // InitShortFirebar clears the low spin byte only. Reused enemy
+            // slots retain their previous high byte, including offscreen phase.
+            bar.spinHigh=w.firebarSlotHigh[slot];
+            w.firebarSlots[slot]=bar;
+            continue;
+        }
+        if(bar.x<actorCamera || bar.x>actorCamera+255.0) continue;
         world14TickFirebar(bar);
+        w.firebarSlotHigh[bar.slot]=bar.spinHigh;
         for(local index = 0; index < bar.length; index += 1) {
             local point = world14FirebarPoint(bar, index);
-            if(world14OverlapPlayer(g, point.x, point.y, 8.0, 8.0)) {
+            local canonicalY=p.big&&!p.crouching?p.y:p.y-16.0;
+            local sampleX=p.x+4.0;
+            local relativeX=point.x-actorCamera;
+            local hit=false;
+            if(canonicalY>=0 && canonicalY<256 && relativeX>=0 && relativeX<240 &&
+               abs(sampleX-point.x)<8.0) {
+                foreach(offset in (p.big&&!p.crouching?[0.0,12.0,24.0]:[24.0]))
+                    if(abs(canonicalY+offset-point.y)<8.0) hit=true;
+            }
+            if(hit && p.starTimer<=0.0) {
                 hurtPlayer(g, {kind="firebar", x=point.x});
                 if(p.dead) return;
             }
@@ -292,6 +343,11 @@ function updateWorld14Actors(g) {
     local b = w.bowser;
     if(b != null) {
         if(!b.defeated && b.x < g.cameraX + 320.0) {
+            // BowserControl skips feet and horizontal movement while the
+            // mouth bit is set. MovingDir controls facing; the signed speed
+            // byte controls travel independently, including left-facing
+            // travel to the right of the original position.
+            if((b.bodyControls & 0x80)==0) {
             b.feetTimer -= 1;
             if(b.feetTimer <= 0) {
                 b.feetTimer = 32;
@@ -300,8 +356,8 @@ function updateWorld14Actors(g) {
             }
             if((frame & 0x0F) == 0) b.movingDir = 2;
             if(b.faceTimer > 0) {
-                if(b.originX > p.x + 48.0) {
-                    b.movingDir = 2;
+                if(p.x > b.x) {
+                    b.movingDir = 1;
                     b.movementSpeed = 2;
                     b.faceTimer = 32;
                     b.fireTimer = 32;
@@ -310,12 +366,12 @@ function updateWorld14Actors(g) {
             }
             if((frame & 0x03) == 0) {
                 local delta = b.x - b.originX;
-                if(b.movingDir == 1) b.x += b.movementSpeed;
-                else b.x -= b.movementSpeed;
+                b.x += b.movementSpeed;
                 delta = b.x - b.originX;
                 if(delta < 0) delta = -delta;
-                if(delta >= b.maxRange)
-                    b.movingDir = b.x > b.originX ? 2 : 1;
+                if(b.movingDir!=1 && delta >= b.maxRange)
+                    b.movementSpeed = b.x > b.originX ? -1 : 1;
+            }
             }
             b.fireTimer -= 1;
             if(b.fireTimer <= 0) {
@@ -368,12 +424,22 @@ function updateWorld14Actors(g) {
         }
     }
 
-    if(world14OverlapPlayer(g, w.axeX - 5.0, 122.0, 18.0, 40.0)) {
+    // ChkFootMTile handles $c5 only on a downward foot probe. A body AABB
+    // also catches Mario passing beside the axe, prematurely starting the
+    // bridge collapse while he is still above the bridge.
+    local axeFootRow=floor((p.y+p.height)/16.0).tointeger()-2;
+    local touchedAxe=false;
+    if(p.nesYSpeed>=0 && axeFootRow>=0 && axeFootRow<13)
+        foreach(offset in [3.0,12.0]) {
+            local column=floor((p.x+offset)/16.0).tointeger();
+            if(column>=0 && column<g.areaWidth &&
+               w.metatiles[column][axeFootRow]==0xC5) touchedAxe=true;
+        }
+    if(touchedAxe) {
         g.state = "world14Axe";
         g.stateTimer = 0.0;
         w.stateFrames = 0;
-        p.vx = 0.0; p.nesXSpeed = 0; p.nesXForce = 0;
-        p.x = w.axeX - 8.0;
+        p.nesXSpeed = 0x18; p.vx=p.nesXSpeed/16.0*NES_FRAME_RATE;
         parityRecordEvent(g, "gameplay", "axe_touched");
         return;
     }
@@ -591,11 +657,13 @@ function drawWorld14Actors(g, behind) {
         return;
     }
     local fireTexture = world14Assets.firebar[(frame >> 2) & 1];
-    foreach(bar in w.firebars)
+    foreach(bar in w.firebars) {
+        if(!bar.awake || bar.retired) continue;
         for(local index = 0; index < bar.length; index += 1) {
             local point = world14FirebarPoint(bar, index);
             worldTexture(g, fireTexture, point.x, point.y, 8.0, 8.0);
         }
+    }
     local b = w.bowser;
     if(b != null && !b.hidden && !b.falling) {
         local texture = world14Assets.bowser[(frame >> 4) & 1];
@@ -653,7 +721,9 @@ function runWorld14SelfTest() {
     local first = hazard.world14.firebars[0];
     local point = world14FirebarPoint(first, 1);
     hazard.cameraX = first.x - 128.0;
-    hazard.player.x = point.x - 4.0; hazard.player.y = point.y - 6.0;
+    hazard.player.x = point.x - 4.0; hazard.player.previousX=hazard.player.x;
+    hazard.player.y = point.y - 8.0;
+    updateWorld14Actors(hazard);
     updateWorld14Actors(hazard);
     requireSelfTest(hazard.player.dead,
         "1-4 firebar collision must hurt the player");
@@ -689,6 +759,10 @@ function runWorld14SelfTest() {
     local clear = createGame(); startWorld14(clear);
     clear.player.x = clear.world14.axeX - 8.0; clear.player.y = 146.0;
     clear.player.grounded = false;
+    updateWorld14Actors(clear);
+    requireSelfTest(clear.state == "playing",
+        "passing beside the axe must not trigger a body-overlap clear");
+    clear.player.y = 114.0;
     updateWorld14Actors(clear);
     requireSelfTest(clear.state == "world14Axe",
         "touching the ROM axe must enter automatic castle clear");

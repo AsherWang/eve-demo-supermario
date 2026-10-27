@@ -1,10 +1,43 @@
+dofile("scripts/generated/oam_cells.nut");
+if (!("oamTextureCells" in getroottable())) oamTextureCells <- {};
+if (!("renderOffsetY" in getroottable())) renderOffsetY <- 0.0;
+
 function loadTexture(path) {
     local texture = gfx.newTextureFromFile(path);
     // NES CHR pixels are discrete samples.  EVEngine textures default to
     // linear filtering, which blends neighbouring texels and shifts edge
     // coverage as the camera moves.  Point sampling preserves the PPU image.
     gfx.setTextureSampler(texture, "nearest", "none", 1.0, 0.0);
+    foreach(entry in OAM_TEXTURE_CELLS) if(entry[0]==path) {
+        local cells=[];
+        foreach(cellPath in entry[3]) cells.append(loadTexture(cellPath));
+        oamTextureCells[texture] <- {columns=entry[1],rows=entry[2],cells=cells};
+        break;
+    }
     return texture;
+}
+
+function screenOamTexture(texture,x,y,width,height,clipX=null,lowerRowCarry=0) {
+    if (!(texture in oamTextureCells)) {
+        screenTexture(texture,x,y,width,height);
+        return;
+    }
+    local data=oamTextureCells[texture];
+    if(clipX==null) clipX=x;
+    for(local row=0;row<data.rows;row+=1) {
+        // Hide offscreen OAM rows before byte wrapping so they cannot
+        // reappear at the opposite edge of the screen.
+        local oamY=floor(y).tointeger()-1+row*8+(row>0?lowerRowCarry:0);
+        if(oamY<0 || oamY>=239) continue;
+        for(local column=0;column<data.columns;column+=1) {
+            local cellX=floor(x).tointeger()+column*8;
+            local maskX=floor(clipX).tointeger()+column*8;
+            // GetXOffscreenBits includes the left edge in the hidden cell:
+            // an edge/object difference of zero selects mask $80.
+            if(maskX<=0 || maskX>=256) continue;
+            screenTexture(data.cells[row*data.columns+column],cellX,oamY+1,8,8);
+        }
+    }
 }
 
 function loadSmallMarioSet(path) {
@@ -353,6 +386,7 @@ function loadAssets() {
 }
 
 function screenRect(x, y, width, height, r, g, b, a = 1.0) {
+    y+=renderOffsetY;
     gfx.drawSolidRect(floor(x * PIXEL_SCALE).tofloat(), floor(y * PIXEL_SCALE).tofloat(),
                       floor(width * PIXEL_SCALE).tofloat(), floor(height * PIXEL_SCALE).tofloat(),
                       r, g, b, a);
@@ -367,6 +401,7 @@ function worldRect(gm, x, y, width, height, r, green, b, a = 1.0) {
 }
 
 function screenTexture(texture, x, y, width, height) {
+    y+=renderOffsetY;
     gfx.drawTexturedRect(texture,
         floor(x * PIXEL_SCALE).tofloat(), floor(y * PIXEL_SCALE).tofloat(),
         floor(width * PIXEL_SCALE).tofloat(), floor(height * PIXEL_SCALE).tofloat(),
@@ -374,6 +409,7 @@ function screenTexture(texture, x, y, width, height) {
 }
 
 function screenTextureTint(texture, x, y, width, height, r, g, b, a = 1.0) {
+    y+=renderOffsetY;
     gfx.drawTexturedRect(texture,
         floor(x * PIXEL_SCALE).tofloat(), floor(y * PIXEL_SCALE).tofloat(),
         floor(width * PIXEL_SCALE).tofloat(), floor(height * PIXEL_SCALE).tofloat(),
@@ -616,8 +652,9 @@ function marioTexture(g) {
 
 function drawPlayer(g) {
     local p = g.player;
-    if (g.level == 1 && parityIsEnabled() && g.parity.frame == 0) return;
-    if (g.state == "timeBonus" || g.state == "raiseFlag" ||
+    if (g.state == "nextStageLoad" && g.stageLoadFrames == 165) return;
+    if (parityIsEnabled() && g.parity.originPending && g.level==1) return;
+    if ((g.state == "timeBonus" && p.courseClearHidden) || g.state == "raiseFlag" ||
         g.state == "fireworks" || g.state == "postClearDelay" ||
         g.state == "levelComplete" || g.state == "gameOver" || g.state == "warpComplete") return;
     if (p.invulnerable > 0.0 && floor(g.simTime * 14.0).tointeger() % 2 == 0) return;
@@ -645,7 +682,7 @@ function drawPlayer(g) {
         worldTexture(g, texture, floor(p.previousX), floor(drawY) + 1.0,
                      16.0, 32.0);
     } else {
-        screenTexture(texture, floor(p.displayRelX),
+        screenOamTexture(texture, floor(p.displayRelX),
                       floor(p.displayRelY) + 1.0,
                       16.0, 32.0);
     }
@@ -666,9 +703,11 @@ function drawPowerUps(g, behindTiles) {
 
 function drawLevelCoins(g) {
     foreach (coin in g.levelCoins) {
-        if (!coin.active) continue;
+        if (!coin.active && !("visualErasePending" in coin && coin.visualErasePending)) continue;
         local phase = g.displayColorPhase;
-        worldTexture(g, assets.items.undergroundCoins[phase],
+        local texture = g.level == 3 ? assets.world13.coins[phase] :
+            assets.items.undergroundCoins[phase];
+        worldTexture(g, texture,
                      floor(coin.x), floor(coin.y), 16.0, 16.0);
     }
 }
@@ -696,13 +735,16 @@ function drawEnemy(g, e) {
     // offscreen region (EnemyOffscrBitsMasked bit 2).  Letting the host clip
     // the corrected 16px texture would leak a one-pixel sliver that the NES
     // OAM writer has already hidden.
-    if (e.x < g.cameraX) return;
+    if (e.x < g.cameraX && g.level!=3) return;
     local visualState = e.displayState;
+    local levelTexture=g.level==3?world13EnemyTexture(g,e,visualState):null;
     local texture = null;
     local y = e.y;
+    if(g.level==3 && e.kind=="goomba") y=e.displayY;
     local height = 24.0;
     if (visualState == "flipped") {
         texture = e.kind == "koopa" ? assets.enemies.greenShell[0] : assets.enemies.goomba;
+        if(levelTexture!=null) texture=levelTexture;
         local flippedY = e.y - (e.kind == "koopa" ? 10.0 : 8.0);
         worldTextureRotated(g, texture, floor(e.x - 1.0), floor(flippedY),
                             16.0, height, 180.0);
@@ -716,11 +758,13 @@ function drawEnemy(g, e) {
         // is a late revival warning, never the moving shell's normal frame.
         local shellFrame = visualState == "shellMoving" ? 0 : e.displayShellFrame;
         texture = assets.enemies.greenShell[shellFrame];
+        if(levelTexture!=null) texture=levelTexture;
         y -= 10.0;
     } else if (e.kind == "koopa") {
         local frame = floor(g.simTime * 7.0).tointeger() % 2;
         texture = e.vx < 0.0 ? assets.enemies.koopaLeft[frame] :
                                assets.enemies.koopaRight[frame];
+        if(levelTexture!=null) texture=levelTexture;
     } else {
         // EnemyGfxHandler sees the counter from the gameplay pass that built
         // the visible OAM buffer (two counts behind this render-side value).
@@ -758,19 +802,44 @@ function drawEnemy(g, e) {
         (e.kind == "goomba" ? e.x + goombaMotionLead : e.x - 1.0);
     local drawY = defeatedGoomba ? y - 8.0 :
         (e.kind == "goomba" ? y - 9.0 : y);
-    worldTexture(g, texture, floor(drawX), floor(drawY), 16.0, height);
+    if (g.level == 3) {
+        if (e.kind == "koopa") {
+            // RelativeEnemyPosition uses the pre-movement X and visible OAM
+            // scanline Y for the red enemy slots.
+            drawX += 1.0;
+            drawY -= 1.0;
+            if(visualState=="walking" || visualState=="falling") {
+                drawY=e.displayY+1.0;
+            }
+        }
+        if(visualState=="walking" || visualState=="falling") drawX=e.displayX;
+    }
+    if(g.level==3)
+        screenOamTexture(texture,floor(drawX)-visualCameraX(g),floor(drawY),16.0,height,
+            // Reconstruct the integer pre-movement coordinate from the
+            // host's half-pixel walking phase before computing edge bits.
+            floor(e.previousX+(e.vx<0.0?0.5:0.0))-visualCameraX(g));
+    else worldTexture(g, texture, floor(drawX), floor(drawY), 16.0, height);
 }
 
 function drawFlag(g) {
+    renderOffsetY=g.displayBackgroundYOffset;
     for (local y = 48.0; y <= 176.0; y += 16.0)
         worldTexture(g, assets.scenery.flagShaft, g.flagX, y, 16.0, 16.0);
     // The flagpole-ball metatile stores its eight visible scanlines in the
     // lower half of a 16px canvas.  FlagpoleObject places that metatile at
     // row 2, so its visible outline starts at y=40.
     worldTexture(g, assets.scenery.flagBall, g.flagX, 32.0, 16.0, 16.0);
+    renderOffsetY=0.0;
     // OAM Y is the scanline immediately above a sprite.  EnemyGfxHandler
     // writes the flag at g.flagY, and the PPU exposes its first pixel at +1.
-    worldTexture(g, assets.scenery.flagpoleFlag,
+    if(g.level==3 && g.flagX-8.0-visualCameraX(g)<240.0)
+        screenOamTexture(assets.scenery.flagpoleFlag,g.flagX-8.0-visualCameraX(g),
+            g.displayFlagY+1.0,16.0,16.0,g.flagX-g.cameraX,
+            // FlagpoleGfxHandler adds 8 then 12 to relative X for the score
+            // baseline. ADC #8 for the third sprite retains that carry.
+            g.flagX-8.0-visualCameraX(g)>=236.0?1:0);
+    else if(g.level!=3) worldTexture(g, assets.scenery.flagpoleFlag,
                  g.flagX - 8.0, g.displayFlagY + 1.0, 16.0, 16.0);
 }
 
@@ -785,6 +854,9 @@ function drawFireworks(g) {
 }
 
 function drawCastle(g) {
+    // World 1-3 carries its full castle in the area tilemap and has no
+    // castle-object star flag. The course-clear flagpole flag is separate.
+    if (g.level == 3) return;
     local x = g.castleX;
     local wall = assets.scenery.castleWall;
     // DrawStarFlag writes attribute $22: palette 2, behind opaque background.
@@ -875,11 +947,13 @@ function drawEffects(g) {
     foreach (score in g.floatingScores) {
         if (score.age <= 0) continue;
         local texture = score.control == 1 ? assets.items.score100 :
-                        (score.control == 2 ? assets.items.score200 : null);
+                        (score.control == 2 ? assets.items.score200 :
+                         (score.control == 3 ? assets.items.flagScores[3] : null));
         if (texture != null)
             // FloateyNumbersRoutine stores the baseline coordinate, subtracts
             // eight for OAM, and PPU sprite Y adds one visible scanline.
-            screenTexture(texture, score.x, score.displayY - 7.0, 16.0, 8.0);
+            screenTexture(texture, score.x,
+                score.displayY-(score.displayY<24.0?8.0:7.0),16.0,8.0);
     }
     // FlagpoleScore becomes visible after the same two-stage OAM handoff as
     // the other enemy-object sprites.  It is composed before Mario, whose
@@ -912,14 +986,16 @@ function drawHud(g) {
     drawHudNumber(g.displayScore, 6, 24.0, 24.0);
     local colorPhase = g.displayColorPhase;
     local hudCoinSet = g.area == "underground" ?
-        assets.items.hudCoinsUnderground : assets.items.hudCoins;
+        assets.items.hudCoinsUnderground :
+        (g.area == "castle" ? world14Assets.hudCoins : assets.items.hudCoins);
     screenTexture(hudCoinSet[colorPhase], 88.0, 24.0, 8.0, 8.0);
     screenTexture(assets.hudFont[0x29], 96.0, 24.0, 8.0, 8.0);
     drawHudNumber(g.displayCoins, 2, 104.0, 24.0);
     drawHudGlyphs([0x20, 0x18, 0x1B, 0x15, 0x0D], 144.0, 16.0); // WORLD
     drawHudGlyphs([0x01, 0x28, g.level], 152.0, 24.0);
     drawHudGlyphs([0x1D, 0x12, 0x16, 0x0E], 200.0, 16.0); // TIME
-    if (!(parityIsEnabled() && g.parity.frame == 0) &&
+    if (!(parityIsEnabled() && g.parity.originPending) &&
+        g.state != "nextStageLoad" && g.stageLoadFrames != 166 &&
         g.state != "areaExitEntrance")
         drawHudNumber(g.displayTime, 3, 208.0, 24.0,
             !(g.state == "timeBonus" || g.state == "raiseFlag" ||
@@ -930,7 +1006,7 @@ function drawHud(g) {
         screenRect(0.0, 0.0, LOGICAL_WIDTH, LOGICAL_HEIGHT, 0.0, 0.0, 0.0);
         drawHudGlyphs([0x10, 0x0A, 0x16, 0x0E, 0x24,
                        0x18, 0x1F, 0x0E, 0x1B], 92.0, 112.0);
-    } else if (g.state == "levelComplete") {
+    } else if (g.state == "levelComplete" && g.level != 3) {
         drawHudGlyphs([0x20, 0x18, 0x1B, 0x15, 0x0D], 88.0, 96.0);
         drawHudGlyphs([0x01, 0x28, g.level], 112.0, 112.0);
     } else if (g.state == "warpComplete") {
@@ -952,7 +1028,8 @@ function drawIntermediateLives(g) {
 
     drawHudGlyphs([0x20, 0x18, 0x1B, 0x15, 0x0D, 0x24,
                    0x01, 0x28, g.level], 88.0, 80.0);
-    screenTexture(assets.mario.standRight, 96.0, 89.0, 16.0, 32.0);
+    if (!(g.state == "nextStageLoad" && g.stageLoadFrames >= 148))
+        screenTexture(assets.mario.standRight, 96.0, 89.0, 16.0, 32.0);
     screenTexture(assets.hudFont[0x29], 120.0, 112.0, 8.0, 8.0);
     screenTexture(assets.hudFont[g.lives], 144.0, 112.0, 8.0, 8.0);
 }
@@ -980,6 +1057,29 @@ function areaTransitionOverlay(g) {
 
 function renderGame(g) {
     gfx.clear();
+    renderOffsetY=0.0;
+    if (g.state == "nextStageLoad" && g.stageLoadFrames == 0 &&
+        "loadingRenderCameraX" in g) {
+        // The first loader pass keeps the completed World 1-3 nametable on
+        // screen while LevelNumber has already advanced.
+        local savedLevel = g.level;
+        local savedState = g.state;
+        local savedCameraX = g.cameraX;
+        local savedDisplayCameraX = g.displayCameraX;
+        local savedDead = g.player.dead;
+        g.level = 3;
+        g.state = "postClearDelay";
+        g.cameraX = g.loadingRenderCameraX;
+        g.displayCameraX = g.loadingRenderCameraX;
+        g.player.dead = true;
+        renderGame(g);
+        g.player.dead = savedDead;
+        g.displayCameraX = savedDisplayCameraX;
+        g.cameraX = savedCameraX;
+        g.state = savedState;
+        g.level = savedLevel;
+        return;
+    }
     local world12EntryFrames=g.world12PipeMode=="side"?160:48;
     if (g.level == 2 && g.state == "world12Pipe" &&
         g.world12TransitionFrames > world12EntryFrames &&
@@ -1011,10 +1111,24 @@ function renderGame(g) {
         }
         return;
     }
+    if (g.state == "nextStageLoad" && g.stageLoadFrames < 165) {
+        if (g.stageLoadFrames <= 3) {
+            screenRect(0.0, 0.0, LOGICAL_WIDTH, LOGICAL_HEIGHT,
+                       146.0 / 255.0, 144.0 / 255.0, 1.0);
+        } else if (g.stageLoadFrames <= 8 || g.stageLoadFrames >= 149) {
+            screenRect(0.0, 0.0, LOGICAL_WIDTH, LOGICAL_HEIGHT,
+                       0.0, 0.0, 0.0);
+        } else {
+            drawIntermediateLives(g);
+        }
+        return;
+    }
     if (g.area == "underground" || g.area == "castle")
         screenRect(0.0, 0.0, LOGICAL_WIDTH, LOGICAL_HEIGHT, 0.0, 0.0, 0.0);
+    renderOffsetY=g.displayBackgroundYOffset;
     drawBackground(g);
     drawLevelCoins(g);
+    renderOffsetY=0.0;
     drawPowerUps(g, true);
     drawFireballs(g);
     if (g.level == 2) drawWorld12Actors(g, true);
@@ -1028,13 +1142,22 @@ function renderGame(g) {
         (g.level == 2 && g.state == "world12Pipe");
     local playerHidden = g.state == "areaReload";
     if (playerBehindBackground && !playerHidden) drawPlayer(g);
+    renderOffsetY=g.displayBackgroundYOffset;
     drawTiles(g);
+    renderOffsetY=0.0;
     drawPowerUps(g, false);
     if (g.area == "main") {
         if (!(g.level == 2 && g.stage == "intro")) drawFlag(g);
         drawCastle(g);
     }
     drawFireworks(g);
+    local hudBeforeSprites=g.state!="gameOver" && g.state!="warpComplete" &&
+        g.state!="levelComplete";
+    if(hudBeforeSprites) {
+        renderOffsetY=g.displayBackgroundYOffset;
+        drawHud(g);
+        renderOffsetY=0.0;
+    }
     // Lower OAM indexes win sprite-over-sprite priority on the PPU.  Draw
     // higher enemy slots first so slot 0 is composited last by the host.
     for (local slot = 5; slot >= 0; slot -= 1)
@@ -1047,5 +1170,5 @@ function renderGame(g) {
     if (g.level == 3) drawWorld13Actors(g, false);
     if (g.level == 4) drawWorld14Actors(g, false);
     if (!playerBehindBackground && !playerHidden) drawPlayer(g);
-    drawHud(g);
+    if(!hudBeforeSprites) drawHud(g);
 }

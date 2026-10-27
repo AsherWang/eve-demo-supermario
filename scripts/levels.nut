@@ -43,6 +43,24 @@ function updateWorld1StageDeath(g) {
 }
 
 function runWorld1StageFlowSelfTest() {
+    foreach(power in [0,1,2]) {
+        local g=createGame();
+        startWorld1Stage(g,3);
+        g.player.big=power>0;g.player.fire=power==2;
+        g.player.height=power>0?32.0:16.0;
+        g.score=15300;g.coins=2;
+        g.state="levelComplete";
+        for(local frame=0;frame<167;frame+=1) simulateFixed(g,FIXED_DT);
+        requireSelfTest(g.level==4 && g.state=="playing" &&
+            g.player.big==(power>0) && g.player.fire==(power==2) &&
+            g.score==15300 && g.coins==2 && g.time==300,
+            "1-3 course clear must finish loading 1-4 and retain powers/progress");
+        local entranceX=g.player.x;
+        g.input.right=true;
+        for(local frame=0;frame<20;frame+=1) simulateFixed(g,FIXED_DT);
+        requireSelfTest(g.player.x>entranceX && !g.player.dead,
+            "1-4 must accept movement after the 1-3 loading sequence");
+    }
     foreach(stage in [3,4]) {
         local g=createGame();g.score=12000;g.coins=17;g.lives=3;
         g.player.big=true;g.player.fire=true;

@@ -112,6 +112,10 @@ def main() -> None:
         compose_metatile(chr_data, question_tiles, palette).save(
             out / f"question-{frame}.png"
         )
+        coin_start = graphics_offset + sum(METATILE_COUNTS[:3]) * 4 + 8
+        compose_metatile(chr_data, prg[coin_start:coin_start + 4], palette).save(
+            out / f"coin-{frame}.png"
+        )
     # DrawLargePlatform uses background tile $5b; the three sections form the
     # 48-pixel ROM platform with the shared sprite palette.
     platform = Image.new("RGBA", (48, 8))

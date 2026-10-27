@@ -79,30 +79,94 @@ The parent runtime asset list must include `castle_theme`, `castle_fast`,
 `castle_clear`, `bowser_fire`, and `bowser_fall`, and map hurry castle music to
 `castle_fast`.
 
-## Deterministic route
+## Original-ROM clear route
 
-`tests/parity/movies/world-1-4-route.json` contains 2400 input frames and requests
-all 2400 comparison images. It starts at the normal raised entrance and ends with
-a stable bounded completion state. The controller route was timed against the
-exact ROM firebar rotation; the earlier sine approximation is deliberately gone.
+`tests/parity/movies/world-1-4-original-clear.json` is the original-ROM clear
+movie. Its SHA-256 is
+`52ab981fd1df3c10618f96fbada68f7f2e2804ab0c8afe017f85c72484dbdef3`.
+It has 2400 input frames represented by 36 non-overlapping input sections and
+requests every frame `0..2399` for capture. The replay starts from the normal
+World 1-4 raised entrance: small Mario at `x=40`, `y=80`, three lives, and a
+300-second timer. The 600-frame controller bootstrap enters the level; frame 0
+of the movie is the first normal-play frame after that entrance.
 
-The final host replay produced 2400 states and 2400 PNGs with no player-death
-events. Important frames are:
+The full original-ROM replay completed without death or player damage. All 2400
+decoded states have three lives, no state enters death subroutine `11`, and the
+semantic event trace contains no `player_death` event. The former ROM deaths at
+frames 789 and 1393 are absent. The verified events are:
 
 | Event | Frame |
 | --- | ---: |
-| Axe touched | 1641 |
-| Bowser fall cue | 1709 |
-| Victory walk begins | 1774 |
-| Toad saved | 1966 |
-| Bounded `worldComplete` | 2348 |
-| Final captured frame | 2399 |
+| Normal World 1-4 control begins | 0 |
+| Axe converts `OperMode` from 1 to 2 | 1863 |
+| Bridge blast effects begin | 1864 |
+| Last bridge blast effect | 1920 |
+| Bowser fall cue | 1920 |
+| Victory walk reaches retainer, `OperMode_Task=3` | 2178 |
+| Second thank-you message, `PrimaryMsgCounter=2` | 2306 |
+| Final verified frame | 2399 |
 
-At frame 2399 the host state is `worldComplete`, timer 0, score 11600, lives 3.
-The score is the original 50-point-per-timer-interval conversion from the initial
-300 second timer to zero.
+The blast events occur at frames 1864, 1868, 1872, 1876, 1880, 1884, 1888,
+1892, 1896, 1900, 1904, 1908, 1912, 1916, and 1920. At frame 2399, ROM state is
+`OperMode=2`, `OperMode_Task=3`, and `GameEngineSubroutine=8`. Mario is healthy
+and small at `x=2431`, `y=176`, with three lives and timer 223. Both Toad/retainer
+thank-you messages have been displayed. This establishes the normal entrance,
+axe transition, complete bridge collapse, Bowser fall, retainer arrival, and
+message sequence as one uninterrupted original-ROM run.
+
+The route corrections from the failed 2400-frame candidate were: move the first
+firebar jump from 750 to 790; move the second firebar jump from 1450 to 1480;
+move the Bowser-approach jump from 1595 to 1660; add jumps at 1760 and 1820 to
+cross Bowser and reach the axe; and continue right+B through frame 2200.
+
+The official Mesen reference directory is
+`local-parity/original-14-evidence/official-reference`. It contains 2400 RAM
+snapshots, 2400 decoded states, 2400 captured PNGs, semantic audio/event traces,
+the origin state, manifest, and `verification.json`. Continuous-video proof
+compares the state replay with an uninterrupted run: all 2400 states and all APU
+writes match, and all 2400 frames were captured. This is an original-ROM result;
+it does not establish the six-gate host parity result described below.
+
+## Host route evidence
+
+`tests/parity/movies/world-1-4-route.json` remains the host-implementation route
+and its recorded comparison artifacts remain failed evidence. A host replay of
+that movie reached a bounded `worldComplete` state at frame 2399, but the same
+controller route makes the original ROM die at frames 789 and 1393. That host
+result therefore cannot be presented as an original no-death reference and its
+early physics mismatches remain unresolved.
 
 ## Commands
+
+Regenerate the complete original-ROM reference and its continuous-video proof
+from this worktree:
+
+```powershell
+python tools/parity/run_reference.py `
+  --rom 'roms/Super Mario Bros. (World).nes' `
+  --movie tests/parity/movies/world-1-4-original-clear.json `
+  --output local-parity/original-14-evidence/official-reference `
+  --mesen-agent 'D:/workspace/eve-demos/super-mario/.tools/mesen/mesen-agent.exe'
+
+python tools/parity/extract_reference_state.py `
+  --input local-parity/original-14-evidence/official-reference/ram-trace.jsonl `
+  --output local-parity/original-14-evidence/official-reference/state.jsonl
+
+python tools/parity/extract_reference_events.py `
+  --queues local-parity/original-14-evidence/official-reference/audio-queues.jsonl `
+  --ram-trace local-parity/original-14-evidence/official-reference/ram-trace.jsonl `
+  --output local-parity/original-14-evidence/official-reference/events-semantic.jsonl
+
+python local-parity/verify_original_14.py
+```
+
+The verifier checks the normal entrance, 2400 captured frames, no death routine,
+constant three lives, axe/Bowser/retainer/message events, final ROM state, and
+the continuous state-and-APU equality proof. It writes
+`local-parity/original-14-evidence/official-reference/verification.json`.
+
+The older host-only route can be regenerated without changing the shared
+implementation:
 
 ```powershell
 $env:EVE_EXE='D:/workspace/eve-demos/super-mario/.tools/evengine/eve-sdk/win32/bin/eve.exe'
@@ -137,24 +201,46 @@ game: runtime playback uses the checked-in PCM files.
 
 ## Strict acceptance status
 
-This is a functional, deterministic host route, not a strict whole-level pass.
-Strict completion requires all six gates in `docs/LEVEL_ACCEPTANCE.md` and a
-reviewed transition into World 2-1. World 2 is unavailable, so the current route
-must remain marked pending. The all-frame ROM reference and six-gate comparison
-must be rerun after final integration; any mismatch remains failed evidence and
-must not be removed by loosening tolerances or sampling frames.
+The original-ROM movie clears World 1-4 without death, but the host
+implementation is not a strict whole-level pass. Strict completion requires all
+six gates in `docs/LEVEL_ACCEPTANCE.md` and a reviewed transition into World 2-1.
+World 2 is unavailable, so the host route remains pending. The original movie is
+the full-level reference input for the required host replay; it is not a claim
+that the six host gates pass. Any mismatch remains failed evidence and must not
+be removed by loosening tolerances or sampling frames.
 
 Known review areas still requiring strict evidence are firebar frame equivalence,
 Bowser movement and flame cadence, castle question-block animation, Toad palette
 and OAM presentation, runtime APU channel stealing/mixing, and the missing real
 World 2-1 transition.
 
-The latest all-frame strict probe remains failed evidence. It mismatches player
-vertical physics at frame 29 and horizontal physics at frame 39, before castle
-actors can be compared. The same movie makes the ROM enter its death routine at
-frames 789 and 1393 while the host route survives. The six-gate probe therefore
-did not reach the axe in the ROM and cannot validate the castle-clear route. Its
-APU stream reached 766 exact frames of 2400, and its audio correlation was
-0.618849 with mean absolute PCM error 0.022511. These failures must remain visible
-until the shared player physics and a single ROM-and-host-clear controller route
-are supplied and the full comparison is rerun.
+The latest all-frame strict probe of the host route remains failed evidence. It
+mismatches player vertical physics at frame 29 and horizontal physics at frame
+39, before castle actors can be compared. That route makes the ROM enter its
+death routine at frames 789 and 1393 while the host route survives. Its APU
+stream reached 766 exact frames of 2400, and its audio correlation was 0.618849
+with mean absolute PCM error 0.022511. The new original-clear movie removes the
+ROM-side deaths on its own replay but still requires a matching host replay and a
+fresh six-gate comparison. These failures must remain visible until the shared
+player physics and rendering parity are resolved and the full comparison passes.
+
+
+## Integration replay follow-up
+
+The original-clear movie was replayed against the integration checkout for all
+2400 frames in `local-parity/original14/actual/first`. Using the current state
+extractor, player X/Y match through frame 1761. The host queues player death at
+1761 from Bowser at X 2124; the ROM Bowser is near X 2188. Position diverges at
+1762. This is a concrete boss motion error rather than an invalid reference
+route. BowserControl adds its signed movement byte independently of facing,
+and skips horizontal movement while its mouth is open. The host previously
+subtracted positive speed when facing left and continued movement with its
+mouth open. These rules have been corrected; the second integration replay completed without death and reached
+the retainer sequence. Random movement range, vertical motion and flame cadence still require
+strict evidence. The third replay also preserves all three lives. The axe now triggers on a
+downward foot probe at frame 1863, matching the ROM; the old body-overlap test
+triggered at 1811 and teleported Mario to the axe. Player X/Y now match through
+1985, with the first difference at 1986 when the ROM starts victory movement.
+The host still needs exact Bowser vertical motion/fall timing and the shared
+player physics during victory walking. State and event gates remain failed.
+The earlier failed route remains historical evidence.

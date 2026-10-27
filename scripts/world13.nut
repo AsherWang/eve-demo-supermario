@@ -22,6 +22,12 @@ function loadWorld13Assets() {
             loadTexture("assets/world13/question-4.png"),
             loadTexture("assets/world13/question-5.png")],
         platform = loadTexture("assets/world13/platform.png"),
+        coins = [loadTexture("assets/world13/coin-0.png"),
+            loadTexture("assets/world13/coin-1.png"),
+            loadTexture("assets/world13/coin-2.png"),
+            loadTexture("assets/world13/coin-3.png"),
+            loadTexture("assets/world13/coin-4.png"),
+            loadTexture("assets/world13/coin-5.png")],
         bulletBill = loadTexture("assets/world13/bullet-bill.png"),
         redKoopaRight = [loadTexture("assets/world13/red-koopa-0-right.png"),
             loadTexture("assets/world13/red-koopa-1-right.png")],
@@ -56,13 +62,12 @@ function world13EnemyTexture(g,e,visualState) {
         if(frame<0 || frame>=assets.world13.redShell.len()) frame=0;
         return assets.world13.redShell[frame];
     }
-    local facing=("world13Facing" in e) ? e.world13Facing :
-        (e.vx<0.0 ? -1 : (e.vx>0.0 ? 1 : -1));
+    local facing=e.displayFacing;
     // EnemyGfxHandler checks FrameCounter bit 3 before selecting the second
     // six-tile frame. Render-side RAM is two gameplay counts ahead, matching
     // the shared Goomba animation hook.
     local frame=(((g.nesFrameCounter+254)&0xff)&0x08)==0 ? 1 : 0;
-    if("paratroopa" in e && e.paratroopa)
+    if(e.displayParatroopa)
         return facing<0 ? assets.world13.redParatroopaLeft[frame] :
                           assets.world13.redParatroopaRight[frame];
     return facing<0 ? assets.world13.redKoopaLeft[frame] :
@@ -71,19 +76,29 @@ function world13EnemyTexture(g,e,visualState) {
 
 // ChkForDemoteKoopa: the first stomp removes a red Paratroopa's wings and
 // returns it to ordinary walking state. It remains a 24px-tall enemy, clears
-// its vertical 8.8 accumulators, faces Mario, and uses DemotedKoopaXSpdData
+// its vertical 8.8 accumulators, and uses EnemyFacePlayer's table index with
+// DemotedKoopaXSpdData
 // ($08/$f8, the same half-pixel walking speed as a normal Koopa).
 function demoteWorld13Paratroopa(g,e) {
     if(g.level!=3 || e.kind!="koopa" || !e.alive || e.state!="walking" ||
        !("red" in e) || !e.red || !("paratroopa" in e) || !e.paratroopa)
         return false;
     e.paratroopa=false;
+    // InitVStf clears speed/force but retains this object's YMF dummy byte.
+    e.nesYDummy=e.verticalDummy;
+    e.nesYSpeed=0;e.nesYMoveForce=0;
     e.verticalSpeed=0;e.verticalForce=0;e.verticalDummy=0;
     e.vy=0.0;e.grounded=false;
-    local direction=g.player.x<e.x ? -1 : 1;
+    // EnemyFacePlayer returns index 0 when EnemyX-PlayerX is nonnegative;
+    // DemotedKoopaXSpdData maps that index to +8, and index 1 to -8.
+    local direction=g.player.x<e.x ? 1 : -1;
     e.world13Facing=direction;
     e.vx=direction*KOOPA_WALK_SPEED;
     e.shellDirection=direction;
+    // RedPTroopaOrigXPos aliases Enemy_X_MoveForce ($0401). The flight
+    // initializer stores the original Y there; demotion reuses that byte
+    // as the fractional horizontal position, including this movement pass.
+    e.x=floor(e.x)+(e.originalY&0xff)/256.0+e.vx*FIXED_DT;
     return true;
 }
 
@@ -95,7 +110,6 @@ function world13TileTexture(g,tx,ty,tile) {
     // Flagpole and the goal castle are drawn by the shared course-clear
     // renderer. Coins use the shared animated level-coin objects.
     if (meta==0x24 || meta==0x25 || meta==0xc2) return null;
-    if (tx >= floor(g.castleX/TILE_SIZE).tointeger()) return null;
     if ((meta==0xc0 || meta==0xc1) && tile==baseTile &&
         (tile==TILE_QUESTION || tile==TILE_POWERUP_BLOCK)) {
         local phase=g.displayColorPhase;
@@ -123,7 +137,11 @@ function applyWorld13Map(g) {
     g.world13Metatiles=array(LEVEL_WIDTH*LEVEL_HEIGHT,0);
     g.world13Blocks=array(LEVEL_WIDTH*LEVEL_HEIGHT,0);
     g.levelCoins=[];
-    for(local x=0;x<g.areaWidth;x+=1) for(local row=0;row<13;row+=1) {
+    // The camera can expose four continuation columns beyond the nominal
+    // 160-column course. Capture them from the ROM parser as well: the ground
+    // and castle artwork continue into that final screen.
+    local mapWidth=ROM_WORLD_1_3_METATILES.len();
+    for(local x=0;x<mapWidth;x+=1) for(local row=0;row<13;row+=1) {
         local y=row+2, index=tileIndex(x,y);
         local meta=ROM_WORLD_1_3_METATILES[x][row];
         local block=ROM_WORLD_1_3_BLOCKS[x][row];
@@ -139,6 +157,8 @@ function applyWorld13Map(g) {
 
 function decodeWorld13Enemies(g) {
     local data=ROM_WORLD_1_3_ENEMIES,page=0,cursor=0;
+    local horizontalPlatformCount=0;
+    local horizontalMoveFractions=[0x80,0x00,0x60];
     g.world13BulletSources=[];
     g.world13Bullets=[];
     while(cursor+1<data.len() && data[cursor]!=255) {
@@ -154,6 +174,7 @@ function decodeWorld13Enemies(g) {
         if(id==0x0f) {
             local e=makeEnemyAt(x,row+1,"koopa");
             e.red <- true;e.paratroopa <- true;e.world13Facing <- -1;
+            e.previousParatroopa=true;e.preparedParatroopa=true;e.displayParatroopa=true;
             local enemyY=e.y.tointeger();
             e.anchorX <- x;e.verticalY <- enemyY;
             e.originalY <- enemyY;
@@ -169,18 +190,29 @@ function decodeWorld13Enemies(g) {
             local platformY=row*16;
             g.platforms.append({x=x,y=platformY.tofloat(),initialY=platformY.tofloat(),
                 previousX=x,previousY=platformY.tofloat(),id=id,motion="vertical",
-                width=48.0,awake=false,verticalY=platformY,
+                width=48.0,awake=false,retired=false,slot=-1,lastSlot=-1,
+                verticalY=platformY,
                 verticalSpeed=0,verticalForce=0,verticalDummy=0});
         } else if(id==0x26 || id==0x27) {
             local up=id==0x26;
             g.platforms.append({x=x+12.0,y=row*16.0,initialY=row*16.0,
                 previousX=x+12.0,previousY=row*16.0,id=id,motion="lift",
-                width=48.0,awake=false,speed=up?-240.0/256.0:240.0/256.0});
+                width=48.0,awake=false,retired=false,slot=-1,lastSlot=-1,
+                speed=up?-240.0/256.0:240.0/256.0});
         } else if(id==0x28) {
+            // InitHoriPlatform clears the secondary counter but intentionally
+            // preserves Enemy_X_MoveForce. These three platforms inherit $80,
+            // $00 and $60 from their verified ROM object-slot history. The
+            // force is at $0401+slot because MoveEnemyHorizontally increments
+            // X before calling MoveObjectHorizontally.
+            local moveFraction=horizontalPlatformCount<horizontalMoveFractions.len() ?
+                horizontalMoveFractions[horizontalPlatformCount] : 0;
             g.platforms.append({x=x,y=row*16.0,initialY=row*16.0,
                 previousX=x,previousY=row*16.0,id=id,motion="horizontal",
-                width=48.0,awake=false,fraction=0.0,
+                width=48.0,awake=false,retired=false,slot=-1,lastSlot=-1,
+                fraction=moveFraction.tofloat(),
                 secondaryCounter=0,primaryCounter=0});
+            horizontalPlatformCount+=1;
         } else if(id==0x17) {
             g.world13BulletSources.append({x=x,y=row*16.0,awake=false,timer=0});
         }
@@ -204,7 +236,11 @@ function startWorld13(g) {
     if (!("world13BaseTiles" in g)) g.world13BaseTiles <- [];
     if (!("world13BulletSources" in g)) g.world13BulletSources <- [];
     if (!("world13Bullets" in g)) g.world13Bullets <- [];
-    g.level=3;g.stage="main";g.area="main";g.areaWidth=160;
+    // The ROM's scroll boundary extends four metatiles beyond the captured
+    // 160-column course map. Course clear advances the camera through those
+    // empty columns and clamps at X=$0940 / 2368 before the next area loads.
+    g.level=3;g.stage="main";g.area="main";g.areaWidth=164;
+    g.romBackgroundCollision=true;
     g.cameraX=0.0;g.displayCameraX=0.0;
     world13ResetObjects(g);
     applyWorld13Map(g);
@@ -214,6 +250,7 @@ function startWorld13(g) {
     g.player.height=big?32.0:16.0;
     g.player.grounded=true;g.player.entranceFalling=false;
     g.player.vy=0.0;g.player.nesYSpeed=0;g.player.nesYMoveForce=0;
+    g.player.fallForce=0x28;
     g.time=300;g.displayTime=300;g.gameTimerControl=23;
     g.hurryActive=false;g.nesFrameCounter=0x1a;
     g.intervalTimerControl=0;g.colorRotateOffset=1;
@@ -242,8 +279,12 @@ function world13PlatformRider(g,platform,oldX,oldY,newX,newY) {
     if(!wasRiding && !crossed) return;
     local left=oldX<newX?oldX:newX;
     local right=oldX>newX?oldX:newX;
-    if(p.x+p.width<=left || p.x>=right+platform.width) return;
-    p.x+=newX-oldX;p.y=newY-p.height;p.grounded=true;p.entranceFalling=false;
+    // Platform and player bounds are inclusive in the ROM collision pass.
+    // Treating an exact edge contact as a miss drops the first landing frame.
+    if(p.x+p.width<left || p.x>right+platform.width) return;
+    p.x+=newX-oldX;
+    p.pendingPlatformXScroll+=(newX-oldX).tointeger();
+    p.y=newY-p.height;p.grounded=true;p.entranceFalling=false;
     p.vy=0.0;p.nesYSpeed=0;p.nesYMoveForce=0;
 }
 
@@ -255,12 +296,19 @@ function world13SignedByte(value) {
 // speed, movement force and dummy accumulator as the original object slot.
 function world13ImposeGravity(actor,downAmount,upAmount,maxSpeed,upward) {
     local forceBefore=actor.verticalForce;
+    // The ROM retains the carry from the dummy accumulator's addition while
+    // it loads and optionally decrements the vertical speed. That carry is
+    // what advances Platform_Y_Position in Shigeru's $25 vertical platform
+    // schedule; using the newly accumulated acceleration carry shifts the
+    // platform down dozens of frames late.
+    local dummySum=actor.verticalDummy+forceBefore;
+    local yCarry=dummySum>>8;
+    actor.verticalDummy=dummySum&0xff;
     local forceSum=forceBefore+downAmount;
-    local carry=forceSum>>8;
-    actor.verticalDummy=(actor.verticalDummy+forceBefore)&0xff;
-    actor.verticalY+=world13SignedByte(actor.verticalSpeed)+carry;
+    local speedCarry=forceSum>>8;
+    actor.verticalY+=world13SignedByte(actor.verticalSpeed)+yCarry;
     actor.verticalForce=forceSum&0xff;
-    actor.verticalSpeed=(actor.verticalSpeed+carry)&0xff;
+    actor.verticalSpeed=(actor.verticalSpeed+speedCarry)&0xff;
     if(world13SignedByte(actor.verticalSpeed)>=maxSpeed &&
        actor.verticalForce<0x80) {
         actor.verticalSpeed=maxSpeed;
@@ -281,12 +329,31 @@ function world13ImposeGravity(actor,downAmount,upAmount,maxSpeed,upward) {
 
 function updateWorld13Platforms(g) {
     local p=g.player;
+    local projectedCameraX=g.cameraX+(p.nesXScroll>0?p.nesXScroll:0);
     foreach(platform in g.platforms) {
+        if(platform.retired) continue;
+        local retireAfterMove=platform.awake && platform.x<projectedCameraX-73.0;
+        local newlyAwake=false;
         if(!platform.awake) {
             local boundary=floor((g.cameraX+LOGICAL_WIDTH-1.0+48.0)/16.0)*16.0;
-            if(platform.x-platform.width/2.0>boundary) continue;
+            if(platform.x>boundary) continue;
             platform.awake=true;
+            newlyAwake=true;
         }
+        if(platform.slot<0) for(local slot=0;slot<5;slot+=1) {
+            local occupied=false;
+            foreach(e in g.goombas)
+                if(e.alive && e.awake && e.slot==slot) {occupied=true;break;}
+            foreach(other in g.platforms)
+                if(other!=platform && other.awake && !other.retired &&
+                   other.slot==slot) {occupied=true;break;}
+            foreach(bullet in g.world13Bullets)
+                if(bullet.active && bullet.slot==slot) {occupied=true;break;}
+            if(!occupied) {platform.slot=slot;break;}
+        }
+        // The parser's allocation pass only initializes the vertical actor;
+        // EnemyMovementSubs begins on its following pass.
+        if(newlyAwake && platform.motion=="vertical") continue;
         platform.previousX=platform.x;platform.previousY=platform.y;
         local oldX=platform.x,oldY=platform.y,newX=oldX,newY=oldY;
         if(platform.motion=="vertical") {
@@ -316,10 +383,25 @@ function updateWorld13Platforms(g) {
                     else platform.secondaryCounter-=1;
                 }
             }
-            local direction=(platform.primaryCounter&2)!=0?1:-1;
-            platform.fraction+=direction*platform.secondaryCounter;
-            while(platform.fraction<0.0) {platform.fraction+=16.0;newX-=1.0;}
-            while(platform.fraction>=16.0) {platform.fraction-=16.0;newX+=1.0;}
+            // MoveWithXMCntrs stores the two's complement of the secondary
+            // counter while moving unless primary-counter bit 1 is set.
+            // MoveObjectHorizontally then treats that byte as 8.8 movement:
+            // the low nibble contributes low-nibble*16 to the force, while
+            // the signed high nibble contributes whole pixels. The force
+            // carry is added to the pixel movement in the same step.
+            local moveCounter=platform.secondaryCounter;
+            if((platform.primaryCounter&2)==0)
+                moveCounter=(-moveCounter)&0xff;
+            local lowNibble=(moveCounter&0x0f)*16;
+            local highNibble=moveCounter>>4;
+            if(highNibble>=8) highNibble-=16;
+            platform.fraction+=lowNibble;
+            local movementCarry=0;
+            while(platform.fraction>=256.0) {
+                platform.fraction-=256.0;
+                movementCarry+=1;
+            }
+            newX+=highNibble+movementCarry;
         } else {
             platform.fraction+=platform.speed;
             while(platform.fraction<0.0) {platform.fraction+=1.0;newY-=1.0;}
@@ -329,6 +411,11 @@ function updateWorld13Platforms(g) {
         }
         platform.x=newX;platform.y=newY;
         world13PlatformRider(g,platform,oldX,oldY,newX,newY);
+        // Erase only after the final movement pass so both horizontal and
+        // vertical fractional bytes survive for the next object in this slot.
+        if(retireAfterMove) {
+            platform.retired=true;platform.lastSlot=platform.slot;platform.slot=-1;
+        }
     }
 }
 
@@ -344,15 +431,29 @@ function updateWorld13Bullets(g) {
         local active=false;
         foreach(bullet in g.world13Bullets) if(bullet.source==source) active=true;
         if(source.timer==0 && !active) {
-            g.world13Bullets.append({source=source,x=g.cameraX+LOGICAL_WIDTH+8.0,
-                y=80.0,width=16.0,height=16.0,vx=-1.5*NES_FRAME_RATE,active=true});
+            local bullet={source=source,x=g.cameraX+LOGICAL_WIDTH+8.0,
+                y=80.0,width=16.0,height=16.0,vx=-1.5*NES_FRAME_RATE,
+                active=true,slot=-1};
+            // Bullet Bills are ordinary enemy objects in the ROM and retain
+            // their NES slot until OffscreenBoundsCheck erases them. Later
+            // stream allocations observe that occupancy.
+            for(local slot=0;slot<5;slot+=1) {
+                local occupied=false;
+                foreach(e in g.goombas) if(e.alive && e.awake && e.slot==slot) {
+                    occupied=true;break;
+                }
+                foreach(other in g.world13Bullets)
+                    if(other.active && other.slot==slot) {occupied=true;break;}
+                if(!occupied) {bullet.slot=slot;break;}
+            }
+            g.world13Bullets.append(bullet);
             emitSound(g,"blast");source.timer=64;
         }
     }
     foreach(bullet in g.world13Bullets) {
         if(!bullet.active) continue;
         bullet.x+=bullet.vx*FIXED_DT;
-        if(bullet.x<g.cameraX-32.0) {bullet.active=false;continue;}
+        if(bullet.x<g.cameraX-32.0) {bullet.active=false;bullet.slot=-1;continue;}
         if(!p.dead && overlaps(p.x+3.0,p.y+(p.big?8.0:4.0),10.0,
             p.big&&!p.crouching?24.0:12.0,bullet.x+2.0,bullet.y+2.0,12.0,12.0))
             hurtPlayer(g);
@@ -371,7 +472,9 @@ function updateWorld13Actors(g) {
         }
         // ProcMoveRedPTroopa has no horizontal movement routine. updateGoombas
         // runs first for shared collisions, so undo its generic walk step.
+        local newlyAwake=e.vx!=0.0;
         e.x=e.anchorX;e.vx=0.0;
+        if(newlyAwake) continue;
         if((e.verticalSpeed|e.verticalForce)==0) {
             e.verticalDummy=0;
             if(e.verticalY<e.originalY && (g.nesFrameCounter&7)==0)
@@ -392,8 +495,11 @@ function drawWorld13Actors(g,behind) {
     foreach(platform in g.platforms) {
         if(!platform.awake || platform.x+platform.width<g.cameraX ||
            platform.x>g.cameraX+LOGICAL_WIDTH) continue;
-        worldTexture(g,assets.world13.platform,platform.x,platform.y,
-                     platform.width,8.0);
+        // The sprite buffer contains the coordinates prepared before this
+        // pass's movement; use those rather than a fixed sprite offset.
+        screenOamTexture(assets.world13.platform,
+            platform.previousX-visualCameraX(g),platform.previousY+1.0,platform.width,8.0,
+            platform.previousX-visualCameraX(g));
     }
     foreach(bullet in g.world13Bullets)
         if(bullet.active) worldTexture(g,assets.world13.bulletBill,
@@ -405,7 +511,7 @@ function runWorld13SelfTest() {
     g.player.big=true;g.player.fire=true;startWorld13(g);
     loadWorld13Assets();
     requireSelfTest(g.level==3 && g.stage=="main" && g.area=="main" &&
-        g.areaWidth==160,"1-3 stage geometry");
+        g.areaWidth==164,"1-3 stage geometry");
     requireSelfTest(g.player.big && g.player.fire && g.score==12000 &&
         g.coins==17 && g.lives==3,"1-3 entry preserves persistent progress");
     requireSelfTest(g.player.x==40.0 && g.player.grounded &&
@@ -424,6 +530,12 @@ function runWorld13SelfTest() {
         getTile(g,24,9)==TILE_SOLID,"1-3 first tree ledge");
     requireSelfTest(g.flagX==152.0*TILE_SIZE && g.castleX==155.0*TILE_SIZE,
         "1-3 ROM flag and castle endpoint");
+    local edgeKoopa=g.goombas[0];
+    edgeKoopa.x=407.5;edgeKoopa.y=56.0;edgeKoopa.vx=-KOOPA_WALK_SPEED;
+    moveEnemyBody(g,edgeKoopa,FIXED_DT);
+    requireSelfTest(edgeKoopa.state=="walking" && edgeKoopa.vx>0 &&
+        edgeKoopa.y==56.0,"ordinary red Koopa must turn at a ledge without falling");
+    startWorld13(g);
     local goombaCount=0,redCount=0,paratroopaCount=0;
     foreach(enemy in g.goombas) {
         if(enemy.kind=="goomba") goombaCount+=1;
@@ -487,13 +599,14 @@ function runWorld13SelfTest() {
         updateWorld13Actors(g);
     }
     requireSelfTest(redParatroopa.x==paratroopaX && redParatroopa.vx==0.0 &&
-        redParatroopa.y==paratroopaY+1,
+        redParatroopa.y>paratroopaY && redParatroopa.verticalForce!=0,
         "red Paratroopa must use the ROM vertical 8.8 motion without walking");
     g.player.x=redParatroopa.x+64.0;
+    local beforeDemoteY=redParatroopa.y;
     requireSelfTest(demoteWorld13Paratroopa(g,redParatroopa) &&
         !redParatroopa.paratroopa && redParatroopa.state=="walking" &&
-        redParatroopa.y==paratroopaY+1 &&
-        redParatroopa.vx==KOOPA_WALK_SPEED &&
+        redParatroopa.y==beforeDemoteY &&
+        redParatroopa.vx==-KOOPA_WALK_SPEED &&
         redParatroopa.verticalSpeed==0 && redParatroopa.verticalForce==0,
         "first Paratroopa stomp must demote it to a walking red Koopa");
     local demotedX=redParatroopa.x,demotedY=redParatroopa.y;
@@ -506,7 +619,7 @@ function runWorld13SelfTest() {
     requireSelfTest(!demoteWorld13Paratroopa(g,redParatroopa),
         "Paratroopa demotion must occur only once");
     updateGoombas(g,FIXED_DT);
-    requireSelfTest(redParatroopa.x>demotedX,
+    requireSelfTest(redParatroopa.x<demotedX,
         "demoted Paratroopa must resume shared red Koopa walking");
     startWorld13(g);vertical=g.platforms[0];vertical.awake=true;
     g.player.x=vertical.x+12.0;g.player.y=vertical.y-g.player.height;

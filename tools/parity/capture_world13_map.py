@@ -12,7 +12,7 @@ from run_reference import EXPECTED_ROM_SHA256, build_origin_lua
 
 
 ROOT = Path(__file__).resolve().parents[2]
-WIDTH = 160
+WIDTH = 164
 PAGES = range(10)
 
 

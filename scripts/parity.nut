@@ -20,6 +20,7 @@ function parityInitialize(g) {
         done = false,
         inputMask = 0,
         eventSequence = 0
+        originPending = true
     };
     if (parityIsEnabled()) {
         print("PARITY_BEGIN " + PARITY_MOVIE_NAME + " frames=" + PARITY_FRAME_MASKS.len() + "\n");
@@ -96,6 +97,21 @@ function parityBool(value) {
 
 function parityStateJson(g, frame) {
     local p = g.player;
+    local actorsJson="[", actorSeparator="";
+    if(g.level==4 && "world14" in g) foreach(bar in g.world14.firebars) {
+        if(!bar.awake || bar.retired) continue;
+        actorsJson+=actorSeparator+"{\"kind\":\"firebar\",\"slot\":"+bar.slot+
+            ",\"x\":"+bar.x+",\"y\":"+bar.y+",\"spin_low\":"+bar.spinLow+
+            ",\"spin_high\":"+bar.spinHigh+"}";
+        actorSeparator=",";
+    }
+    if(g.level==3 && "platforms" in g) foreach(platform in g.platforms) {
+        actorsJson+=actorSeparator+"{\"kind\":\"platform\",\"id\":"+platform.id+
+            ",\"x\":"+platform.x+",\"y\":"+platform.y+
+            ",\"awake\":"+parityBool(platform.awake)+"}";
+        actorSeparator=",";
+    }
+    actorsJson+="]";
     local canonicalYWorld = p.big && !p.crouching ? p.y : p.y - 16.0;
     local canonicalY = floor(canonicalYWorld).tointeger() & 0xFF;
     local firstEnemyJson = "{\"active\":false}";
@@ -194,9 +210,14 @@ function parityStateJson(g, frame) {
         engineSubroutine = 7;
     } else if (g.state == "areaExitEntrance") {
         engineSubroutine = 7;
+    } else if (g.state == "nextStageLoad") {
+        operModeTask = g.stageLoadFrames <= 1 ? 0 :
+            (g.stageLoadFrames < 163 ? 1 : (g.stageLoadFrames == 163 ? 2 : 3));
+        engineSubroutine = g.stageLoadFrames <= 1 ? 5 :
+            (g.stageLoadFrames == 165 ? 7 : 0);
     } else if (g.state == "endLevel" || g.state == "timeBonus" ||
                g.state == "raiseFlag" || g.state == "fireworks" ||
-               g.state == "postClearDelay") {
+               g.state == "postClearDelay" || g.state == "levelComplete") {
         // These host states are phases of the ROM's PlayerEndLevel routine.
         engineSubroutine = 5;
     } else if (g.state == "flagSlide") {
@@ -269,6 +290,7 @@ function parityStateJson(g, frame) {
         ",\"enemy0\":" + firstEnemyJson +
         ",\"powerup\":" + powerupJson +
         ",\"enemies\":" + enemiesJson +
+        ",\"actors\":" + actorsJson +
         ",\"rom_state\":{\"oper_mode\":" + operMode +
         ",\"oper_mode_task\":" + operModeTask +
         ",\"game_engine_subroutine\":" + engineSubroutine + "}" +
@@ -295,6 +317,7 @@ function parityCaptureRenderedFrame(g) {
     }
 
     print("PARITY_STATE " + parityStateJson(g, frame) + "\n");
+    g.parity.originPending=false;
     g.parity.frame += 1;
     g.parity.awaitingCapture = false;
     if (g.parity.frame >= PARITY_FRAME_MASKS.len()) {

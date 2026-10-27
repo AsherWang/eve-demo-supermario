@@ -132,10 +132,39 @@ python tools\parity\compare_frames.py `
 
 ## Acceptance status
 
-World 1-3 is not yet marked strictly complete. A checked-in, fixed-input
-whole-level movie from entrance through the flag/castle transition is still
-required, followed by zero-tolerance artifact, every-frame image, state, event,
-APU-write, and audio checks. The route must also exercise and review the moving
-platforms and red Koopa/Paratroopa interactions. The frame-0 Mario presentation
-gap must be closed by the shared parity render hook. Full-route evidence and
-remaining actor-art differences will be recorded rather than waived.
+World 1-3 is not yet marked strictly complete. The fixed-input whole-level movie
+is `tests/parity/movies/world-1-3-route.json` (1840 frames). Its extended companion,
+`world-1-3-transition.json` (2240 frames), retains the route inputs and adds neutral
+frames through the World 1-4 entrance. Both retain zero-tolerance checks.
+
+The 2240-frame reference identifies the next-stage setup at frame 1974 and
+controllable gameplay at frame 1975. The loader now exits at these points instead
+of remaining in `nextStageLoad` forever. Castle music is queued at frame 1973.
+`runWorld1StageFlowSelfTest()` covers small, big and fire Mario, preservation of
+score/coins/powers, and movement after loading World 1-4.
+
+The 2240-frame replay in `local-parity/transition13/actual/twentyninth`
+passes state and semantic event comparison. Its frame comparison fails one
+frame (1419, five pixels); all added frames 1840..2239 match exactly. State comparison does not
+exhaustively cover enemy slots, so it cannot replace every-frame image checks.
+This same replay passes artifact, state, event, APU and audio gates. PCM was
+reused only after verifying that the full modeled APU write stream hash and
+the movie/origin inputs were unchanged.
+
+Continuous cold-boot reference video now removes a savestate capture artifact:
+restoring a state on scanline zero did not restore the already-rendered pixel
+prefix. `continuous_reference_video.py` verifies all 2240 decoded states and
+comparison APU writes before installing the continuous PNGs. It retains the raw
+trace, nine pre-origin initialization writes, proof hashes and bootstrap evidence.
+No comparison tolerance or movie input changed. Artifact validation checks the
+continuous proof when present; frame-specific rendering overlays were removed.
+
+Recent integration also preserves retired platform fractional movement, queues
+OAM positions and sprite cells, defers HUD score updates while the secondary
+VRAM buffer is selected, and models the primary VRAM backlog. The red flying
+Koopa original-Y byte aliases horizontal movement force in the ROM; demotion
+now preserves that fractional phase and consumes the demotion-frame step.
+The latest frame report is `local-parity/transition13/reports/twentyninth`.
+The only remaining frame difference is five HUD coin pixels during the
+primary VRAM overflow at frame 1419. All 2239 other frames match exactly. No acceptance record is marked
+complete on this evidence alone.
