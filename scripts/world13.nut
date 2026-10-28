@@ -230,6 +230,7 @@ function world13ResetObjects(g) {
 }
 
 function startWorld13(g) {
+    g.world=1;
     local big=g.player.big,fire=g.player.fire;
     if (!("world13Metatiles" in g)) g.world13Metatiles <- [];
     if (!("world13Blocks" in g)) g.world13Blocks <- [];

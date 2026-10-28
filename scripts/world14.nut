@@ -138,6 +138,7 @@ function world14ParseCastleObjects(g) {
 }
 
 function startWorld14(g) {
+    g.world=1;
     g.level = 4;
     g.stage = "world14";
     g.area = "castle";
@@ -594,9 +595,10 @@ function updateWorld14Transition(g) {
         p.nesXSpeed = 0; p.vx = 0.0; p.grounded = true;
         if(w.worldEndFrames > 0) w.worldEndFrames -= 1;
         if(w.worldEndFrames <= 0) {
-            g.state = "worldComplete";
-            w.completeFrames = 0;
             parityRecordEvent(g, "gameplay", "world14_complete");
+            startLevel(g,2,1);
+            parityRecordEvent(g,"music","overworld",",\"action\":\"start\",\"phase\":\"intro\"");
+            parityRecordEvent(g,"gameplay","world_entered",",\"world\":2,\"level\":1");
         }
         return true;
     }
@@ -734,12 +736,12 @@ function runWorld14SelfTest() {
     updateWorld14Actors(clear);
     requireSelfTest(clear.state == "world14Axe",
         "touching the ROM axe must enter automatic castle clear");
-    for(local frame = 0; frame < 2500 && clear.state != "worldComplete"; frame += 1)
+    for(local frame = 0; frame < 2500 && clear.world==1; frame += 1)
         updateWorld14Transition(clear);
     requireSelfTest(clear.world14.bridgeRight < 128 && clear.world14.rescued &&
-        clear.state == "worldComplete" && clear.time == 44 && clear.score == 12800 &&
+        clear.world==2 && clear.level==1 && clear.time==400 && clear.score==12800 &&
         clear.world14.primaryMsgCounter == 4 && clear.world14.worldEndFrames == 0,
-        "1-4 clear must collapse the bridge, save the mushroom retainer and stop at worldComplete");
+        "1-4 clear must collapse the bridge, save the mushroom retainer and enter World 2-1");
     requireSelfTest(clear.player.x < clear.areaWidth * 16.0,
         "1-4 clear must remain bounded to the castle map");
     for(local form=0;form<3;form+=1) {
@@ -749,17 +751,19 @@ function runWorld14SelfTest() {
         ending.player.grounded=false; ending.player.nesYSpeed=4;
         ending.player.nesXSpeed=24;
         ending.state="world14VictoryWalk";
-        local sawAnimationChange=false,firstAnimation=-100;
-        for(local frame=0;frame<1200;frame+=1) {
+        local sawAnimationChange=false,firstAnimation=-100,sawFloor=false;
+        for(local frame=0;frame<1200 && ending.world==1;frame+=1) {
             simulateFixed(ending,FIXED_DT);
+            if(ending.world==1 && ending.state=="world14Rescue" && ending.world14.stateFrames>3)
+                sawFloor=ending.player.x==2431 && ending.player.y+ending.player.height==208 &&
+                    ending.player.displayRelX==126 && ending.player.displayRelY==176;
             if(ending.state=="world14VictoryWalk" && ending.player.grounded) {
                 if(firstAnimation==-100) firstAnimation=ending.player.displayAnimationFrame;
                 else if(firstAnimation!=ending.player.displayAnimationFrame) sawAnimationChange=true;
             }
         }
-        requireSelfTest(ending.state=="worldComplete" && ending.world14.rescued &&
-            ending.player.x==2431.0 && ending.player.y+ending.player.height==208.0 &&
-            ending.player.displayRelX==126.0 && ending.player.displayRelY==176.0 &&
+        requireSelfTest(ending.world==2 && ending.level==1 && ending.state=="playing" && sawFloor &&
+            ending.player.x==40.0 &&
             ending.player.big==(form>0) && ending.player.fire==(form==2) &&
             ending.world14.retainer.y==184.0 && sawAnimationChange,
             "castle ending must animate, land and refresh OAM for small, big and fire Mario");

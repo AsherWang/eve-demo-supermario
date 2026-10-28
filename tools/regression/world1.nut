@@ -8,6 +8,7 @@ PARITY_MOVIE_ENABLED=false;
 local suites=[
     ["simulation",runSimulationSelfTest], ["world12",runWorld12SelfTest],
     ["world13",runWorld13SelfTest], ["world14",runWorld14SelfTest],
+    ["world21",runWorld21SelfTest],
     ["stage-flow",runWorld1StageFlowSelfTest], ["koopa-bounce",runKoopaBounceSelfTest],
     ["powerup-gap",runPowerUpGapSelfTest], ["shell-defeat",runShellDefeatSelfTest]
 ];

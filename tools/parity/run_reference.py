@@ -9,7 +9,8 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-from common import load_movie, mesen_section_input_arguments, sha256_file, tool_path
+from common import load_movie, mesen_section_input_arguments, sha256_file, tool_path, require_supported_stage
+from world21_reference import build_world21_origin_lua
 
 
 EXPECTED_ROM_SHA256 = "f61548fdf1670cffefcc4f0b7bdcdd9eaba0c226e3b74f8666071496988248de"
@@ -226,6 +227,7 @@ def main() -> int:
         parser.error(f"mesen-agent not found: {args.mesen_agent}")
 
     movie = load_movie(movie_path)
+    require_supported_stage(movie)
     rom_hash = sha256_file(rom)
     if rom_hash != EXPECTED_ROM_SHA256 and not args.allow_other_rom:
         parser.error(
@@ -242,7 +244,7 @@ def main() -> int:
     bootstrap = movie.get("reference_bootstrap", {})
     bootstrap_frames = bootstrap.get("frames", 0)
     origin_lua = output / "find-origin.lua"
-    origin_lua.write_text(build_origin_lua(movie.get("level", 1)), encoding="utf-8", newline="\n")
+    origin_lua.write_text(build_world21_origin_lua() if movie.get("world",1)==2 else build_origin_lua(movie.get("level", 1)), encoding="utf-8", newline="\n")
     origin_state = output / "origin.mss"
     scan_command = [
         str(args.mesen_agent.resolve()),

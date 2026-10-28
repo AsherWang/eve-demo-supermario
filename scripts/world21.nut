@@ -1,0 +1,156 @@
+// World 2-1 main-route prototype. Bonus destinations are not yet connected.
+dofile("scripts/generated/world21_data.nut");
+dofile("scripts/generated/world21_map.nut");
+
+function isWorld21(g) {return g.world==2 && g.level==1;}
+
+function initializeWorld21Parity(g) {
+    // First controllable frame of the offline World 2-1 fixture, read from
+    // the ROM RAM trace. This initializes a test origin, not gameplay frames.
+    g.nesFrameCounter=0x1a;g.intervalTimerControl=0;
+    g.gameTimerControl=23;g.colorRotateOffset=1;g.displayColorPhase=0;
+    g.pendingColorPhase=0;g.colorPhasePending=false;
+    g.player.movingDir=0;
+}
+
+function loadWorld21Assets() {
+    if(assets==null) loadAssets();
+    if("world21" in assets) return;
+    local metatiles={};
+    foreach(column in ROM_WORLD_2_1_METATILES) foreach(meta in column)
+        if(meta!=0 && !(meta in metatiles))
+            metatiles[meta] <- loadTexture("assets/world13/metatile-"+meta+".png");
+    assets.world21 <- {metatiles=metatiles,
+        wingsRight=[loadTexture("assets/world21/paratroopa-0.png"),loadTexture("assets/world21/paratroopa-1.png")],
+        wingsLeft=[loadTexture("assets/world21/paratroopa-0-left.png"),loadTexture("assets/world21/paratroopa-1-left.png")],
+        plants=[loadTexture("assets/world21/plant-0.png"),loadTexture("assets/world21/plant-1.png")],
+        springs=[loadTexture("assets/world21/spring-0.png"),loadTexture("assets/world21/spring-1.png"),loadTexture("assets/world21/spring-2.png")],
+        vineTop=loadTexture("assets/world21/vine-top.png"),vineBody=loadTexture("assets/world21/vine-body.png")};
+}
+
+function startWorld21(g) {
+    g.world=2;g.level=1;g.stage="world21";g.area="main";
+    g.areaWidth=ROM_WORLD_2_1_METATILES.len();g.romBackgroundCollision=true;
+    clearAreaObjects(g);g.plants=[];g.platforms=[];g.enterablePipes=[];
+    g.sidePipeX=-1;g.cameraX=0.0;g.displayCameraX=0.0;
+    local state={baseTiles=[],vines=[],springs=[]};
+    if("world21" in g) g.world21=state; else g.world21 <- state;
+    local mapping={};
+    foreach(pair in [[0x51,TILE_BRICK],[0x52,TILE_BRICK],[0x54,TILE_GROUND],
+        [0x55,TILE_BRICK_POWERUP],[0x56,TILE_BRICK_VINE],[0x57,TILE_BRICK_STAR],
+        [0x58,TILE_BRICK_COIN],[0x59,TILE_BRICK_ONEUP],[0x5f,TILE_HIDDEN_COIN],
+        [0x60,TILE_HIDDEN_ONEUP],[0xc0,TILE_QUESTION],[0xc1,TILE_POWERUP_BLOCK],
+        [0xc4,TILE_USED],[0x10,TILE_PIPE_TOP_LEFT],[0x11,TILE_PIPE_TOP_RIGHT],
+        [0x12,TILE_PIPE_TOP_LEFT],[0x13,TILE_PIPE_TOP_RIGHT],
+        [0x14,TILE_PIPE_SHAFT_LEFT],[0x15,TILE_PIPE_SHAFT_RIGHT]]) mapping[pair[0]]<-pair[1];
+    for(local x=0;x<g.areaWidth;x+=1) for(local row=0;row<13;row+=1) {
+        local meta=ROM_WORLD_2_1_METATILES[x][row],block=ROM_WORLD_2_1_BLOCKS[x][row];
+        local tile=meta in mapping?mapping[meta]:(block!=0?TILE_SOLID:TILE_EMPTY);
+        setTile(g,x,row+2,tile);
+        if(meta==0x10 || meta==0x12)
+            g.plants.append({x=x*16.0+8.0,y=(row+2)*16.0,baseY=(row+2)*16.0,
+                direction=1,moving=false,timer=0,active=true});
+        if(meta==0x67) state.springs.append({x=x*16.0,y=(row+2)*16.0,control=0,timer=0,force=-7});
+    }
+    state.baseTiles=clone g.tiles;
+    decodeWorld11Enemies(g,ROM_WORLD_2_1_ENEMIES);
+    g.flagX=200.0*16.0;g.castleX=204.0*16.0;g.flagY=48.0;
+    g.preparedFlagY=48.0;g.displayFlagY=48.0;g.castleFlagVisible=false;
+    resetPlayerForArea(g,40,176);g.player.grounded=true;g.player.entranceFalling=false;
+    g.state="playing";g.stateTimer=0.0;g.checkpointPage=0;
+    g.time=400;g.displayTime=400;g.gameTimerControl=23;g.hurryActive=false;
+    g.soundEvents.append("resume_music");
+}
+
+function world21TileTexture(g,tx,ty,tile) {
+    if(ty<2) return null;
+    local meta=ROM_WORLD_2_1_METATILES[tx][ty-2];
+    if(meta==0 || meta==0x24 || meta==0x25 || meta==0x5f || meta==0x60) {
+        return tile==TILE_USED?assets.tiles.used:null;
+    }
+    if((meta==0x67 || meta==0x68) && g.world21.springs.len()>0 &&
+        g.world21.springs[0].control>0) return null;
+    if(tile!=g.world21.baseTiles[tileIndex(tx,ty)]) return tileTexture(g,tile);
+    if(meta==0xc0 || meta==0xc1) return assets.tiles.questions[g.displayColorPhase];
+    return meta in assets.world21.metatiles?assets.world21.metatiles[meta]:null;
+}
+
+function growWorld21Vine(g,tx,ty) {
+    retainOldTileForPpu(g,tx,ty,TILE_BRICK_VINE);
+    setTile(g,tx,ty,TILE_USED);
+    g.world21.vines.append({x=tx*16.0,y=ty*16.0,height=0.0});
+    emitSound(g,"powerup","reveal");
+    parityRecordEvent(g,"gameplay","vine_revealed");
+}
+
+function updateWorld21Actors(g) {
+    // Shared piranha behavior; this course has no World 1-2 lift objects.
+    updateWorld12Actors(g);
+    foreach(vine in g.world21.vines) if(vine.height<96.0) vine.height+=0.5;
+    local p=g.player;
+    foreach(spring in g.world21.springs) {
+        if(spring.control==0) {
+            if(p.grounded && abs(p.y+p.height-spring.y)<1.0 &&
+                p.x+12>spring.x && p.x<spring.x+16) {
+                spring.control=1;spring.timer=3;spring.force=-7;
+            }
+        } else {
+            if(spring.control>=2 && g.input.jumpQueued) spring.force=-12;
+            spring.timer-=1;
+            if(spring.timer<=0) {spring.control+=1;spring.timer=4;}
+            if(spring.control>=5) {
+                spring.control=0;p.grounded=false;p.nesYSpeed=spring.force;
+                p.nesYMoveForce=0;p.nesYDummy=0;p.jumpGravityActive=false;p.fallForce=0x70;
+                p.vy=p.nesYSpeed*NES_FRAME_RATE;emitSound(g,"jump");
+            } else {
+                local offsets=[0,0,8,16,8];
+                p.y=spring.y-p.height+offsets[spring.control];
+                p.grounded=true;p.nesYSpeed=0;p.vy=0.0;
+            }
+        }
+    }
+}
+
+function drawWorld21Actors(g,behind) {
+    if(behind) {
+        foreach(plant in g.plants) if(plant.active)
+            worldTexture(g,assets.world21.plants[(g.nesFrameCounter/8)%2],plant.x,plant.y+1,16,24);
+        foreach(vine in g.world21.vines)
+            for(local y=0;y<vine.height;y+=8)
+                worldTexture(g,y==0?assets.world21.vineTop:assets.world21.vineBody,
+                    vine.x,vine.y-vine.height+y,14,8);
+    } else foreach(spring in g.world21.springs) if(spring.control>0) {
+        local frames=[0,0,1,2,1];local offsets=[0,0,8,16,8];
+        worldTexture(g,assets.world21.springs[frames[spring.control]],spring.x,
+            spring.y+offsets[spring.control]+1,16,24);
+    }
+}
+
+function runWorld21SelfTest() {
+    local g=createGame();startLevel(g,2,1);
+    requireSelfTest(isWorld21(g) && g.areaWidth==212 && g.flagX==3200 &&
+        getTile(g,83,5)==TILE_BRICK_VINE && getTile(g,28,5)==TILE_HIDDEN_ONEUP &&
+        getTile(g,82,9)==TILE_QUESTION && g.world21.springs.len()==1,
+        "2-1 must use the verified map, rewards and spring");
+    local hops=0;
+    foreach(e in g.goombas) if("greenJump" in e && e.greenJump) hops+=1;
+    requireSelfTest(hops==3,"2-1 must retain all three jumping Paratroopas");
+    hitBlock(g,83,5);
+    requireSelfTest(g.world21.vines.len()==1 && g.powerups.len()==0,
+        "a vine brick must not be substituted with a mushroom");
+    local spring=g.world21.springs[0];
+    g.player.x=spring.x;g.player.y=spring.y-g.player.height;g.player.grounded=true;
+    for(local i=0;i<16;i+=1) updateWorld21Actors(g);
+    requireSelfTest(!g.player.grounded && g.player.nesYSpeed<0,"spring must launch Mario upwards");
+    g.score=12300;g.coins=19;g.lives=3;g.cameraX=1600;
+    g.player.big=true;g.player.fire=true;finishPlayerDeath(g);
+    for(local i=0;i<166;i+=1) simulateFixed(g,FIXED_DT);
+    requireSelfTest(isWorld21(g) && g.checkpointPage==6 && g.lives==2 &&
+        !g.player.big && !g.player.fire && g.score==12300 && g.coins==19,
+        "2-1 death must retain world/progress and reset powers at its checkpoint");
+    g.state="levelComplete";g.input.resetQueued=true;simulateFixed(g,FIXED_DT);
+    requireSelfTest(isWorld21(g) && g.state=="playing" && g.player.x==40 &&
+        g.score==12300 && g.coins==19 && g.lives==2,
+        "2-1 course completion must restart in World 2 rather than load World 1-2");
+    print("World 2-1 main-route self-test passed.\n");
+}

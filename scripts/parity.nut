@@ -236,7 +236,7 @@ function parityStateJson(g, frame) {
     return "{\"frame\":" + frame +
         ",\"input_mask\":" + g.parity.inputMask +
         ",\"state\":\"" + g.state + "\"" +
-        ",\"world\":1,\"level\":" + g.level +
+        ",\"world\":"+g.world+",\"level\":" + g.level +
         ",\"area\":\"" + g.area + "\"" +
         ",\"player\":{\"x\":" + p.x + ",\"y\":" + canonicalY +
         ",\"previous_x\":" + p.previousX +

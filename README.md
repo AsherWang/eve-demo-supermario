@@ -1,6 +1,8 @@
-# Super Mario Bros. World 1-1 ~ 1-4 — EVEngine
+# Super Mario Bros. — EVEngine
 
-Personal-study, ROM-data-driven reconstruction of NES World 1-1 through 1-4 in EVEngine.
+Personal-study, ROM-data-driven reconstruction in EVEngine. World 1-1 through
+1-4 are playable; the World 2-1 main-route prototype is under development.
+World 2-1 bonus destinations and strict whole-level acceptance remain pending.
 The packaged game does not include a ROM. Runtime assets were extracted locally
 from a user-provided ROM for this study build.
 
@@ -150,3 +152,11 @@ current ambiguity measurement: across the original five-movie analysis set, 187 
 per-frame APU address/value templates occur on multiple absolute CPU schedules,
 and 73 even use different spacing between writes. Values and order alone are
 therefore insufficient to infer cycle-exact audio timing.
+
+
+World 2-1 development entry: F5 starts its main-route prototype. The source build
+also transitions from the World 1-4 credits into World 2-1 while preserving
+score, coins, lives and powers. The cloud/underground destinations are not yet
+connected; the vine grows without substituting a mushroom, but climbing into
+the cloud area is pending. World 2-2 is not implemented. These features are not
+in the published 0.0.7 package.

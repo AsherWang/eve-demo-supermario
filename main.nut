@@ -7,6 +7,7 @@ persist hurryMusicTime = 0.0
 persist levelTwoKeyDown = false
 persist levelThreeKeyDown = false
 persist levelFourKeyDown = false
+persist levelFiveKeyDown = false
 
 dofile("scripts/core.nut");
 dofile("scripts/generated/rom_data.nut");
@@ -23,6 +24,7 @@ dofile("scripts/generated/world13_data.nut");
 dofile("scripts/generated/world13_map.nut");
 dofile("scripts/world13.nut");
 dofile("scripts/world14.nut");
+dofile("scripts/world21.nut");
 dofile("scripts/levels.nut");
 dofile("scripts/render.nut");
 dofile("scripts/parity.nut");
@@ -38,6 +40,7 @@ eve_init = function() {
     loadAssets();
     loadWorld13Assets();
     loadWorld14Assets();
+    loadWorld21Assets();
     loadAudio();
     if (!("startupSelfTests" in config) || config.startupSelfTests || parityIsEnabled()) {
         runSimulationSelfTest();
@@ -45,6 +48,7 @@ eve_init = function() {
         runWorld13SelfTest();
         runWorld14SelfTest();
         runWorld1StageFlowSelfTest();
+        runWorld21SelfTest();
         runKoopaBounceSelfTest();
         runPowerUpGapSelfTest();
         runShellDefeatSelfTest();
@@ -54,6 +58,7 @@ eve_init = function() {
         startWorld12(game, ("startArea" in config) ? config.startArea : "intro");
     if ("startLevel" in config && config.startLevel == 3) startWorld1Stage(game,3);
     if ("startLevel" in config && config.startLevel == 4) startWorld1Stage(game,4);
+    if("startWorld" in config && config.startWorld==2) startLevel(game,2,1);
     if (parityIsEnabled() && "PARITY_START_LEVEL" in getroottable() && PARITY_START_LEVEL == 2)
         initializeWorld12Parity(game);
     if (parityIsEnabled() && "PARITY_START_LEVEL" in getroottable() && PARITY_START_LEVEL == 3) {
@@ -62,6 +67,10 @@ eve_init = function() {
     }
     if (parityIsEnabled() && "PARITY_START_LEVEL" in getroottable() && PARITY_START_LEVEL == 4)
         startWorld1Stage(game,4);
+    if(parityIsEnabled() && "PARITY_START_WORLD" in getroottable() && PARITY_START_WORLD==2) {
+        startLevel(game,2,1);
+        initializeWorld21Parity(game);
+    }
     parityInitialize(game);
     if (config.previewScenario == "world12-pipes" || config.previewScenario == "world12-lifts") {
         setupWorld12ActorPreview(game,config.previewScenario);
@@ -135,7 +144,7 @@ eve_init = function() {
         game.displayCameraX = game.cameraX;
         game.player.x = config.previewCameraX + 32.0;
     }
-    if (game.level == 1 && game.area == "main") validateLevel(game);
+    if (game.world==1 && game.level == 1 && game.area == "main") validateLevel(game);
     print("World 1-1 remake ready: arrows/A-D move, X/Shift run or throw, Z/Space jump, R reset.\n");
 };
 
@@ -161,6 +170,9 @@ eve_update = function(dt) {
     local levelFourKey=keyboard.isDown("F4");
     if(levelFourKey && !levelFourKeyDown) startWorld1Stage(game,4);
     levelFourKeyDown=levelFourKey;
+    local levelFiveKey=keyboard.isDown("F5");
+    if(levelFiveKey && !levelFiveKeyDown) startLevel(game,2,1);
+    levelFiveKeyDown=levelFiveKey;
     game.accumulator += frameDt;
 
     local steps = 0;

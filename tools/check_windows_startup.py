@@ -25,7 +25,7 @@ def main() -> int:
     parser.add_argument('--report', type=Path, required=True)
     parser.add_argument('--expect-failure', action='store_true')
     parser.add_argument('--expected-error', help='Failure text that must appear in game.log')
-    parser.add_argument('--expected-title', default='Super Mario Bros. World 1-1 ~ 1-4 - EVEngine')
+    parser.add_argument('--expected-title', default='Super Mario Bros. - EVEngine')
     args = parser.parse_args()
     kernel = ctypes.WinDLL('kernel32', use_last_error=True)
     user = ctypes.WinDLL('user32', use_last_error=True)

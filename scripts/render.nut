@@ -457,6 +457,7 @@ function positiveModulo(value, divisor) {
 }
 
 function drawBackground(g) {
+    if(isWorld21(g)) {drawWorld13Background(g);return;}
     if(g.level==3) {drawWorld13Background(g);return;}
     if(g.level==4) {drawWorld14Background(g);return;}
     if (g.area == "underground") return;
@@ -533,6 +534,11 @@ function drawTiles(g) {
                     tile = entry.tile;
                     break;
                 }
+            }
+            if(isWorld21(g)) {
+                local texture=world21TileTexture(g,tx,ty,tile);
+                if(texture!=null) worldTexture(g,texture,tx*16.0,ty*16.0,16,16);
+                continue;
             }
             if(g.level>=3) {
                 local texture=g.level==3?world13TileTexture(g,tx,ty,tile):
@@ -653,7 +659,7 @@ function marioTexture(g) {
 function drawPlayer(g) {
     local p = g.player;
     if (g.state == "nextStageLoad" && g.stageLoadFrames == 165) return;
-    if (parityIsEnabled() && g.parity.originPending && g.level==1) return;
+    if (parityIsEnabled() && g.parity.originPending && g.world==1 && g.level==1) return;
     if ((g.state == "timeBonus" && p.courseClearHidden) || g.state == "raiseFlag" ||
         g.state == "fireworks" || g.state == "postClearDelay" ||
         g.state == "levelComplete" || g.state == "gameOver" || g.state == "warpComplete") return;
@@ -765,6 +771,8 @@ function drawEnemy(g, e) {
         texture = e.vx < 0.0 ? assets.enemies.koopaLeft[frame] :
                                assets.enemies.koopaRight[frame];
         if(levelTexture!=null) texture=levelTexture;
+        if(isWorld21(g) && "greenJump" in e && e.greenJump)
+            texture=e.vx<0?assets.world21.wingsLeft[frame]:assets.world21.wingsRight[frame];
     } else {
         // EnemyGfxHandler sees the counter from the gameplay pass that built
         // the visible OAM buffer (two counts behind this render-side value).
@@ -854,6 +862,11 @@ function drawFireworks(g) {
 }
 
 function drawCastle(g) {
+    if(isWorld21(g)) {
+        if(g.castleFlagVisible) worldTexture(g,assets.scenery.castleFlag,
+            g.castleX+32,g.castleFlagY+1,16,16);
+        return;
+    }
     // World 1-3 carries its full castle in the area tilemap and has no
     // castle-object star flag. The course-clear flagpole flag is separate.
     if (g.level == 3) return;
@@ -992,7 +1005,7 @@ function drawHud(g) {
     screenTexture(assets.hudFont[0x29], 96.0, 24.0, 8.0, 8.0);
     drawHudNumber(g.displayCoins, 2, 104.0, 24.0);
     drawHudGlyphs([0x20, 0x18, 0x1B, 0x15, 0x0D], 144.0, 16.0); // WORLD
-    drawHudGlyphs([0x01, 0x28, g.level], 152.0, 24.0);
+    drawHudGlyphs([g.world, 0x28, g.level], 152.0, 24.0);
     drawHudGlyphs([0x1D, 0x12, 0x16, 0x0E], 200.0, 16.0); // TIME
     if (!(parityIsEnabled() && g.parity.originPending) &&
         g.state != "nextStageLoad" && g.stageLoadFrames != 166 &&
@@ -1008,7 +1021,7 @@ function drawHud(g) {
                        0x18, 0x1F, 0x0E, 0x1B], 92.0, 112.0);
     } else if (g.state == "levelComplete" && g.level != 3) {
         drawHudGlyphs([0x20, 0x18, 0x1B, 0x15, 0x0D], 88.0, 96.0);
-        drawHudGlyphs([0x01, 0x28, g.level], 112.0, 112.0);
+        drawHudGlyphs([g.world, 0x28, g.level], 112.0, 112.0);
     } else if (g.state == "warpComplete") {
         drawHudGlyphs([0x20,0x18,0x1b,0x15,0x0d],88,96);
         drawHudGlyphs([g.warpWorld,0x28,1],112,112);
@@ -1023,11 +1036,11 @@ function drawIntermediateLives(g) {
     screenTexture(assets.hudFont[0x29], 96.0, 24.0, 8.0, 8.0);
     drawHudNumber(g.coins, 2, 104.0, 24.0);
     drawHudGlyphs([0x20, 0x18, 0x1B, 0x15, 0x0D], 144.0, 16.0);
-    drawHudGlyphs([0x01, 0x28, g.level], 152.0, 24.0);
+    drawHudGlyphs([g.world, 0x28, g.level], 152.0, 24.0);
     drawHudGlyphs([0x1D, 0x12, 0x16, 0x0E], 200.0, 16.0);
 
     drawHudGlyphs([0x20, 0x18, 0x1B, 0x15, 0x0D, 0x24,
-                   0x01, 0x28, g.level], 88.0, 80.0);
+                  g.world, 0x28, g.level], 88.0, 80.0);
     if (!(g.state == "nextStageLoad" && g.stageLoadFrames >= 148))
         screenTexture(assets.mario.standRight, 96.0, 89.0, 16.0, 32.0);
     screenTexture(assets.hudFont[0x29], 120.0, 112.0, 8.0, 8.0);
@@ -1134,6 +1147,7 @@ function renderGame(g) {
     if (g.level == 2) drawWorld12Actors(g, true);
     if (g.level == 3) drawWorld13Actors(g, true);
     if (g.level == 4) drawWorld14Actors(g, true);
+    if(isWorld21(g)) drawWorld21Actors(g,true);
     // Pipe/entrance movement sets OAM priority bit 5 for Mario.  Draw him
     // before the background metatiles so non-transparent pipe/ground pixels
     // occlude the sprite exactly as the PPU does.
@@ -1169,6 +1183,7 @@ function renderGame(g) {
     if (g.level == 2) drawWorld12Actors(g, false);
     if (g.level == 3) drawWorld13Actors(g, false);
     if (g.level == 4) drawWorld14Actors(g, false);
+    if(isWorld21(g)) drawWorld21Actors(g,false);
     if (!playerBehindBackground && !playerHidden) drawPlayer(g);
     if(!hudBeforeSprites) drawHud(g);
 }

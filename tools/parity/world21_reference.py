@@ -23,7 +23,7 @@ emu.addEventCallback(function()
      and emu.read(0x0770,ram)==1 and emu.read(0x0772,ram)==3
      and emu.read(0x000e,ram)==8 and emu.read(0x0774,ram)==0 then
     found=true
-    emu.log("WORLD21_ORIGIN frame="..frame)
+    emu.log("PARITY_ORIGIN frame="..frame.." world=2 level=1")
   end
   frame=frame+1
 end,emu.eventType.endFrame)

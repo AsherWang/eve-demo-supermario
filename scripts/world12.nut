@@ -206,6 +206,7 @@ function applyWorld12Map(g) {
 }
 
 function startWorld12(g, stage="intro") {
+    g.world=1;
     buildWorld12(g,stage);
     resetPlayerForArea(g,stage=="exit"?11*256+40:40,176);
     if(stage=="underground" || stage=="bonus") resetPlayerForArea(g,40,32);

@@ -1,7 +1,7 @@
 # World 2-1 implementation plan
 
-Updated 2026-10-28. Data preparation is implemented; the runtime stage is not
-loaded yet. This is not a playability or whole-level acceptance claim.
+Updated 2026-10-28. The main-route runtime prototype and 1-4 to 2-1 transition
+are implemented. Bonus destinations and strict whole-level acceptance remain pending.
 
 ## Verified offline data
 
@@ -41,7 +41,7 @@ The generator fails on missing columns or differing overlap, and records hashes.
 
 ## Runtime and acceptance work
 
-- [ ] Introduce explicit world/stage identity while keeping existing World 1
+- [x] Introduce explicit world/stage identity while keeping existing World 1
   loaders and regressions stable. Do not overload stage number 1 as World 1-1.
 - [ ] Define a small level descriptor for map, enemy stream, item locations,
   entry, goal, checkpoint, music and palette. Keep mutable area state separate.
@@ -50,9 +50,9 @@ The generator fails on missing columns or differing overlap, and records hashes.
 - [ ] Implement vine growth/climbing, cloud-area return, underground-area
   return, and correct destination/return links. Do not substitute a mushroom
   for the vine reward or label inaccessible branches complete.
-- [ ] Connect 1-4 to 2-1 and preserve score, coins, lives and powers. Reset the
+- [x] Connect 1-4 to 2-1 and preserve score, coins, lives and powers. Reset the
   area timer, HUD and music correctly; cover death and restart in World 2.
-- [ ] Extend reference/bootstrap and actual replay selection with world/stage
+- [x] Extend reference/bootstrap and actual replay selection with world/stage
   fields. Existing World 1 movies retain their present meaning and hashes.
 - [ ] Establish a fixed-input normal-entrance whole-route movie and separate
   branch movies; compare artifact/state/event/all images/APU/audio gates.
@@ -60,6 +60,32 @@ The generator fails on missing columns or differing overlap, and records hashes.
   after the corresponding acceptance requirements pass.
 
 0.0.7 contains the World 1 fixes. It does not include playable World 2-1.
+
+## Runtime verification record
+
+The source prototype loads the verified map and enemy stream, including jumping
+green Paratroopas, piranhas, a working spring and growing vine. F5 selects 2-1.
+Vine climbing, cloud and underground destinations/returns remain unimplemented;
+pipe entry is disabled for this stage rather than entering a World 1 bonus room.
+2-2 is unavailable; R at the 2-1 settlement restarts 2-1.
+
+- Ten simulation regression groups pass via `python tools/run_world1_regressions.py`.
+  These include checkpoint/new-life reset and small/big/fire cross-world retention.
+- `world-2-1-idle.json`: all 120 frames pass artifact, state, event, image,
+  APU and detection-side audio gates. Reports: `local-parity/world21-runtime/reports/idle-final`.
+- `world-2-1-main-host-route.json`: 3116 host frames reach settlement with
+  three lives and no death. The same input fails in the ROM, with deaths at
+  754, 1393 and 2018. First Y difference is frame 643 and first X difference
+  frame 649. Reports: `local-parity/world21-runtime/reports/main-route`.
+- The earlier `world-2-1-route-candidate.json` remains failed evidence in
+  `local-parity/world21-runtime/reports/route`; it is not an acceptance movie.
+- `world-1-4-to-world-2-1.json`: 2800 actual frames, no death, three lives,
+  enters World 2-1 at frame 2496 and finishes in playing state with score 11150.
+  Capture: `local-parity/world21-runtime/actual/world-transition`.
+
+Next: resolve the first movement divergence, then complete branch destinations
+and record same-input full-route six-gate acceptance. Opening gates and host
+playability do not mark the level complete in the 32-level inventory.
 
 
 ## Data validation record

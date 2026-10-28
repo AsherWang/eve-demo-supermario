@@ -19,7 +19,7 @@ def main() -> int:
     (args.output/'engine.log').write_text(output,encoding='utf-8')
     suites=[line.removeprefix('REGRESSION_PASS ') for line in output.splitlines()
         if line.startswith('REGRESSION_PASS ')]
-    passed=result.returncode==0 and 'WORLD1_REGRESSION_OK' in output and len(suites)==9
+    passed=result.returncode==0 and 'WORLD1_REGRESSION_OK' in output and len(suites)==10
     commit=subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip()
     dirty=bool(subprocess.check_output(['git','status','--porcelain'],cwd=ROOT,text=True).strip())
     report=dict(passed=passed,commit=commit,working_tree_dirty=dirty,suites=suites,exit_code=result.returncode,

@@ -161,13 +161,14 @@ function appendEnemyGroup(g, x, groupId) {
     }
 }
 
-function decodeWorld11Enemies(g) {
+function decodeWorld11Enemies(g, data=null) {
+    if(data==null) data=ROM_WORLD_1_1_ENEMY_DATA;
     local page = 0;
     local cursor = 0;
-    while (cursor < ROM_WORLD_1_1_ENEMY_DATA.len()) {
-        local first = ROM_WORLD_1_1_ENEMY_DATA[cursor];
+    while (cursor < data.len()) {
+        local first = data[cursor];
         if (first == 0xFF) break;
-        local second = ROM_WORLD_1_1_ENEMY_DATA[cursor + 1];
+        local second = data[cursor + 1];
         local row = first & 0x0F;
         if ((second & 0x80) != 0) page += 1;
         if (row == 0x0F && (second & 0x80) == 0) {
@@ -184,9 +185,11 @@ function decodeWorld11Enemies(g) {
         if ((second & 0x40) == 0) {
             if (enemyId >= 0x37 && enemyId < 0x3F) {
                 appendEnemyGroup(g, x, enemyId);
-            } else if (enemyId == 0x00 || enemyId == 0x06) {
-                local kind = enemyId == 0x00 ? "koopa" : "goomba";
-                g.goombas.append(makeEnemy(x, row + 1, kind));
+            } else if (enemyId == 0x00 || enemyId == 0x06 || enemyId==0x0e) {
+                local kind = enemyId == 0x06 ? "goomba" : "koopa";
+                local enemy=makeEnemy(x,row+1,kind);
+                if(enemyId==0x0e) enemy.greenJump <- true;
+                g.goombas.append(enemy);
             }
         }
         cursor += 2;
@@ -417,7 +420,7 @@ function createPlayer() {
 
 function createGame() {
     local g = {
-        level = 1, stage = "world11",
+        world = 1, level = 1, stage = "world11",
         plants = [], platforms = [], enterablePipes = [],
         world12BaseTiles = [], world12Metatiles = [], savedWorld12 = null,
         world12Target = "underground", world12PipeMode = "side", world12TransitionFrames = 0,

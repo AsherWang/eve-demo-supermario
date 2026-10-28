@@ -1,4 +1,5 @@
 function resetRound(g) {
+    if(g.world==2) {startLevel(g,2,1,true);return;}
     if(g.level>=3) {startWorld1Stage(g,g.level,true);return;}
     if (g.level == 2) { g.player=createPlayer(); startWorld12(g); return; }
     local checkpointPage = g.checkpointPage;
@@ -155,6 +156,7 @@ function restoreMainArea(g) {
 }
 
 function tryStartAreaTransition(g) {
+    if(g.world==2) return false; // World 2 bonus destinations are not connected yet.
     if(g.level>=3) return false;
     if (g.level == 2) return tryWorld12Pipe(g);
     local p = g.player;
@@ -502,6 +504,7 @@ function bumpEnemiesAbove(g, tx, ty) {
 
 function hitBlock(g, tx, ty) {
     local tile = getTile(g, tx, ty);
+    if(isWorld21(g) && tile==TILE_BRICK_VINE) {growWorld21Vine(g,tx,ty);return;}
     if (tile == TILE_BRICK_POWERUP || tile == TILE_BRICK_ONEUP || tile == TILE_BRICK_VINE ||
         tile == TILE_HIDDEN_COIN) {
         retainOldTileForPpu(g, tx, ty, tile);
@@ -1591,7 +1594,18 @@ function moveEnemyBody(g, e, dt) {
             e.grounded = false;
         }
     }
-    if (!world13GroundWalker) {
+    local greenJump=("greenJump" in e) && e.greenJump && e.state=="walking";
+    if(greenJump) {
+        if(e.grounded) {e.nesYSpeed=-3;e.nesYMoveForce=0;e.grounded=false;}
+        local positionSum=e.nesYDummy+e.nesYMoveForce;
+        e.nesYDummy=positionSum&255;
+        e.vy=(e.nesYSpeed+floor(positionSum/256).tointeger())/dt;
+        local forceSum=e.nesYMoveForce+0x1c;
+        e.nesYMoveForce=forceSum&255;e.nesYSpeed+=floor(forceSum/256).tointeger();
+        if(e.nesYSpeed>=3 && e.nesYMoveForce>=0x80) {
+            e.nesYSpeed=3;e.nesYMoveForce=0;
+        }
+    } else if (!world13GroundWalker) {
         e.vy += 857.8125 * dt;
         if (e.vy > 180.0) e.vy = 180.0;
     }
@@ -2083,7 +2097,10 @@ function updateGoombas(g, dt) {
                 if (e.kind == "goomba") {
                     stompGoomba(e);
                 } else if (e.state == "walking") {
-                    demotedParatroopa=g.level==3 && demoteWorld13Paratroopa(g,e);
+                    if("greenJump" in e && e.greenJump) {
+                        e.greenJump=false;demotedParatroopa=true;e.nesYSpeed=0;
+                        e.nesYMoveForce=0;e.vy=0.0;
+                    } else demotedParatroopa=g.level==3 && demoteWorld13Paratroopa(g,e);
                     if(!demotedParatroopa) enterKoopaShell(e);
                 } else if (e.state == "shellMoving") {
                     stopKoopaShell(e);
@@ -2233,7 +2250,7 @@ function updateCamera(g) {
     g.flagContactScrollPending = false;
     // HalfwayPageNybbles stores page 5 for World 1-1.  It is only retained
     // after the left edge has actually reached that page.
-    if (g.level == 1 && g.area == "main" && g.cameraX >= 5.0 * 256.0)
+    if (g.world==1 && g.level == 1 && g.area == "main" && g.cameraX >= 5.0 * 256.0)
         g.checkpointPage = 5;
 }
 
@@ -2628,7 +2645,7 @@ function updateFireworks(g, dt) {
 }
 
 function updateDeathReload(g) {
-    if(g.level>=3) {updateWorld1StageDeath(g);return;}
+    if(g.world==2 || g.level>=3) {updateWorld1StageDeath(g);return;}
     if (g.level == 2) {
         g.deathReloadFrames += 1;
         if (g.deathReloadFrames == 1) {
@@ -2855,6 +2872,10 @@ function simulateFixed(g, dt) {
     }
     if (g.stageLoadFrames == 166) g.stageLoadFrames = 167;
     if (g.level <= 3 && g.state == "levelComplete") {
+        if(g.world==2) {
+            if(g.input.resetQueued) resetRound(g);
+            return; // World 2-2 is not implemented; never load World 1-2 here.
+        }
         // Preserve the established 1-1 parity endpoint; newer whole-route
         // movies include the next stage and therefore must cross this edge.
         if(!(g.level==1 && parityIsEnabled())) {
@@ -2986,6 +3007,7 @@ function simulateFixed(g, dt) {
             if (g.level == 2) updateWorld12Actors(g);
             if (g.level == 3) updateWorld13Actors(g);
             if (g.level == 4) updateWorld14Actors(g);
+            if(isWorld21(g)) updateWorld21Actors(g);
         } else if (g.state == "pipeDown" || g.state == "pipeSide") {
             // Pipe-entry player control is a game-engine subroutine; normal
             // enemy objects still run on the transition's first frame.

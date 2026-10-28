@@ -71,7 +71,7 @@ bool revealAfterFirstPresent(const PROCESS_INFORMATION& process, const std::wstr
             if (game.handle != nullptr) {
                 // The visible window belongs to the engine child, not this
                 // launcher. Apply the game's identity before revealing it.
-                SetWindowTextW(game.handle, L"Super Mario Bros. World 1-1 ~ 1-4 - EVEngine");
+                SetWindowTextW(game.handle, L"Super Mario Bros. - EVEngine");
                 const HINSTANCE module = GetModuleHandleW(nullptr);
                 for (const int size : {ICON_SMALL, ICON_BIG}) {
                     const int metric = size == ICON_SMALL ? SM_CXSMICON : SM_CXICON;

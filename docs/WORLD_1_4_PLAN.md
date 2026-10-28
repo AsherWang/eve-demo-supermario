@@ -277,3 +277,13 @@ It reaches `worldComplete` with three lives and no death, Mario at canonical
 regions and the complete 16x24 Toad region match original-ROM frame 2399.
 `local-parity/world14-ending-fix/verification.json` records those scoped checks;
 this does not imply the entire scene or timing passes strict parity.
+
+## World 2 continuation (2026-10-28)
+
+The current source replaces the stationary World 1 endpoint with a normal
+World 2-1 load after the rescue text delay, retaining score, coins, lives and
+powers. The previous endpoint capture above remains historical presentation
+evidence. The new `world-1-4-to-world-2-1.json` host replay runs 2800 frames,
+enters World 2-1 at frame 2496, retains three lives and has no death.
+Small/big/fire transition behavior is covered by the simulation regression.
+This does not resolve the existing strict Bowser and victory-timing differences.

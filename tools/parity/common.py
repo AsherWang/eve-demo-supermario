@@ -54,6 +54,15 @@ def load_movie(path: Path) -> dict[str, Any]:
     return data
 
 
+def require_supported_stage(movie: dict[str, Any]) -> tuple[int, int]:
+    world,stage=movie.get('world',1),movie.get('level',1)
+    if type(world) is not int or type(stage) is not int or not (
+        world==1 and stage in (1,2,3,4) or world==2 and stage==1
+    ):
+        raise ValueError(f'Unsupported replay stage {world}-{stage}; supported: World 1 and 2-1')
+    return world,stage
+
+
 def _validate_inputs(inputs: Any, frame_count: int, label: str) -> None:
     if not isinstance(inputs, list):
         raise ValueError(f"{label} must be an array")

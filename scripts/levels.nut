@@ -1,7 +1,14 @@
 // Shared World 1 entry points. Level-specific data and actors live in their
 // own scripts; all entries preserve the score, coin tally and lives.
 function startWorld1Stage(g, stage, newLife=false) {
+    return startLevel(g,1,stage,newLife);
+}
+
+function startLevel(g, world, stage, newLife=false) {
+    if((world!=1 || stage<1 || stage>4) && !(world==2 && stage==1))
+        throw "Unsupported world/stage";
     local score=g.score, coins=g.coins, lives=g.lives, input=g.input;
+    local frameCounter=g.nesFrameCounter;
     local big=!newLife && g.player.big, fire=!newLife && g.player.fire;
     local fresh=createGame();
     foreach(key,value in fresh) g[key]=value;
@@ -9,7 +16,8 @@ function startWorld1Stage(g, stage, newLife=false) {
     g.coins=coins;g.queuedCoins=coins;g.displayCoins=coins;
     g.lives=lives;g.input=input;
     g.player.big=big;g.player.fire=fire;g.player.height=big?32.0:16.0;
-    if(stage==1) {
+    if(world==2) {g.nesFrameCounter=frameCounter;startWorld21(g);}
+    else if(stage==1) {
         resetPlayerForArea(g,40,176);
         g.soundEvents.append("resume_music");
     } else if(stage==2) startWorld12(g);
@@ -21,7 +29,8 @@ function startWorld1Stage(g, stage, newLife=false) {
 function updateWorld1StageDeath(g) {
     g.deathReloadFrames+=1;
     if(g.deathReloadFrames==1) {
-        g.checkpointPage=g.level==3 && g.cameraX>=1024.0?4:0;
+        g.checkpointPage=g.world==2 ? (g.cameraX>=1536.0?6:0) :
+            (g.level==3 && g.cameraX>=1024.0?4:0);
         g.lives-=1;
         if(g.lives<=0) {
             g.state="gameOver";g.player.dead=false;
@@ -29,8 +38,8 @@ function updateWorld1StageDeath(g) {
         }
     }
     if(g.deathReloadFrames>=166) {
-        local stage=g.level,page=g.checkpointPage;
-        startWorld1Stage(g,stage,true);
+        local world=g.world,stage=g.level,page=g.checkpointPage;
+        startLevel(g,world,stage,true);
         if(page>0) {
             g.checkpointPage=page;
             g.cameraX=page*256.0;g.displayCameraX=g.cameraX;
