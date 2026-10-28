@@ -49,6 +49,9 @@ jobs:
           $name = "super-mario-$version-win64"
           $package = Join-Path $env:RUNNER_TEMP $name
           ./tools/package_windows.ps1 -Sdk $env:EVE_SDK -Output $package
+          $env:EVE_EXE = "$env:EVE_SDK/bin/eve.exe"
+          python tools/run_world1_regressions.py --output "$env:RUNNER_TEMP/world1-regression"
+          if ($LASTEXITCODE) { throw 'World 1 simulation regressions failed' }
           Copy-Item -LiteralPath "docs/releases/$version.md" -Destination "$package/README.md"
           # Assert both PE binaries really are x64, even though the SDK is named win32.
           foreach ($binary in @("$package/SuperMario.exe", "$package/runtime/eve.exe", "$package/native/bin/mario_audio.dll")) {

@@ -479,6 +479,11 @@ function world14RemoveBridgeSection(g) {
 
 function updateWorld14Transition(g) {
     if(!("world14" in g)) return false;
+    if(g.input.resetQueued && ["world14Axe","world14VictoryWalk","world14Rescue",
+            "world14EndWorld","worldComplete"].find(g.state)!=null) {
+        resetRound(g);
+        return true;
+    }
     local w = g.world14, p = g.player;
     if(g.state == "world14Axe") {
         w.stateFrames += 1;
