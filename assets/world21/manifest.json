@@ -1,0 +1,166 @@
+{
+  "schema": "smb-world21-data-v1",
+  "rom_sha256": "f61548fdf1670cffefcc4f0b7bdcdd9eaba0c226e3b74f8666071496988248de",
+  "area_pointer": 40,
+  "streams": {
+    "AREA": {
+      "label": "L_GroundArea9",
+      "cpu_address": "0xa7cd",
+      "length": 101,
+      "sha256": "7cf28339e173b9719127b9df1ad2de2ff6597f6c4c65b61ddd6c9e64c42c4e85"
+    },
+    "ENEMIES": {
+      "label": "E_GroundArea9",
+      "cpu_address": "0x9f51",
+      "length": 43,
+      "sha256": "ab0b0a25de05d8b10e32f93ae9f742fc7f909b4ddc6e9ad6598689004372feb7"
+    }
+  },
+  "flag_column": 200,
+  "items": {
+    "question_powerups": [
+      [
+        53,
+        9
+      ]
+    ],
+    "question_coins": [
+      [
+        53,
+        5
+      ],
+      [
+        54,
+        5
+      ],
+      [
+        55,
+        5
+      ],
+      [
+        56,
+        5
+      ],
+      [
+        57,
+        5
+      ],
+      [
+        54,
+        9
+      ],
+      [
+        55,
+        9
+      ],
+      [
+        56,
+        9
+      ],
+      [
+        57,
+        9
+      ],
+      [
+        79,
+        9
+      ],
+      [
+        80,
+        9
+      ],
+      [
+        81,
+        9
+      ],
+      [
+        82,
+        9
+      ],
+      [
+        85,
+        9
+      ],
+      [
+        86,
+        9
+      ],
+      [
+        87,
+        9
+      ],
+      [
+        170,
+        9
+      ]
+    ],
+    "hidden_coins": [
+      [
+        28,
+        9
+      ],
+      [
+        186,
+        5
+      ]
+    ],
+    "hidden_oneups": [
+      [
+        28,
+        5
+      ]
+    ],
+    "brick_powerups": [
+      [
+        16,
+        9
+      ],
+      [
+        125,
+        5
+      ],
+      [
+        172,
+        5
+      ]
+    ],
+    "brick_vines": [
+      [
+        83,
+        5
+      ]
+    ],
+    "brick_stars": [
+      [
+        69,
+        5
+      ]
+    ],
+    "brick_coins": [
+      [
+        161,
+        9
+      ]
+    ],
+    "brick_oneups": []
+  },
+  "area_links": [
+    {
+      "offset": 12,
+      "raw": [
+        254,
+        43,
+        32
+      ]
+    },
+    {
+      "offset": 23,
+      "raw": [
+        254,
+        66,
+        32
+      ]
+    }
+  ],
+  "runtime_implemented": false
+}
