@@ -153,10 +153,12 @@ function appendEnemyGroup(g, x, groupId) {
     local count = (groupType & 1) != 0 ? 3 : 2;
     local kind = groupType >= 4 ? "koopa" : "goomba";
     local supportRow = (groupType & 2) != 0 ? 8 : 12;
+    local command={started=false};
     for (local i = 0; i < count; i += 1) {
         local enemy = makeEnemyAt(x * TILE_SIZE, supportRow, kind);
         enemy.groupCommandX = x * TILE_SIZE.tofloat();
         enemy.groupIndex = i;
+        enemy.groupCommand <- command;
         g.goombas.append(enemy);
     }
 }

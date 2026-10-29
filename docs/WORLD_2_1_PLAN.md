@@ -103,7 +103,7 @@ have identical state records for all 3976 simulated frames; these checks do not
 include rendered images or device audio. Their report is
 `local-parity/world21-runtime/collision-fix/world1-before-after.json`.
 
-The same-input diagnostic now retains matching player X/Y through frame 754;
+At commit `930ff87`, the same-input diagnostic retains matching player X/Y through frame 754;
 the next position divergence is 755. This is only a position-prefix check,
 not a pass of the complete semantic state or image gates. At this point the
 host has a different enemy population: piranhas do not reserve the ROM's five
@@ -112,8 +112,32 @@ group command when slots are exhausted. These are the next parser/actor tasks.
 The earlier 3116-frame no-death result belongs to the old commit and must not
 be interpreted as verification of the corrected collision code.
 
-Next: correct shared actor-slot occupancy and group-command consumption,
-then complete branch destinations
+## Actor-slot follow-up (2026-10-29)
+
+Pipe parser column tasks now allocate piranhas from the same five slots as
+walkers. A plant is skipped when its column is parsed with a full buffer;
+it is not spawned later when capacity becomes available. A full-buffer enemy
+group command waits, but once its first member spawns the command is consumed
+and members beyond capacity are discarded. A slot erased at the end of its
+enemy pass becomes available to the walker parser on the following frame.
+These changes are currently scoped to World 2-1; World 1 behavior is preserved.
+
+Ten simulation groups pass, including plant/walker slot exclusion, skipped
+plants, full and partial group allocation, and deferred reuse of erased slots.
+The 900-frame actual-window replay uses the unchanged first 900 inputs of
+`world-2-1-main-host-route.json`. Player X/Y, raw X/Y speeds, vertical force
+and accumulator, state and grounded flag all match the existing ROM reference
+for all 900 frames. Both runs enter death from the Goomba at frame 754.
+Capture: `local-parity/world21-runtime/actual/slot-prefix`; comparison:
+`local-parity/world21-runtime/slots-fix/verification.json`.
+
+The complete 3116-input simulation probe first differs in Y at frame 961 and
+X at 963, during death/reload. The host uses a fixed 208-frame death duration;
+the ROM gates life loss on player depth and death-music completion. Full
+reload parity, actor image parity and whole-route acceptance remain pending.
+The 900-frame result is a player-state prefix, not a six-gate whole-level pass.
+
+Next: align death/life-loss and reload timing, then complete branch destinations
 and record same-input full-route six-gate acceptance. Opening gates and host
 playability do not mark the level complete in the 32-level inventory.
 

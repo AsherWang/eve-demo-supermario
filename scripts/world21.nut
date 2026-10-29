@@ -49,7 +49,8 @@ function startWorld21(g) {
         setTile(g,x,row+2,tile);
         if(meta==0x10 || meta==0x12)
             g.plants.append({x=x*16.0+8.0,y=(row+2)*16.0,baseY=(row+2)*16.0,
-                direction=1,moving=false,timer=0,active=true});
+                direction=1,moving=false,timer=0,active=false,awake=false,
+                retired=false,slot=-1,enemyCollisionMask=0});
         if(meta==0x67) state.springs.append({x=x*16.0,y=(row+2)*16.0,control=0,timer=0,force=-7});
     }
     state.baseTiles=clone g.tiles;
@@ -84,6 +85,10 @@ function growWorld21Vine(g,tx,ty) {
 }
 
 function updateWorld21Actors(g) {
+    foreach(plant in g.plants) if(plant.awake &&
+        (!plant.active || plant.x<g.cameraX-73.0)) {
+        plant.active=false;plant.slot=-1;plant.retired=true;
+    }
     // Shared piranha behavior; this course has no World 1-2 lift objects.
     updateWorld12Actors(g);
     foreach(vine in g.world21.vines) if(vine.height<96.0) vine.height+=0.5;
@@ -107,6 +112,23 @@ function updateWorld21Actors(g) {
                 p.y=spring.y-p.height+offsets[spring.control];
                 p.grounded=true;p.nesYSpeed=0;p.vy=0.0;
             }
+        }
+    }
+}
+
+function parseWorld21PlantColumn(g,task) {
+    // AreaParser tasks 7 and 3 process the next two columns, 22 metatiles
+    // ahead of the camera's 32-pixel boundary. Pipe objects allocate from
+    // the same five enemy slots as walkers; a full buffer skips the plant.
+    if(task==7) g.world21.parserColumn <- floor(g.cameraX/32).tointeger()*2+22;
+    if(task!=7 && task!=3) return;
+    if(!("parserColumn" in g.world21)) return;
+    local column=g.world21.parserColumn+(task==3?1:0);
+    foreach(plant in g.plants) if(!plant.awake && !plant.retired &&
+        floor((plant.x-8)/16).tointeger()==column) {
+        plant.retired=true;
+        if(allocateEnemySlot(g,plant)) {
+            plant.awake=true;plant.active=true;plant.retired=false;
         }
     }
 }
@@ -135,6 +157,63 @@ function runWorld21SelfTest() {
     local hops=0;
     foreach(e in g.goombas) if("greenJump" in e && e.greenJump) hops+=1;
     requireSelfTest(hops==3,"2-1 must retain all three jumping Paratroopas");
+    local slots=createGame();startLevel(slots,2,1);slots.goombas=[];
+    local plant=slots.plants[0];
+    slots.cameraX=plant.x-8-352;
+    parseWorld21PlantColumn(slots,7);
+    requireSelfTest(plant.awake && plant.active && plant.slot==0,
+        "the pipe parser must reserve a shared enemy slot on its column task");
+    local probe=makeEnemyAt(100,12,"goomba");
+    requireSelfTest(allocateEnemySlot(slots,probe) && probe.slot==1,
+        "walkers must not reuse a slot occupied by a piranha");
+    foreach(occupiedCount in [4,5]) {
+        startLevel(slots,2,1);slots.goombas=[];slots.plants=[];
+        slots.player.x=0;slots.player.y=32;slots.nesFrameCounter=0;
+        for(local i=0;i<occupiedCount;i+=1) {
+            local enemy=makeEnemyAt(100+i*24,12,"goomba");
+            enemy.awake=true;enemy.slot=i;slots.goombas.append(enemy);
+        }
+        appendEnemyGroup(slots,16,0x38);
+        updateGoombas(slots,FIXED_DT);
+        local leader=slots.goombas[occupiedCount];
+        requireSelfTest(leader.awake==(occupiedCount==4),
+            "a group command must wait if all five slots are occupied");
+        if(occupiedCount==4) {
+            requireSelfTest(!slots.goombas[5].alive && !slots.goombas[6].alive,
+                "a partially spawned group must discard members that exceed capacity");
+            slots.goombas[0].alive=false;updateGoombas(slots,FIXED_DT);
+            requireSelfTest(!slots.goombas[5].awake && !slots.goombas[6].awake,
+                "discarded group members must never appear after another slot frees");
+        } else {
+            slots.goombas[0].alive=false;updateGoombas(slots,FIXED_DT);
+            requireSelfTest(leader.awake && !slots.goombas[6].alive,
+                "an unconsumed full-buffer group must retry when a slot becomes available");
+        }
+    }
+    startLevel(slots,2,1);slots.goombas=[];
+    plant=slots.plants[0];slots.cameraX=plant.x-8-352;
+    for(local i=0;i<5;i+=1) {
+        local enemy=makeEnemyAt(100+i*24,12,"goomba");
+        enemy.awake=true;enemy.slot=i;slots.goombas.append(enemy);
+    }
+    parseWorld21PlantColumn(slots,7);
+    requireSelfTest(!plant.active && plant.retired,
+        "a full buffer must skip a pipe's plant rather than defer it");
+    slots.goombas=[];parseWorld21PlantColumn(slots,7);
+    requireSelfTest(!plant.active,"a skipped plant must not spawn on a repeated parser task");
+    startLevel(slots,2,1);slots.goombas=[];slots.plants=[];
+    slots.cameraX=100;slots.player.x=112;slots.player.y=32;
+    for(local i=0;i<5;i+=1) {
+        local enemy=makeEnemyAt(i==0?27.25:180+i*24,12,"goomba");
+        enemy.awake=true;enemy.slot=i;slots.goombas.append(enemy);
+    }
+    appendEnemyGroup(slots,16,0x38);
+    updateGoombas(slots,FIXED_DT);
+    requireSelfTest(!slots.goombas[0].alive && !slots.goombas[5].awake,
+        "an erased slot must not be parsed again during the same enemy pass");
+    updateGoombas(slots,FIXED_DT);
+    requireSelfTest(slots.goombas[5].awake && slots.goombas[5].slot==0,
+        "the erased slot must become available on the following enemy pass");
     hitBlock(g,83,5);
     requireSelfTest(g.world21.vines.len()==1 && g.powerups.len()==0,
         "a vine brick must not be substituted with a mushroom");

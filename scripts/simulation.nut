@@ -1886,6 +1886,10 @@ function allocateEnemySlot(g, enemy) {
                 }
             }
         }
+        if(isWorld21(g)) foreach(plant in g.plants)
+            if(plant.active && plant.awake && plant.slot==slot) occupied=true;
+        if(isWorld21(g) && "groupIndex" in enemy &&
+            "releasedSlots" in g.world21 && g.world21.releasedSlots[slot]) occupied=true;
         if (g.level == 3 && "platforms" in g) {
             foreach (platform in g.platforms) {
                 if (platform.awake && !platform.retired &&
@@ -1972,6 +1976,7 @@ function updateNormalEnemyCollisions(g) {
 }
 
 function updateGoombas(g, dt) {
+    if(isWorld21(g)) g.world21.releasedSlots <- [false,false,false,false,false];
     local p = g.player;
     // Enemy stream parsing follows ScrollHandler in the original frame.  Use
     // the screen edge that this frame's pending scroll will expose.
@@ -2031,6 +2036,7 @@ function updateGoombas(g, dt) {
         // right edge.  Its load frame only allocates the object slot; movement
         // starts on the following frame.
         if (!e.awake) {
+            if(isWorld21(g) && e.groupIndex>0 && !e.groupCommand.started) continue;
             local triggerX = e.groupIndex >= 0 ? e.groupCommandX : e.x;
             // The parser adds $30 to ScreenRight_X_Pos and masks the low
             // nibble before comparing the stream object's 16-pixel column.
@@ -2042,7 +2048,13 @@ function updateGoombas(g, dt) {
                 // $18 for each member; the stream object's X is only a gate.
                 e.x = projectedCameraX + LOGICAL_WIDTH - 1.0 + e.groupIndex * 24.0;
             }
-            if (!allocateEnemySlot(g, e)) continue;
+            if (!allocateEnemySlot(g, e)) {
+                // SpawnEnemyGroup consumes its command when the buffer fills;
+                // omitted members are not deferred to a later camera edge.
+                if(isWorld21(g) && e.groupIndex>0) e.alive=false;
+                continue;
+            }
+            if(isWorld21(g) && e.groupIndex==0) e.groupCommand.started=true;
             e.awake = true;
             continue;
         }
@@ -2158,6 +2170,9 @@ function updateGoombas(g, dt) {
         // despite the source comment describing a 72-pixel extension.
         if (e.x < projectedCameraX - 73.0) {
             e.alive = false;
+            // The ROM dispatches slots in order. Erasing a slot at the end
+            // of its pass cannot re-run that slot's parser in the same pass.
+            if(isWorld21(g) && e.slot>=0) g.world21.releasedSlots[e.slot]=true;
             releaseEnemySlot(e);
             continue;
         }
@@ -2281,6 +2296,7 @@ function updateVramAreaParserScheduler(g) {
     }
     g.vramAreaParserTask -= 1;
     local completedTask = g.vramAreaParserTask;
+    if(isWorld21(g)) parseWorld21PlantColumn(g,completedTask);
     if (completedTask == 6 || completedTask == 5 ||
         completedTask == 2 || completedTask == 1 || completedTask == 0)
         g.vramBufferAddrCtrl = 6;

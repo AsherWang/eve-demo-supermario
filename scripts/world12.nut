@@ -383,7 +383,8 @@ function updateWorld12Platforms(g) {
 function updateWorld12Actors(g) {
     local p=g.player;
     foreach(plant in g.plants) {
-        if(!plant.active || plant.x>g.cameraX+304 || plant.x<g.cameraX-32) continue;
+        if(!plant.active || (!isWorld21(g) &&
+            (plant.x>g.cameraX+304 || plant.x<g.cameraX-32))) continue;
         if(plant.timer>0) plant.timer-=1;
         else {
             if(!plant.moving) {
