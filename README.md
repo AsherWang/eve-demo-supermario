@@ -50,6 +50,7 @@ Whole-level acceptance evidence for all 32 stages is tracked using
 - Jump: Z or Space
 - Enter pipe: Down while standing on the World 1-1 warp pipe
 - Reset (or restart after Game Over): R
+- Start a new single-player game from the returned title screen: Enter (or R)
 - Start World 1-2 at its entrance: F2 (or finish World 1-1)
 
 For development, set `startLevel = 2` in `config.nut`; `startArea` accepts
@@ -158,5 +159,8 @@ World 2-1 development entry: F5 starts its main-route prototype. The source buil
 also transitions from the World 1-4 credits into World 2-1 while preserving
 score, coins, lives and powers. The cloud/underground destinations are not yet
 connected; the vine grows without substituting a mushroom, but climbing into
-the cloud area is pending. World 2-2 is not implemented. These features are not
+the cloud area is pending. After World 2-1 Game Over, the source build returns
+to its original-art single-player title; Enter starts a fresh World 1-1 game.
+The idle demo, two-player selection and A+Start continue are pending.
+World 2-2 is not implemented. These features are not
 in the published 0.0.7 package.

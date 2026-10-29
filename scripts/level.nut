@@ -556,6 +556,7 @@ function createGame() {
             fireQueued = false,
             jumpDown = false, jumpQueued = false,
             resetDown = false, resetQueued = false
+            startDown = false, startQueued = false
         }
     };
     buildLevel(g);

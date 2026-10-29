@@ -1001,7 +1001,8 @@ function drawHud(g) {
     local hudCoinSet = g.area == "underground" ?
         assets.items.hudCoinsUnderground :
         (g.area == "castle" ? world14Assets.hudCoins : assets.items.hudCoins);
-    screenTexture(g.state=="gameOverScreen"?assets.items.hudCoinLives:hudCoinSet[colorPhase],
+    screenTexture(g.state=="gameOverScreen"?
+        assets.items.hudCoinLives:hudCoinSet[colorPhase],
         88.0, 24.0, 8.0, 8.0);
     screenTexture(assets.hudFont[0x29], 96.0, 24.0, 8.0, 8.0);
     drawHudNumber(g.displayCoins, 2, 104.0, 24.0);
@@ -1010,7 +1011,7 @@ function drawHud(g) {
     drawHudGlyphs([0x1D, 0x12, 0x16, 0x0E], 200.0, 16.0); // TIME
     if (!(parityIsEnabled() && g.parity.originPending) &&
         g.state != "nextStageLoad" && g.stageLoadFrames != 166 &&
-        g.state != "areaExitEntrance" && g.state != "gameOverScreen")
+        g.state != "areaExitEntrance" && g.state != "gameOverScreen" && g.state != "titleScreen")
         drawHudNumber(g.displayTime, 3, 208.0, 24.0,
             !(g.state == "timeBonus" || g.state == "raiseFlag" ||
               g.state == "fireworks" || g.state == "postClearDelay" ||
@@ -1072,8 +1073,11 @@ function areaTransitionOverlay(g) {
 function renderGame(g) {
     gfx.clear();
     renderOffsetY=0.0;
+    if(g.state=="titleLoad" || g.state=="titleScreen" || g.state=="newGameLoad") {drawTitleFlow(g);return;}
     if(isWorld21(g) && g.state=="gameOver") {
-        if(g.world21.gameOverFrames<2) {
+        if(g.world21.gameOverFrames==0) {
+            g.state="playing";renderGame(g);g.state="gameOver";
+        } else if(g.world21.gameOverFrames<=2) {
             screenRect(0.0,0.0,LOGICAL_WIDTH,LOGICAL_HEIGHT,146.0/255.0,144.0/255.0,1.0);
         } else {
             screenRect(0.0,0.0,LOGICAL_WIDTH,LOGICAL_HEIGHT,0.0,0.0,0.0);
@@ -1123,6 +1127,9 @@ function renderGame(g) {
         return;
     }
     if (g.state == "deathReload") {
+        if(isWorld21(g) && g.deathReloadFrames==0 && g.lives==1) {
+            g.state="playing";renderGame(g);g.state="deathReload";return;
+        }
         local areaRenderStart=isWorld21(g) && "lifeScreenEnd" in g.world21?
             g.world21.lifeScreenEnd+1:149;
         // Screen disable first exposes the previous sky backdrop, then the

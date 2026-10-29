@@ -210,8 +210,8 @@ function updateWorld21GameOver(g) {
     g.world21.gameOverFrames+=1;
     if(g.world21.gameOverFrames==1) emitSound(g,"game_over");
     if(g.world21.gameOverFrames==7) g.world21.gameOverTimer <- 0x12;
-    // Keep the terminal screen until R while the title-screen flow is pending.
-    // The timer still runs independently so its original expiry is testable.
+    if("gameOverTimer" in g.world21 && g.world21.gameOverTimer==0 &&
+        g.world21.gameOverFrames>=7) beginTitleReturn(g);
 }
 
 function runWorld21SelfTest() {
@@ -330,6 +330,7 @@ function runWorld21SelfTest() {
     updatePlayer(depth,FIXED_DT);
     requireSelfTest(depth.state=="playing","music completion alone must not skip the death fall");
     local over=createGame();startLevel(over,2,1);over.lives=1;
+    over.score=12300;over.coins=17;
     over.player.dead=true;finishPlayerDeath(over);
     over.world21.masterTimer <- 47;over.intervalTimerControl=16;over.soundEvents.clear();
     simulateFixed(over,FIXED_DT);
@@ -341,12 +342,18 @@ function runWorld21SelfTest() {
         "Game Over setup must queue its music exactly once");
     over.soundEvents.clear();
     for(local frame=2;frame<=419;frame+=1) simulateFixed(over,FIXED_DT);
-    requireSelfTest(over.world21.gameOverTimer==0 && over.soundEvents.len()==0,
-        "Game Over screen timer must expire after its master freeze and 18 interval ticks");
-    over.score=12300;over.coins=17;over.input.resetQueued=true;
+    requireSelfTest(over.world21.gameOverTimer==0 && over.state=="titleLoad" &&
+        over.highScore==12300 && over.soundEvents.len()==1 && over.soundEvents[0]=="silence_music",
+        "Game Over expiry must silence music and begin title return, preserving the top score");
+    for(local frame=0;frame<30;frame+=1) simulateFixed(over,FIXED_DT);
+    requireSelfTest(over.state=="titleScreen" && over.world==1 && over.level==1,
+        "the title loader must complete and await a new-game input");
+    over.input.startQueued=true;
     simulateFixed(over,FIXED_DT);
-    requireSelfTest(isWorld21(over) && over.state=="playing" && over.lives==3 &&
-        over.score==0 && over.coins==0 && !over.player.dead,
-        "R must start a clean three-life retry from the bounded Game Over screen");
+    for(local frame=0;frame<195 && over.state!="playing";frame+=1) simulateFixed(over,FIXED_DT);
+    requireSelfTest(over.world==1 && over.level==1 && over.state=="playing" && over.lives==3 &&
+        over.score==0 && over.coins==0 && !over.player.dead && !over.player.big &&
+        over.highScore==12300 && over.checkpointPage==0,
+        "Enter on the title must start a clean three-life World 1-1 game and retain only the top score");
     print("World 2-1 main-route self-test passed.\n");
 }

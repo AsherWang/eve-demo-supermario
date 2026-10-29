@@ -358,6 +358,8 @@ function sampleInput(g) {
     local reset = keyboard.isDown("r") || keyboard.isDown("R");
     if (reset && !g.input.resetDown) g.input.resetQueued = true;
     g.input.resetDown = reset;
+    local start=keyboard.isDown("enter") || keyboard.isDown("Enter");
+    g.input.startQueued=start && !g.input.startDown;g.input.startDown=start;
 }
 
 function spawnPowerUp(g, tx, ty, kind) {
@@ -2902,6 +2904,7 @@ function preparePlayerPresentation(g) {
 
 function simulateFixed(g, dt) {
     g.simTime += dt;
+    if(g.state=="titleLoad" || g.state=="titleScreen" || g.state=="newGameLoad") {updateTitleFlow(g);return;}
     if (g.state == "nextStageLoad") {
         updateNextWorld1StageLoad(g);
         return;

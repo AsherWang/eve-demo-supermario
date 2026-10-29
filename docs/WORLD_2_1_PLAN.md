@@ -230,8 +230,8 @@ artifacts remain on disk. A first failed Game Over rendering probe is kept in
 than a successful screenshot run. Unit checks cover completed captures with a
 render fault and healthy audio status containing `error=0`.
 
-The terminal screen still waits for R. Automatic return to the title screen
-is not implemented. In the complete-input simulation the first engine-mode
+At commit `64614d7`, the terminal screen still waits for R. Automatic title return
+is not implemented in that version. In its complete-input simulation the first engine-mode
 difference is now 2646, where the ROM leaves Game Over for its title flow;
 the first visible-lives difference is 2647. This is retained as failed evidence.
 
@@ -244,8 +244,51 @@ Three handoff images (2227, 2228, 2230) still fail and are not excluded from the
 report. Stable-page correctness does not imply whole-scene or timing acceptance.
 The corrected capture has no runtime errors; earlier failed probes remain saved.
 
-Next: resolve the Game Over handoff frames and implement title return/new-game flow,
-then complete branch destinations
+## Single-player title and new game (2026-10-29)
+
+Game Over expiry now returns to a title loader and a single-player menu.
+Enter/Start starts a fresh World 1-1 game with three lives, small Mario,
+zero score/coins and no checkpoint, retaining the best score for this process.
+R on the title also starts a new game; R before the Game Over wait finishes
+remains the development retry shortcut for the current stage.
+
+`tools/extract_title.py` verifies the ROM hash and decodes the CHR $1ec0 VRAM
+packet into `assets/title/overlay.png` and `scripts/generated/title_data.nut`.
+The original logo, copyright, menu and mushroom cursor are reused; the runtime
+uses only generated files. The title's temporary $0300..$0439 copy and subsequent
+buffer clear are modeled for the inactive-player accumulator aliases.
+
+The new-game loader preserves entrance state until its initialization pass,
+waits on ScreenTimer and the shared interval divider, then restores music and
+the first-control friction profile. Regression covers automatic title return,
+fresh stats/powers/checkpoint and best-score retention. Versioned diagnostic
+movies are `world-2-1-title-return.json` and `world-2-1-title-new-game.json`.
+The new-game reference has a continuous-video proof for all 3116 states and APU
+writes from the normal World 2-1 origin through title Start and movement in 1-1.
+
+Final actual capture: `local-parity/world21-runtime/actual/title-new-game-verified`.
+All 3116 frames match the 18 selected player/progress/engine fields recorded in
+`title-fix/verified-report.json`. The original title packet briefly aliases
+movement fractions during loading; these bytes are cleared on the next buffer
+task, not carried into gameplay. Stable title frames 2690/2749, lives screen
+2800 and sampled 1-1 frames 2950/3115 match at zero pixel tolerance.
+
+The full state gate still FAILS on raw size/palette/VRAM fields in the title
+loader and pre-existing enemy fields (first enemy-state mismatch at 129).
+The full selected-image report compares 91 images: 73 pass, 18 fail. Large
+Game Over handoff backdrop errors are fixed; frames 2227/2228 each retain 370
+enemy pixels of difference. Other failed loading images remain in
+`title-fix/reports/state-report.html` and `title-fix/reports/report.html`.
+These are diagnostics, not a complete World 2-1 route or six-gate acceptance.
+The first concurrent capture had black image output despite valid state logs;
+the final native replay was run serially and retained that earlier failed probe.
+
+This is the single-player return flow for World 2-1. Initial launch still enters
+the existing 1-1 game. Two-player selection, the idle demo and A+Start continue
+are not implemented; the original title artwork still contains its two-player
+label. Whole-route and branch acceptance remain pending.
+
+Next: finish remaining presentation/strict gates, then complete branch destinations
 and record same-input full-route six-gate acceptance. Opening gates and host
 playability do not mark the level complete in the 32-level inventory.
 

@@ -47,6 +47,8 @@ function parityApplyMask(g, mask) {
     g.input.right = (mask & PARITY_BUTTON_RIGHT) != 0;
     g.input.up = (mask & PARITY_BUTTON_UP) != 0;
     g.input.down = (mask & PARITY_BUTTON_DOWN) != 0;
+    local start=(mask & PARITY_BUTTON_START)!=0;
+    g.input.startQueued=start && !g.input.startDown;g.input.startDown=start;
 
     if (run && !g.input.runDown) g.input.fireQueued = true;
     g.input.run = run;
@@ -173,7 +175,15 @@ function parityStateJson(g, frame) {
     local operMode = 1;
     local operModeTask = 3;
     local engineSubroutine = 8;
-    if(isWorld21(g) && g.state=="gameOver") {
+    if(g.state=="newGameLoad") {
+        local frame=g.title.loadFrames,end=("waitEnd" in g.title)?g.title.waitEnd:10000;
+        operModeTask=frame<=1?0:(frame<end+16?1:(frame==end+16?2:3));
+        engineSubroutine=frame<=1?8:(frame==end+18?7:(frame==end+19?8:0));
+    } else if(g.state=="titleLoad" || g.state=="titleScreen") {
+        local frame=g.title.frames;
+        operMode=0;operModeTask=frame<=2?0:(frame<27?1:(frame==27?2:3));
+        engineSubroutine=frame<=1?6:(frame<29?0:(frame==29?7:8));
+    } else if(isWorld21(g) && g.state=="gameOver") {
         operMode=3;engineSubroutine=6;
         operModeTask=g.world21.gameOverFrames==0?0:(g.world21.gameOverFrames<7?1:2);
     } else if (g.state == "playing" && p.dead) {

@@ -1,0 +1,8 @@
+{
+  "schema": "smb-title-overlay-v1",
+  "rom_sha256": "f61548fdf1670cffefcc4f0b7bdcdd9eaba0c226e3b74f8666071496988248de",
+  "source": "CHR $1ec0 VRAM packet, background pattern table 1",
+  "packet_sha256": "683c58c403f54b991f2a8b3a30009594a30170183b2eda5d4785d9c22a35b170",
+  "packet_bytes": 305,
+  "writes": 317
+}

@@ -25,6 +25,7 @@ dofile("scripts/generated/world13_map.nut");
 dofile("scripts/world13.nut");
 dofile("scripts/world14.nut");
 dofile("scripts/world21.nut");
+dofile("scripts/title.nut");
 dofile("scripts/levels.nut");
 dofile("scripts/render.nut");
 dofile("scripts/parity.nut");
@@ -41,6 +42,7 @@ eve_init = function() {
     loadWorld13Assets();
     loadWorld14Assets();
     loadWorld21Assets();
+    loadTitleAssets();
     loadAudio();
     if (!("startupSelfTests" in config) || config.startupSelfTests || parityIsEnabled()) {
         runSimulationSelfTest();
