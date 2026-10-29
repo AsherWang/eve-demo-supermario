@@ -176,3 +176,12 @@ Game Over 后续：修复参考解码器将 `$ff` 生命下溢算作 256 条命�
 - 原生窗口回放 `world-2-1-title-new-game.json` 共 3116 帧，无缺帧。状态门禁仅剩 `enemy0.x`：首次差异第 709 帧（原版 1115、当前 1114），共 232 帧；此前第 406/407 帧的激活/位置差异已消除。玩家、进度及其他当前门禁字段保持一致。
 - 91 张截图中 73 通过、18 失败；10 组模拟回归和 3 项参考状态/运行错误检测测试通过。此回放包含死亡、Game Over、标题及重新开局，不能替代成功通关验收。
 - 证据：`local-parity/world21-runtime/actual/parser-task-fix`、`local-parity/world21-runtime/parser-task-fix/native-reports`。下一步追查第 709 帧空槽复用/组内更新顺序，并继续清理图像差异；奖励区域连接及整关验收仍未完成。
+
+
+### 2026-10-30：保留复用敌人槽的横向小数状态
+
+- 原版 RAM 显示第 708 帧新板栗复用槽 1 时保留 `$0402` 的 `$80` 横向累积值；原实现重置该值，导致第 709 帧开始提前一像素。现按槽保存横向运动小数，分配新敌人时继承，初始化区域时清零。
+- 新增槽位继承与区域初始化清零回归。10 组模拟回归、3 项 Python 测试、原生音频测试全部通过。
+- 原生 `world-2-1-title-new-game.json` 回放 3116 帧，当前全部状态门禁通过、无缺帧。91 张截图仍为 73 通过、18 失败；状态门禁通过仅限当前覆盖字段，不能替代整关成功通关、全图像和设备音频验收。
+- 证据：`local-parity/world21-runtime/actual/slot-fraction-fix` 和 `local-parity/world21-runtime/slot-fraction-fix/native-reports`。预览包：`dist/super-mario-world21-slot-fix-win64/SuperMario.exe`，启动、标题、大小图标及关闭检查通过。没有发布新 release，版本仍为 0.0.7。
+- 下一步处理剩余截图差异，继续接通 2-1 奖励区域和返回路线，并补成功通关的整关验证。

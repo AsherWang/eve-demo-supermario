@@ -1924,6 +1924,10 @@ function allocateEnemySlot(g, enemy) {
                     }
                 }
             }
+            if(isWorld21(g)) {
+                // InitEnemyObject leaves Enemy_X_MoveForce intact on reuse.
+                enemy.x += g.world21.slotXFractions[slot];
+            }
             enemy.slot = slot;
             enemy.enemyCollisionMask = 0;
             return true;
@@ -2182,6 +2186,9 @@ function updateGoombas(g, dt) {
         if(e.kind=="koopa" && e.state=="shell" && e.intervalTimer==0)
             reviveKoopa(e,g.nesFrameCounter);
         moveEnemyBody(g, e, dt);
+        if(isWorld21(g) && e.slot>=0) {
+            g.world21.slotXFractions[e.slot]=e.x-floor(e.x);
+        }
         // OffscreenBoundsCheck reaches `SBC #$48` with carry clear for a
         // normal Goomba: the preceding `CPY #con_piranha_plant` fails with
         // Y=$06.  The effective bound is therefore screen-left-$49 (73 px),

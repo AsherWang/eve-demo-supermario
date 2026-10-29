@@ -35,7 +35,8 @@ function startWorld21(g) {
     g.areaWidth=ROM_WORLD_2_1_METATILES.len();g.romBackgroundCollision=true;
     clearAreaObjects(g);g.plants=[];g.platforms=[];g.enterablePipes=[];
     g.sidePipeX=-1;g.cameraX=0.0;g.displayCameraX=0.0;
-    local state={baseTiles=[],vines=[],springs=[]};
+    local state={baseTiles=[],vines=[],springs=[],
+        slotXFractions=[0.0,0.0,0.0,0.0,0.0]};
     if("world21" in g) g.world21=state; else g.world21 <- state;
     local mapping={};
     foreach(pair in [[0x51,TILE_BRICK],[0x52,TILE_BRICK],[0x54,TILE_GROUND],
@@ -242,6 +243,15 @@ function runWorld21SelfTest() {
     local probe=makeEnemyAt(100,12,"goomba");
     requireSelfTest(allocateEnemySlot(slots,probe) && probe.slot==1,
         "walkers must not reuse a slot occupied by a piranha");
+    local reuse=createGame();startLevel(reuse,2,1);
+    reuse.goombas=[];reuse.plants=[];
+    reuse.world21.slotXFractions[0]=0.5;
+    local inherited=makeEnemyAt(200.0,12,"goomba");
+    requireSelfTest(allocateEnemySlot(reuse,inherited) && inherited.x==200.5,
+        "reused enemy slots must retain their horizontal movement accumulator");
+    startLevel(reuse,2,1);
+    requireSelfTest(reuse.world21.slotXFractions[0]==0.0,
+        "area initialization must clear enemy slot movement accumulators");
     local parser=createGame();startLevel(parser,2,1);
     parser.goombas=[];parser.plants=[];
     parser.player.x=0;parser.player.y=32;
