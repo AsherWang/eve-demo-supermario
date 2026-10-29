@@ -352,3 +352,12 @@ agreement are retained in `local-parity/world21-map-final`.
 - 原生 `world-2-1-title-new-game.json` 回放 3116 帧，当前全部状态门禁通过、无缺帧。91 张截图仍为 73 通过、18 失败；状态门禁通过仅限当前覆盖字段，不能替代整关成功通关、全图像和设备音频验收。
 - 证据：`local-parity/world21-runtime/actual/slot-fraction-fix` 和 `local-parity/world21-runtime/slot-fraction-fix/native-reports`。预览包：`dist/super-mario-world21-slot-fix-win64/SuperMario.exe`，启动、标题、大小图标及关闭检查通过。没有发布新 release，版本仍为 0.0.7。
 - 下一步处理剩余截图差异，继续接通 2-1 奖励区域和返回路线，并补成功通关的整关验证。
+
+
+### 2026-10-30：剩余截图差异定位与图形验证阻塞
+
+- 对 `slot-fraction-fix` 的 91 张截图逐项检查：失败集中在 2220–2228、2236、2671–2676、2751、2918，共 18 张。当前状态门禁仍为 3116 帧通过。
+- 已目视确认 2671、2674 原版仍为纯天空背景色，当前实现提前绘制关卡或菜单；2918 原版为纯天空背景色，当前实现仍为黑屏。应继续核对关闭 PPU 绘制期间的背景色及重新启用绘制时机，不能只调整状态机时间。
+- 绘制候选保存在 `local-parity/world21-runtime/title-blanking-investigation/candidate.patch`，未合入运行源码。连续三次原生验证均在 SDL 创建窗口时因 `vkEnumerateInstanceExtensionProperties returned VK_INCOMPLETE(5)` 失败，尚未进入脚本游戏循环；不是截图门禁通过，也未产生新的完整状态证据。
+- 失败日志分别保留在 `actual/title-blanking-fix`、`actual/title-blanking-fix-retry`、`actual/title-blanking-fix-third`（均相对 `local-parity/world21-runtime`）。候选代码的 10 组无窗口模拟回归通过，但不能证明绘制正确。
+- 下一步先恢复原生图形捕获，再验证候选并核对逐帧空白/精灵显示阶段；未确认前保持已验证运行代码，不发布新包或 release。
