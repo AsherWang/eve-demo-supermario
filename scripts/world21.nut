@@ -209,6 +209,7 @@ function updateWorld21DeathReload(g) {
 function updateWorld21GameOver(g) {
     g.world21.gameOverFrames+=1;
     if(g.world21.gameOverFrames==1) emitSound(g,"game_over");
+    if(g.world21.gameOverFrames==2) g.vramBufferAddrCtrl=3;
     if(g.world21.gameOverFrames==7) g.world21.gameOverTimer <- 0x12;
     if("gameOverTimer" in g.world21 && g.world21.gameOverTimer==0 &&
         g.world21.gameOverFrames>=7) beginTitleReturn(g);
@@ -223,6 +224,15 @@ function runWorld21SelfTest() {
     local hops=0;
     foreach(e in g.goombas) if("greenJump" in e && e.greenJump) hops+=1;
     requireSelfTest(hops==3,"2-1 must retain all three jumping Paratroopas");
+    local falling=createGame();startLevel(falling,2,1);
+    for(local i=0;i<falling.tiles.len();i+=1) falling.tiles[i]=TILE_EMPTY;
+    local walker=makeEnemyAt(384.0,6,"goomba");
+    // Golden first-airborne Y bytes from the normal-entry ROM trace.
+    foreach(y in [88,88,88,89,90,91,93,94,96,98,101,103]) {
+        moveEnemyBody(falling,walker,FIXED_DT);
+        requireSelfTest(walker.state=="falling" && walker.y-10==y,
+            "a 2-1 Goomba must use ROM falling state and byte-accumulator motion");
+    }
     local slots=createGame();startLevel(slots,2,1);slots.goombas=[];
     local plant=slots.plants[0];
     slots.cameraX=plant.x-8-352;

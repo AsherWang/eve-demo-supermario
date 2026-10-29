@@ -1563,12 +1563,12 @@ function moveEnemyBody(g, e, dt) {
         if(!isSolidAt(g,floor(footX/16).tointeger(),floor((e.y+e.height+1)/16).tointeger()))
             e.vx=-e.vx;
     }
-    local world13GroundWalker = g.level == 3 &&
+    local romGroundWalker = (g.level == 3 || (isWorld21(g) && e.kind=="goomba")) &&
         (e.kind == "goomba" ||
          (e.kind == "koopa" && e.state != "shell" &&
           e.state != "shellMoving" && e.state != "flipped" &&
           !("paratroopa" in e && e.paratroopa)));
-    if (world13GroundWalker) {
+    if (romGroundWalker) {
         local supportRow = floor((e.y + e.height) / TILE_SIZE).tointeger();
         local supportColumn = floor((collisionX + 8.0) / TILE_SIZE).tointeger();
         if (isSolidAt(g, supportColumn, supportRow)) {
@@ -1615,7 +1615,7 @@ function moveEnemyBody(g, e, dt) {
         if(e.nesYSpeed>=3 && e.nesYMoveForce>=0x80) {
             e.nesYSpeed=3;e.nesYMoveForce=0;
         }
-    } else if (!world13GroundWalker) {
+    } else if (!romGroundWalker) {
         e.vy += 857.8125 * dt;
         if (e.vy > 180.0) e.vy = 180.0;
     }
@@ -1653,7 +1653,7 @@ function moveEnemyBody(g, e, dt) {
     e.x += e.vx * dt;
 
     local nextY = e.y + e.vy * dt;
-    if (e.state == "falling" && world13GroundWalker) {
+    if (e.state == "falling" && romGroundWalker) {
         // MoveD_EnemyVertically uses downward force $3d and maximum speed $03.
         // The first pass consumes only the byte-sized movement force, so the
         // integer Y remains unchanged until its accumulator carries.
@@ -1670,7 +1670,7 @@ function moveEnemyBody(g, e, dt) {
         nextY = e.y + delta;
         e.vy = e.nesYSpeed * NES_FRAME_RATE;
     }
-    if (nextY >= e.y && !world13GroundWalker) {
+    if (nextY >= e.y && !romGroundWalker) {
         local floorTy = floor((nextY + e.height) / TILE_SIZE).tointeger();
         // BlockBufferChk_Enemy checks the bottom-middle probe (X+8, Y+18),
         // not both edges. A trailing edge touching an adjacent column must not

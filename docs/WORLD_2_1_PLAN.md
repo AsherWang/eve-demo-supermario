@@ -273,7 +273,7 @@ movement fractions during loading; these bytes are cleared on the next buffer
 task, not carried into gameplay. Stable title frames 2690/2749, lives screen
 2800 and sampled 1-1 frames 2950/3115 match at zero pixel tolerance.
 
-The full state gate still FAILS on raw size/palette/VRAM fields in the title
+At commit `7111cf8`, the full state gate FAILS on raw size/palette/VRAM fields in the title
 loader and pre-existing enemy fields (first enemy-state mismatch at 129).
 The full selected-image report compares 91 images: 73 pass, 18 fail. Large
 Game Over handoff backdrop errors are fixed; frames 2227/2228 each retain 370
@@ -288,7 +288,38 @@ the existing 1-1 game. Two-player selection, the idle demo and A+Start continue
 are not implemented; the original title artwork still contains its two-player
 label. Whole-route and branch acceptance remain pending.
 
-Next: finish remaining presentation/strict gates, then complete branch destinations
+## Walker and title-state follow-up (2026-10-29)
+
+World 2-1 Goombas now use the existing integer ROM ground-walker/falling
+routine instead of floating-point gravity. A missing bottom-middle support
+probe changes the enemy to falling before movement; the $3d force accumulator
+then advances its Y bytes. A golden twelve-frame regression checks the first
+airborne sequence from the normal-entry ROM trace. World 1 movement is unchanged.
+
+Title initialization now clears palette/scroll/parser state on the memory-clear
+pass. The inactive raw Size byte is retained separately from logical player
+powers until PrimaryGameSetup initializes it. Title and new-game screen tasks
+queue their initial palette, twelve area-column buffers, area palette and CHR
+title packet, and consume the previous VRAM selection before the next task.
+The first controllable new-game pass also advances the shared palette cycle.
+
+The simulation state probe retains all 3116 player/progress frames and removes
+the earlier raw-size, palette, VRAM and first falling-state failures. Its state
+gate still FAILS on enemy activation and X (first mismatch 406/407).
+Evidence: `local-parity/world21-runtime/walker-fix/simulation-report`.
+The camera-admission experiment saved as `group-probe.jsonl` was not retained
+in runtime code: it moved a spawn discrepancy later without establishing the
+underlying stream-parser rule. Existing failed probes remain visible.
+
+The serial actual-window replay is `actual/walker-title-fix` under the same
+local evidence directory. Its 3116-frame state comparison confirms only two
+failed fields: enemy activation at 406 and X at 407; all other fields in the
+current state gate pass. Reports are in `walker-fix/reports`. The 91 selected
+images still have 18 failures (no full-frame or audio acceptance claim).
+Ten simulation groups pass, including the new falling trajectory regression.
+
+Next: resolve enemy stream admission/placement and remaining presentation gates,
+then complete branch destinations
 and record same-input full-route six-gate acceptance. Opening gates and host
 playability do not mark the level complete in the 32-level inventory.
 

@@ -29,9 +29,20 @@ function tickTitleDivider(g) {
     if(g.intervalTimerControl<0) g.intervalTimerControl=20;
 }
 
+function updateTitlePalette(g) {
+    if(g.colorPhasePending && g.vramBufferAddrCtrl!=6) {
+        g.displayColorPhase=g.pendingColorPhase;g.colorPhasePending=false;
+    }
+    if((g.nesFrameCounter&7)==0) {
+        g.pendingColorPhase=g.colorRotateOffset;g.colorPhasePending=true;
+        g.colorRotateOffset=(g.colorRotateOffset+1)%6;
+    }
+}
+
 function updateTitleNewGameLoad(g) {
     g.title.loadFrames+=1;
     local frame=g.title.loadFrames;
+    g.vramBufferAddrCtrl=0;
     if(frame!=2) tickTitleDivider(g);
     if(frame==1) {
         g.cameraX=0;g.displayCameraX=0;
@@ -43,10 +54,15 @@ function updateTitleNewGameLoad(g) {
         startLevel(g,1,1,true);g.state="newGameLoad";g.soundEvents.clear();
         resetPlayerForArea(g,0,0);g.player.movingDir=0;
         g.time=time;g.displayTime=time;g.intervalTimerControl=interval;g.nesFrameCounter=0;
+        g.colorRotateOffset=0;g.displayColorPhase=0;
+        g.pendingColorPhase=0;g.colorPhasePending=false;
     }
+    if(frame==3) g.vramBufferAddrCtrl=3; // InitializeScreen palette
     if(frame==8) g.title.waitEnd <- frame+g.intervalTimerControl+1+6*21;
     if("waitEnd" in g.title) {
         local end=g.title.waitEnd;
+        if(frame>end && frame<=end+12) g.vramBufferAddrCtrl=6; // initial area columns
+        if(frame==end+13) g.vramBufferAddrCtrl=2; // area palette
         if(frame==end+17) {g.soundEvents.append("resume_music");parityRecordEvent(g,"music","overworld");}
         if(frame==end+18) {
             resetPlayerForArea(g,40,176);g.player.grounded=true;g.player.movingDir=0;
@@ -56,12 +72,14 @@ function updateTitleNewGameLoad(g) {
             g.player.parityOriginFriction=true;
             g.input.jumpDown=false;g.input.runDown=false;
         }
+        if(frame>=end+18) updateTitlePalette(g);
     }
     g.nesFrameCounter=(g.nesFrameCounter+1)&255;
 }
 
 function updateTitleFlow(g) {
     if(g.state=="newGameLoad") {updateTitleNewGameLoad(g);return;}
+    g.vramBufferAddrCtrl=0;
     local next=g.title.frames+1;
     if(!(g.state=="titleLoad" && (next==2 || next==3))) tickTitleDivider(g);
     if(g.state=="titleScreen" && (g.input.startQueued || g.input.resetQueued)) {
@@ -70,16 +88,26 @@ function updateTitleFlow(g) {
     g.title.frames+=1;
     local frame=g.title.frames;
     if(g.state=="titleLoad") {
+        if(frame>=10 && frame<=21) g.vramBufferAddrCtrl=6; // twelve area-column tasks
+        if(frame==22) g.vramBufferAddrCtrl=2;
+        if(frame==25) g.vramBufferAddrCtrl=5; // copied CHR title packet
+    }
+    if(g.state=="titleLoad") {
         if(frame==1) {
             g.world=1;g.level=1;g.lives=1;g.cameraX=0;g.displayCameraX=0;
             g.player.nesXForce=0;g.player.nesXMoveForce=0;
             g.player.nesYMoveForce=0;g.player.nesYDummy=0;
+            // InitializeGame clears these bytes before InitializeArea.
+            g.player.romSizeRaw <- 0;
+            g.colorRotateOffset=0;g.displayColorPhase=0;g.colorPhasePending=false;
+            g.vramScrollThirtyTwo=0;g.vramAreaParserTask=0;g.vramBufferAddrCtrl=0;
         } else if(frame==2) {
             local time=g.time,control=g.gameTimerControl,interval=g.intervalTimerControl;
             startLevel(g,1,1,true);g.soundEvents.clear();
             g.state="titleLoad";g.time=time;g.displayTime=time;g.gameTimerControl=control;
             g.intervalTimerControl=interval;
             resetPlayerForArea(g,0,0);g.player.movingDir=0;
+            g.player.romSizeRaw <- 0;
             g.nesFrameCounter=0;g.goombas=[];
             g.colorRotateOffset=0;g.displayColorPhase=0;g.pendingColorPhase=0;
             g.colorPhasePending=false;
@@ -96,6 +124,7 @@ function updateTitleFlow(g) {
         } else if(frame==28) {
             g.lives=3;g.player.nesXMoveForce=0;
             g.player.nesYDummy=0;g.player.nesYMoveForce=0;
+            g.player.romSizeRaw=1;
         }
         else if(frame==29) {
             resetPlayerForArea(g,40,176);g.player.movingDir=0;
@@ -104,13 +133,7 @@ function updateTitleFlow(g) {
     }
     g.input.startQueued=false;
     // InitializeArea occupies two passes around the zeroed frame counter.
-    if(frame>=29) {
-        if(g.colorPhasePending) {g.displayColorPhase=g.pendingColorPhase;g.colorPhasePending=false;}
-        if((g.nesFrameCounter&7)==0) {
-            g.pendingColorPhase=g.colorRotateOffset;g.colorPhasePending=true;
-            g.colorRotateOffset=(g.colorRotateOffset+1)%6;
-        }
-    }
+    if(frame>=29) updateTitlePalette(g);
     if(!(g.state=="titleLoad" && frame==3))
         g.nesFrameCounter=(g.nesFrameCounter+1)&255;
 }

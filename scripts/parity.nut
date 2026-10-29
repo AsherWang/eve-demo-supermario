@@ -275,7 +275,7 @@ function parityStateJson(g, frame) {
         ",\"x_acceleration_fraction\":" + p.nesXForce +
         ",\"x_position_fraction\":" + p.nesXMoveForce +
         ",\"state_raw\":" + playerStateRaw +
-        ",\"size_raw\":" + (p.big ? 0 : 1) +
+        ",\"size_raw\":" + (("romSizeRaw" in p)?p.romSizeRaw:(p.big ? 0 : 1)) +
         ",\"status_raw\":" + (p.fire ? 2 : (p.big ? 1 : 0)) +
         ",\"big\":" + parityBool(p.big) +
         ",\"fire\":" + parityBool(p.fire) +
