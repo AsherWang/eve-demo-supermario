@@ -1110,13 +1110,15 @@ function renderGame(g) {
         return;
     }
     if (g.state == "deathReload") {
+        local areaRenderStart=isWorld21(g) && "lifeScreenEnd" in g.world21?
+            g.world21.lifeScreenEnd+1:149;
         // Screen disable first exposes the previous sky backdrop, then the
         // intermediate lives nametable.  The final twelve-count disable wait
         // exposes its black universal background before area rendering resumes.
         if (g.deathReloadFrames <= 8) {
             screenRect(0.0, 0.0, LOGICAL_WIDTH, LOGICAL_HEIGHT,
                        146.0 / 255.0, 144.0 / 255.0, 1.0);
-        } else if (g.deathReloadFrames >= 149) {
+        } else if (g.deathReloadFrames >= areaRenderStart) {
             screenRect(0.0, 0.0, LOGICAL_WIDTH, LOGICAL_HEIGHT,
                        0.0, 0.0, 0.0);
         } else {

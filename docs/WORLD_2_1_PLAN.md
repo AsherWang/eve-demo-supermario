@@ -131,13 +131,47 @@ for all 900 frames. Both runs enter death from the Goomba at frame 754.
 Capture: `local-parity/world21-runtime/actual/slot-prefix`; comparison:
 `local-parity/world21-runtime/slots-fix/verification.json`.
 
-The complete 3116-input simulation probe first differs in Y at frame 961 and
+At commit `148a9a3`, the complete 3116-input simulation probe first differs in Y at frame 961 and
 X at 963, during death/reload. The host uses a fixed 208-frame death duration;
 the ROM gates life loss on player depth and death-music completion. Full
 reload parity, actor image parity and whole-route acceptance remain pending.
 The 900-frame result is a player-state prefix, not a six-gate whole-level pass.
 
-Next: align death/life-loss and reload timing, then complete branch destinations
+## Death/reload follow-up (2026-10-29)
+
+World 2-1 now ends enemy-death animation when both conditions from PlayerControl
+hold: the 180-frame death track has ended and the sprite origin reaches the
+ROM's Y-high-byte $04 depth. The old unconditional 208-frame delay remains
+unchanged in World 1. Timer banks are retained when the death event freezes the
+gameplay pass, including a divider edge on that pass.
+
+The World 2 reload now clears the area on its initialization pass, resets
+powers while retaining score/coins/lives/checkpoint, and computes the lives-screen
+wait from ScreenTimer=7 and the shared 21-frame interval divider. It rebuilds
+the area, restores music, then exposes entrance and normal-control passes in
+order. A/B input history is cleared by entrance control, and the first moving
+frame uses the shared entrance friction profile. Holding jump through the
+lives screen can therefore jump immediately on the first controllable frame.
+
+Regression covers six divider phases at start/checkpoint 6, retained stats,
+small new-life form and the two independent death-completion conditions.
+The complete-input simulation now matches player X/Y through frame 1393;
+the next position difference is 1394, at the second enemy-death interaction.
+This remains a failed whole-route diagnostic, not an accepted level.
+
+Final actual-window capture:
+`local-parity/world21-runtime/actual/death-reload-final`, with selected-field
+comparison in `local-parity/world21-runtime/death-fix/final-verification.json`.
+All 1200 frames match player X/Y, raw speeds, vertical force/dummy, horizontal
+acceleration/position fractions, state and grounded flag, plus world, level,
+lives, time, camera, frame counter and engine loading phase. Milestones are
+death at 754, lose-life dispatch at 960, decrement at 961, area initialization
+at 963, entrance at 1131, normal control at 1132 and held-button jump at 1133.
+The final run captures five screenshots; the preceding run retains all 1200
+images, with the remaining horizontal-fraction correction recorded separately.
+Neither run establishes complete image/audio or whole-level acceptance.
+
+Next: resolve the second-life enemy interaction, then complete branch destinations
 and record same-input full-route six-gate acceptance. Opening gates and host
 playability do not mark the level complete in the 32-level inventory.
 

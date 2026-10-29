@@ -148,6 +148,59 @@ function drawWorld21Actors(g,behind) {
     }
 }
 
+function updateWorld21DeathReload(g) {
+    g.deathReloadFrames+=1;
+    local frame=g.deathReloadFrames;
+    if(frame==1) {
+        g.checkpointPage=g.cameraX>=1536?6:0;g.lives-=1;
+        parityRecordEvent(g,"music","silence");
+        if(g.lives<=0) {
+            g.state="gameOver";g.player.dead=false;emitSound(g,"game_over");return;
+        }
+    } else if(frame==2) {
+        g.cameraX=0;g.displayCameraX=0;
+        g.player.nesXForce=0;g.player.nesXMoveForce=0;
+        g.player.nesYMoveForce=0;g.player.nesYDummy=0;
+        g.colorRotateOffset=0;g.displayColorPhase=0;
+        g.pendingColorPhase=0;g.colorPhasePending=false;
+        g.vramScrollThirtyTwo=0;g.vramAreaParserTask=0;g.vramBufferAddrCtrl=0;
+    } else if(frame==3) {
+        local page=g.checkpointPage,time=g.time,control=g.gameTimerControl;
+        g.player=createPlayer();startWorld21(g);
+        g.checkpointPage=page;g.time=time;g.displayTime=time;g.gameTimerControl=control;
+        g.soundEvents.clear();g.state="deathReload";
+        g.player.x=0;g.player.previousX=0;g.player.y=16;g.player.previousY=16;
+        g.player.movingDir=0;
+        g.nesFrameCounter=0;
+    }
+    // DisplayIntermediate sets ScreenTimer=7 on pass 9. It expires on
+    // the next interval-divider edge plus six more 21-frame intervals.
+    if(frame==9) g.world21.lifeScreenEnd <- frame+g.intervalTimerControl+1+6*21;
+    if(frame==4) g.vramBufferAddrCtrl=3;
+    if(!("lifeScreenEnd" in g.world21)) return;
+    local end=g.world21.lifeScreenEnd;
+    if(frame>end && frame<=end+12) g.vramBufferAddrCtrl=6;
+    if(frame==end+13) g.vramBufferAddrCtrl=2;
+    if(frame==end+17) {
+        parityRecordEvent(g,"music","overworld");g.soundEvents.append("resume_music");
+    } else if(frame==end+18) {
+        g.player=createPlayer();
+        local page=g.checkpointPage;
+        resetPlayerForArea(g,page*256+40,176);
+        g.player.movingDir=0;
+        g.cameraX=page*256.0;g.displayCameraX=g.cameraX;
+        foreach(enemy in g.goombas) if(enemy.x<g.cameraX) enemy.alive=false;
+        g.time=401;g.hurryActive=false;g.gameTimerControl=0;g.state="deathEntrance";
+    } else if(frame==end+19) {
+        g.state="playing";g.stateTimer=0;
+        g.respawnPrimeDirection=0;g.respawnPrimeRun=false;
+        g.player.parityOriginFriction=true;
+        // The entrance override clears the previous A/B latch. Held buttons
+        // become a fresh press on the first controllable frame after reload.
+        g.input.jumpDown=false;g.input.runDown=false;
+    }
+}
+
 function runWorld21SelfTest() {
     local g=createGame();startLevel(g,2,1);
     requireSelfTest(isWorld21(g) && g.areaWidth==212 && g.flagX==3200 &&
@@ -231,5 +284,37 @@ function runWorld21SelfTest() {
     requireSelfTest(isWorld21(g) && g.state=="playing" && g.player.x==40 &&
         g.score==12300 && g.coins==19 && g.lives==2,
         "2-1 course completion must restart in World 2 rather than load World 1-2");
+    foreach(phase in [0,1,3,12,19,20]) foreach(page in [0,6]) {
+        local reload=createGame();startLevel(reload,2,1);
+        reload.cameraX=page*256;reload.score=45600;reload.coins=27;
+        reload.player.big=true;reload.player.fire=true;
+        finishPlayerDeath(reload);reload.intervalTimerControl=phase;
+        local waited=-1,end=-1;
+        for(local frame=1;frame<=195;frame+=1) {
+            simulateFixed(reload,FIXED_DT);
+            if(frame==9) {
+                end=reload.world21.lifeScreenEnd;
+                requireSelfTest(end==9+reload.intervalTimerControl+1+6*21,
+                    "life-screen wait must use the interval divider phase");
+            }
+            if(reload.state=="playing") {waited=frame;break;}
+        }
+        requireSelfTest(waited==end+19 && reload.lives==2 &&
+            reload.cameraX==page*256 && reload.player.x==page*256+40 &&
+            !reload.player.big && !reload.player.fire && reload.score==45600 &&
+            reload.coins==27 && reload.time==400 && reload.player.parityOriginFriction,
+            "World 2 death reload must retain checkpoint/stats, clear powers and restore entry controls");
+    }
+    local depth=createGame();startLevel(depth,2,1);
+    depth.player.dead=true;depth.player.deadFrames=179;
+    depth.player.deathFreezeFrames=0;depth.player.y=800;
+    updatePlayer(depth,FIXED_DT);
+    requireSelfTest(depth.state=="playing","depth alone must not end death before its music finishes");
+    updatePlayer(depth,FIXED_DT);
+    requireSelfTest(depth.state=="deathReload","music completion plus depth must enter life loss");
+    startLevel(depth,2,1);depth.player.dead=true;depth.player.deadFrames=400;
+    depth.player.deathFreezeFrames=0;depth.player.y=32;
+    updatePlayer(depth,FIXED_DT);
+    requireSelfTest(depth.state=="playing","music completion alone must not skip the death fall");
     print("World 2-1 main-route self-test passed.\n");
 }

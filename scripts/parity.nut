@@ -176,15 +176,17 @@ function parityStateJson(g, frame) {
     if (g.state == "playing" && p.dead) {
         engineSubroutine = 11;
     } else if (g.state == "deathReload") {
+        local modeTwoFrame=isWorld21(g) && "lifeScreenEnd" in g.world21?
+            g.world21.lifeScreenEnd+16:164;
         if (g.deathReloadFrames == 0) {
             engineSubroutine = 6;
         } else if (g.deathReloadFrames <= 2) {
             operModeTask = 0;
             engineSubroutine = 0;
-        } else if (g.deathReloadFrames < 164) {
+        } else if (g.deathReloadFrames < modeTwoFrame) {
             operModeTask = 1;
             engineSubroutine = 0;
-        } else if (g.deathReloadFrames == 164) {
+        } else if (g.deathReloadFrames == modeTwoFrame) {
             operModeTask = 2;
             engineSubroutine = 0;
         } else {

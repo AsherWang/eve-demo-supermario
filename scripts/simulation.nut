@@ -817,6 +817,11 @@ function playerHasFootSupport(g, p) {
 function killPlayer(g, causeJson = "") {
     local p = g.player;
     if (p.dead || g.state != "playing") return;
+    if(isWorld21(g) && "timersBeforeFrame" in g.world21) {
+        local timers=g.world21.timersBeforeFrame;
+        g.intervalTimerControl=timers.interval;g.gameTimerControl=timers.game;
+        foreach(entry in timers.enemies) entry.enemy.intervalTimer=entry.timer;
+    }
     p.dead = true;
     p.deadTimer = 0.0;
     p.deadFrames = 0;
@@ -824,7 +829,7 @@ function killPlayer(g, causeJson = "") {
     p.vx = 0.0;
     p.vy = -4.0 * NES_FRAME_RATE;
     p.nesXSpeed = 0;
-    if (g.level == 1) p.nesXForce = 0;
+    if (g.world==1 && g.level == 1) p.nesXForce = 0;
     p.nesYSpeed = -4;
     p.fallForce = 0x28;
     p.grounded = false;
@@ -1115,7 +1120,14 @@ function updatePlayer(g, dt) {
         p.vy = p.nesYSpeed * NES_FRAME_RATE;
         // Verified ROM trace: death at comparison frame 191, PlayerLoseLife
         // at frame 399 (208 subsequent death-routine frames).
-        if (p.deadFrames >= 208) finishPlayerDeath(g);
+        if(isWorld21(g)) {
+            // ROM event music has 180 frames (rom-music-manifest.json),
+            // starts on the next sound pass and must finish before life loss.
+            // PlayerControl also requires Y high byte $04: three full screen
+            // heights below the normal $01 page, using the sprite origin.
+            local spriteY=p.y-(p.big && !p.crouching?0.0:16.0);
+            if(p.deadFrames>180 && spriteY>=3*256) finishPlayerDeath(g);
+        } else if (p.deadFrames >= 208) finishPlayerDeath(g);
         return;
     }
 
@@ -2668,7 +2680,8 @@ function updateFireworks(g, dt) {
 }
 
 function updateDeathReload(g) {
-    if(g.world==2 || g.level>=3) {updateWorld1StageDeath(g);return;}
+    if(isWorld21(g)) {updateWorld21DeathReload(g);return;}
+    if(g.level>=3) {updateWorld1StageDeath(g);return;}
     if (g.level == 2) {
         g.deathReloadFrames += 1;
         if (g.deathReloadFrames == 1) {
@@ -2993,13 +3006,22 @@ function simulateFixed(g, dt) {
     // UpdateScreen decrements the RAM timer slots before the game-engine
     // subroutine runs.  It continues through pipe/entrance transitions, while
     // RunGameTimer itself is gated by the final subroutine state below.
-    if (g.gameTimerControl > 0) g.gameTimerControl -= 1;
+    if(isWorld21(g)) {
+        local timers={interval=g.intervalTimerControl,game=g.gameTimerControl,enemies=[]};
+        if(g.intervalTimerControl==0) foreach(enemy in g.goombas)
+            timers.enemies.append({enemy=enemy,timer=enemy.intervalTimer});
+        g.world21.timersBeforeFrame <- timers;
+    }
+    local freezeWorld21Death=isWorld21(g) &&
+        ((g.state=="playing" && g.player.dead) ||
+         (g.state=="deathReload" && (g.deathReloadFrames==0 || g.deathReloadFrames==2)));
+    if (!freezeWorld21Death && g.gameTimerControl > 0) g.gameTimerControl -= 1;
     // IntervalTimerControl is a 21-frame divider shared by the enemy interval
     // timers. ScreenRoutineTask leaves TimerControl at one for the first area
     // loading pass, freezing both timer banks for exactly that frame.
     local freezeIntervalTimers = g.state == "areaReload" &&
         g.areaReloadFrames == 1;
-    if (!freezeIntervalTimers) {
+    if (!freezeIntervalTimers && !freezeWorld21Death) {
         g.intervalTimerControl -= 1;
         if (g.intervalTimerControl < 0) {
             g.intervalTimerControl = 0x14;
