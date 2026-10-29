@@ -1129,6 +1129,21 @@ function runSimulationSelfTest() {
         requireSelfTest(turtle.state=="shell" && !mario.dead && mario.nesYSpeed==-4,
                         "descending small/big Mario must stomp a walking koopa");
     }
+    foreach(big in [false,true]) foreach(winged in [false,true]) {
+        local collisionTest=createGame();
+        local turtle=makeEnemyAt(100.0,12,"koopa");
+        turtle.awake=true;turtle.slot=0;turtle.greenJump <- winged;
+        collisionTest.goombas=[turtle];collisionTest.nesFrameCounter=0;
+        local mario=collisionTest.player;
+        mario.big=big;mario.height=big?32.0:16.0;
+        mario.x=100.0;mario.y=big?166.0:182.0;
+        mario.nesYSpeed=-5;mario.vy=-5*NES_FRAME_RATE;mario.grounded=false;
+        updateGoombas(collisionTest,FIXED_DT);
+        requireSelfTest(turtle.state=="walking" &&
+            (winged?(!turtle.greenJump && !mario.dead && mario.nesYSpeed==-4):
+                (big?(!mario.dead && mario.transformKind=="shrink"):mario.dead)),
+            "upward contact must injure Mario on normal Koopas; only a winged Koopa uses the high-position stomp rule");
+    }
     foreach(fraction in [0.0,0.5,0.999]) foreach(offset in [11.0,12.0]) {
         local edgeTest=createGame();
         local turtle=makeEnemyAt(100.0+fraction,12,"koopa");

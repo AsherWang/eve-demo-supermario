@@ -7,7 +7,9 @@ function isWorld21(g) {return g.world==2 && g.level==1;}
 function initializeWorld21Parity(g) {
     // First controllable frame of the offline World 2-1 fixture, read from
     // the ROM RAM trace. This initializes a test origin, not gameplay frames.
-    g.nesFrameCounter=0x1a;g.intervalTimerControl=0;
+    // RAM $077f is $01 at this origin; $00 shifts the divider one frame
+    // early and must not be compensated by rewinding timers on a later death.
+    g.nesFrameCounter=0x1a;g.intervalTimerControl=1;
     g.gameTimerControl=23;g.colorRotateOffset=1;g.displayColorPhase=0;
     g.pendingColorPhase=0;g.colorPhasePending=false;
     g.player.movingDir=0;

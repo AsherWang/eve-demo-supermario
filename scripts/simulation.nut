@@ -817,11 +817,6 @@ function playerHasFootSupport(g, p) {
 function killPlayer(g, causeJson = "") {
     local p = g.player;
     if (p.dead || g.state != "playing") return;
-    if(isWorld21(g) && "timersBeforeFrame" in g.world21) {
-        local timers=g.world21.timersBeforeFrame;
-        g.intervalTimerControl=timers.interval;g.gameTimerControl=timers.game;
-        foreach(entry in timers.enemies) entry.enemy.intervalTimer=entry.timer;
-    }
     p.dead = true;
     p.deadTimer = 0.0;
     p.deadFrames = 0;
@@ -2115,12 +2110,16 @@ function updateGoombas(g, dt) {
             // ChkForPlayerInjury branches directly to EnemyStomped for a
             // positive Player_Y_Speed. Koopa's body collision box begins
             // below its head, so a previous-feet/head test rejects valid hits.
+            // While rising, IDs below $07 (ordinary Koopas and Goombas)
+            // skip the height-based exception used by flying enemies.
             if (e.kind == "koopa" && e.state == "shell") {
                 // HandlePECollisions kicks a stationary shell even when
                 // Mario is descending. Only a moving shell is stomped again.
                 kickKoopaShell(g,e);
             } else if (p.nesYSpeed > 0 ||
                        (e.kind=="koopa" && p.nesYSpeed<=0 &&
+                        ((("greenJump" in e) && e.greenJump) ||
+                         (("paratroopa" in e) && e.paratroopa)) &&
                         (p.big && !p.crouching ? p.y : p.y-16.0)+12.0<e.y)) {
                 local demotedParatroopa=false;
                 parityRecordEvent(g, "gameplay", "enemy_stomp",
@@ -3006,12 +3005,6 @@ function simulateFixed(g, dt) {
     // UpdateScreen decrements the RAM timer slots before the game-engine
     // subroutine runs.  It continues through pipe/entrance transitions, while
     // RunGameTimer itself is gated by the final subroutine state below.
-    if(isWorld21(g)) {
-        local timers={interval=g.intervalTimerControl,game=g.gameTimerControl,enemies=[]};
-        if(g.intervalTimerControl==0) foreach(enemy in g.goombas)
-            timers.enemies.append({enemy=enemy,timer=enemy.intervalTimer});
-        g.world21.timersBeforeFrame <- timers;
-    }
     local freezeWorld21Death=isWorld21(g) &&
         ((g.state=="playing" && g.player.dead) ||
          (g.state=="deathReload" && (g.deathReloadFrames==0 || g.deathReloadFrames==2)));

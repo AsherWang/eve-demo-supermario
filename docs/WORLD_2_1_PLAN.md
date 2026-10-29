@@ -142,8 +142,8 @@ The 900-frame result is a player-state prefix, not a six-gate whole-level pass.
 World 2-1 now ends enemy-death animation when both conditions from PlayerControl
 hold: the 180-frame death track has ended and the sprite origin reaches the
 ROM's Y-high-byte $04 depth. The old unconditional 208-frame delay remains
-unchanged in World 1. Timer banks are retained when the death event freezes the
-gameplay pass, including a divider edge on that pass.
+unchanged in World 1. The later correction below supersedes the initial timer
+rewind used by this implementation.
 
 The World 2 reload now clears the area on its initialization pass, resets
 powers while retaining score/coins/lives/checkpoint, and computes the lives-screen
@@ -155,7 +155,7 @@ lives screen can therefore jump immediately on the first controllable frame.
 
 Regression covers six divider phases at start/checkpoint 6, retained stats,
 small new-life form and the two independent death-completion conditions.
-The complete-input simulation now matches player X/Y through frame 1393;
+At commit `7813aeb`, the complete-input simulation matches player X/Y through frame 1393;
 the next position difference is 1394, at the second enemy-death interaction.
 This remains a failed whole-route diagnostic, not an accepted level.
 
@@ -171,7 +171,43 @@ The final run captures five screenshots; the preceding run retains all 1200
 images, with the remaining horizontal-fraction correction recorded separately.
 Neither run establishes complete image/audio or whole-level acceptance.
 
-Next: resolve the second-life enemy interaction, then complete branch destinations
+## Second-life contact follow-up (2026-10-29)
+
+ChkForPlayerInjury skips its height-based exception for enemy IDs below $07.
+Ordinary Koopas therefore injure an ascending Mario; only the flying variants
+use that high-position stomp rule. The shared handler now distinguishes these
+cases. Regression covers upward contact for small/big Mario against ordinary
+and winged Koopas, alongside the existing descending stomp tests.
+
+The reference origin RAM has IntervalTimerControl ($077f) = $01, not $00.
+Correcting this fixture removes the need to rewind timers on death. Normal
+frame timers now complete the collision frame before the death freeze begins,
+which also fixes the second lives-screen wait without a special frame offset.
+
+The complete-input simulation aligns all three death contacts (754, 1393,
+2018), the first two life losses and both restarts. Player X/Y stay equal until
+the ROM returns to its title flow at 2648, but a semantic difference remains
+at Game Over (2227): the host uses a bounded game-over state while the ROM
+enters mode 3 and later returns to title. The old reference extractor also
+reports 256 lives for the ROM's $ff underflow byte; that requires a separate
+normalization correction with raw data preserved. This is still failed
+whole-route evidence; matching frozen coordinates does not establish gameplay
+equivalence after Game Over.
+
+Four before/after World 1 simulation routes retain identical state records
+for all 3976 frames (`second-life-fix/world1-before-after.json` under the local
+World 2-1 evidence directory). Image/audio and whole-route acceptance remain pending.
+
+The actual-window diagnostic is
+`local-parity/world21-runtime/actual/second-life-prefix` (2230 frames, eight
+screenshots). Its `second-life-fix/verification.json` report retains the failed
+Game Over comparisons: lives and engine phase first differ at 2227. Selected
+player position, raw speeds, movement fractions, state/grounded, time, world,
+level, camera and frame counter match throughout the capture; all selected
+fields match through 2226. Death events are exactly 754, 1393 and 2018. This
+diagnostic does not pass full-scene image/audio gates or reach the level goal.
+
+Next: resolve Game Over/reference life normalization, then complete branch destinations
 and record same-input full-route six-gate acceptance. Opening gates and host
 playability do not mark the level complete in the 32-level inventory.
 
