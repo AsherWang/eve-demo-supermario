@@ -2050,20 +2050,27 @@ function updateGoombas(g, dt) {
             e.shellFrames = e.intervalTimer * NES_INTERVAL_FRAMES;
             e.stateTimer = e.shellFrames * FIXED_DT;
         }
-        local playerBoxY = p.y + (p.big && !p.crouching ? 8.0 : 4.0);
-        local playerBoxHeight = p.big && !p.crouching ? 24.0 : 12.0;
-        local enemyBoxY = e.kind == "goomba" ? e.y + 4.0 : e.y + 9.0;
-        local enemyBoxHeight = e.kind == "goomba" ? 6.0 : 12.0;
-        local playerBoxX=p.x+3.0,playerBoxWidth=10.0;
-        local enemyBoxX=e.x+3.0,enemyBoxWidth=10.0;
+        // ROM edges are inclusive: small Mario [$03,$14,$0d,$20]
+        // and Goomba [$03,$0e,$0d,$14], relative to their ROM origins.
+        local tallPlayer=p.big && !p.crouching;
+        local playerBoxY = floor(p.y) + (tallPlayer ? 8.0 : 4.0);
+        local playerBoxHeight = tallPlayer ? 25.0 : 13.0;
+        local enemyBoxY = e.kind == "goomba" ? floor(e.y) + 4.0 : floor(e.y) + 9.0;
+        local enemyBoxHeight = e.kind == "goomba" ? 7.0 : 13.0;
+        local playerBoxX=floor(p.x)+(tallPlayer?2.0:3.0),playerBoxWidth=tallPlayer?13.0:11.0;
+        local enemyBoxX=floor(e.x)+3.0,enemyBoxWidth=11.0;
         if(e.kind=="koopa") {
             // TallBBox ($03) is relative to the ROM origin, which stays at
             // the same Y after a stomp. Only our 14px shell body moves down.
             local shell=e.state=="shell" || e.state=="shellMoving";
-            enemyBoxY=e.y-(shell?10.0:0.0)+9.0;
-            enemyBoxHeight=13.0;enemyBoxX=e.x+2.0;enemyBoxWidth=13.0;
+            // BoundingBoxCore reads integer position bytes, not the movement
+            // accumulator. A trailing half pixel must not turn a near miss
+            // into a stomp (or a kick) after Mario has passed the turtle.
+            enemyBoxY=floor(e.y)-(shell?10.0:0.0)+9.0;
+            enemyBoxHeight=13.0;enemyBoxX=floor(e.x)+2.0;enemyBoxWidth=13.0;
             local tall=p.big && !p.crouching;
-            playerBoxX=p.x+(tall?2.0:3.0);playerBoxWidth=tall?13.0:11.0;
+            playerBoxX=floor(p.x)+(tall?2.0:3.0);playerBoxWidth=tall?13.0:11.0;
+            playerBoxY=floor(p.y)+(tall?8.0:4.0);
             playerBoxHeight=tall?25.0:13.0;
         }
         local touching=overlaps(playerBoxX,playerBoxY,playerBoxWidth,playerBoxHeight,

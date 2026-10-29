@@ -1127,6 +1127,31 @@ function runSimulationSelfTest() {
         requireSelfTest(turtle.state=="shell" && !mario.dead && mario.nesYSpeed==-4,
                         "descending small/big Mario must stomp a walking koopa");
     }
+    foreach(fraction in [0.0,0.5,0.999]) foreach(offset in [11.0,12.0]) {
+        local edgeTest=createGame();
+        local turtle=makeEnemyAt(100.0+fraction,12,"koopa");
+        turtle.awake=true;turtle.slot=0;edgeTest.goombas=[turtle];
+        edgeTest.nesFrameCounter=0;
+        local mario=edgeTest.player;
+        mario.x=100.0+offset;mario.y=180.0;mario.nesYSpeed=4;
+        mario.vy=4*NES_FRAME_RATE;mario.grounded=false;
+        updateGoombas(edgeTest,FIXED_DT);
+        requireSelfTest(!mario.dead &&
+            (offset==11.0?(turtle.state=="shell" && mario.nesYSpeed==-4):
+                          (turtle.state=="walking" && mario.nesYSpeed==4)),
+            "Koopa collision must use integer inclusive edges regardless of half-pixel movement phase");
+    }
+    foreach(gap in [0.0,1.0]) {
+        local edgeTest=createGame();
+        local enemy=makeEnemyAt(100.5,12,"goomba");
+        enemy.awake=true;enemy.slot=0;edgeTest.goombas=[enemy];edgeTest.nesFrameCounter=0;
+        local mario=edgeTest.player;
+        mario.x=94.0;mario.y=182.0-gap;mario.nesYSpeed=-5;
+        mario.vy=-5*NES_FRAME_RATE;mario.grounded=false;
+        updateGoombas(edgeTest,FIXED_DT);
+        requireSelfTest(mario.dead==(gap==0.0),
+            "Goomba and Mario inclusive vertical edges must touch, while a one-pixel gap must miss");
+    }
     local clearMusicTest=createGame();
     clearMusicTest.state="timeBonus";clearMusicTest.time=1;
     clearMusicTest.soundEvents=[];

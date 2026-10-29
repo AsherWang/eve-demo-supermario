@@ -1,6 +1,6 @@
 # World 2-1 implementation plan
 
-Updated 2026-10-28. The main-route runtime prototype and 1-4 to 2-1 transition
+Updated 2026-10-29. The main-route runtime prototype and 1-4 to 2-1 transition
 are implemented. Bonus destinations and strict whole-level acceptance remain pending.
 
 ## Verified offline data
@@ -73,7 +73,7 @@ pipe entry is disabled for this stage rather than entering a World 1 bonus room.
   These include checkpoint/new-life reset and small/big/fire cross-world retention.
 - `world-2-1-idle.json`: all 120 frames pass artifact, state, event, image,
   APU and detection-side audio gates. Reports: `local-parity/world21-runtime/reports/idle-final`.
-- `world-2-1-main-host-route.json`: 3116 host frames reach settlement with
+- At commit `3d4a209`, `world-2-1-main-host-route.json`: 3116 host frames reach settlement with
   three lives and no death. The same input fails in the ROM, with deaths at
   754, 1393 and 2018. First Y difference is frame 643 and first X difference
   frame 649. Reports: `local-parity/world21-runtime/reports/main-route`.
@@ -83,7 +83,37 @@ pipe entry is disabled for this stage rather than entering a World 1 bonus room.
   enters World 2-1 at frame 2496 and finishes in playing state with score 11150.
   Capture: `local-parity/world21-runtime/actual/world-transition`.
 
-Next: resolve the first movement divergence, then complete branch destinations
+## Collision follow-up (2026-10-29)
+
+The first player-position divergence was caused by a false Koopa stomp at frame
+642, not by free-flight gravity. The host fed a fractional enemy X into an
+integer ROM bounding box, extending the trailing collision edge by half a pixel.
+Collision boxes now use integer origins and inclusive ROM edges. Goomba and
+Mario edge contact also retains the inclusive final pixel. Regression cases
+cover Koopa integer/half-pixel phases, adjacent hit/miss positions, and Goomba
+vertical edge contact versus a one-pixel gap.
+
+The 760-frame actual-window capture is retained in
+`local-parity/world21-runtime/actual/collision-inclusive`; its unchanged-input
+prefix comparison is `local-parity/world21-runtime/collision-fix/verification.json`.
+There is no stomp event at 642. The next speed differences are at 754 and the
+next X/Y differences at 755. Ten simulation groups pass. Four before/after
+World 1 simulation replays (first stomp, death lifecycle, 1-1 TAS and 1-3 route)
+have identical state records for all 3976 simulated frames; these checks do not
+include rendered images or device audio. Their report is
+`local-parity/world21-runtime/collision-fix/world1-before-after.json`.
+
+The same-input diagnostic now retains matching player X/Y through frame 754;
+the next position divergence is 755. This is only a position-prefix check,
+not a pass of the complete semantic state or image gates. At this point the
+host has a different enemy population: piranhas do not reserve the ROM's five
+enemy slots, and delayed group members are retried instead of consuming the
+group command when slots are exhausted. These are the next parser/actor tasks.
+The earlier 3116-frame no-death result belongs to the old commit and must not
+be interpreted as verification of the corrected collision code.
+
+Next: correct shared actor-slot occupancy and group-command consumption,
+then complete branch destinations
 and record same-input full-route six-gate acceptance. Opening gates and host
 playability do not mark the level complete in the 32-level inventory.
 
