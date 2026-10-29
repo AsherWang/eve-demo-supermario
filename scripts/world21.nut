@@ -242,6 +242,20 @@ function runWorld21SelfTest() {
     local probe=makeEnemyAt(100,12,"goomba");
     requireSelfTest(allocateEnemySlot(slots,probe) && probe.slot==1,
         "walkers must not reuse a slot occupied by a piranha");
+    local parser=createGame();startLevel(parser,2,1);
+    parser.goombas=[];parser.plants=[];
+    parser.player.x=0;parser.player.y=32;
+    local active=makeEnemyAt(100,12,"goomba");
+    active.awake=true;active.slot=0;parser.goombas.append(active);
+    appendEnemyGroup(parser,16,0x37);
+    parser.vramAreaParserTask=7;
+    updateGoombas(parser,FIXED_DT);
+    requireSelfTest(!parser.goombas[1].awake && active.x<100,
+        "parser task 7 must pause admission while active actors keep moving");
+    parser.vramAreaParserTask=6;
+    updateGoombas(parser,FIXED_DT);
+    requireSelfTest(parser.goombas[1].awake && parser.goombas[2].awake,
+        "enemy groups must resume admission after parser task 7");
     foreach(occupiedCount in [4,5]) {
         startLevel(slots,2,1);slots.goombas=[];slots.plants=[];
         slots.player.x=0;slots.player.y=32;slots.nesFrameCounter=0;

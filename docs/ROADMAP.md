@@ -167,3 +167,12 @@ Game Over 后续：修复参考解码器将 `$ff` 生命下溢算作 256 条命�
 - [对照测试计划与命令](../PARITY_TEST_PLAN.md)
 - [复刻方法与真值边界](../REPRODUCTION_METHOD.md)
 - [Windows 开发与干净源码验证](DEVELOPMENT.md)
+
+
+### 2026-10-29：敌人流的地图解析任务门控
+
+- 对照 `EnemiesAndLoopsCore` 确认：空槽在 `AreaParserTaskNum & 7 == 7` 时不解析敌人流；已有敌人继续更新。2-1 现已遵守此规则，没有修改摄像机边界或回放输入。
+- 新增回归覆盖任务 7 暂停生成、已有敌人继续移动、任务 6 恢复整组生成。
+- 原生窗口回放 `world-2-1-title-new-game.json` 共 3116 帧，无缺帧。状态门禁仅剩 `enemy0.x`：首次差异第 709 帧（原版 1115、当前 1114），共 232 帧；此前第 406/407 帧的激活/位置差异已消除。玩家、进度及其他当前门禁字段保持一致。
+- 91 张截图中 73 通过、18 失败；10 组模拟回归和 3 项参考状态/运行错误检测测试通过。此回放包含死亡、Game Over、标题及重新开局，不能替代成功通关验收。
+- 证据：`local-parity/world21-runtime/actual/parser-task-fix`、`local-parity/world21-runtime/parser-task-fix/native-reports`。下一步追查第 709 帧空槽复用/组内更新顺序，并继续清理图像差异；奖励区域连接及整关验收仍未完成。

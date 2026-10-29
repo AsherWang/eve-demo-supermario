@@ -2046,6 +2046,10 @@ function updateGoombas(g, dt) {
         // right edge.  Its load frame only allocates the object slot; movement
         // starts on the following frame.
         if (!e.awake) {
+            // EnemiesAndLoopsCore skips empty slots during area-parser task 7.
+            // Active actors still move; only stream admission waits for the
+            // next pass, using that pass's current screen-right boundary.
+            if(isWorld21(g) && (g.vramAreaParserTask & 7)==7) continue;
             if(isWorld21(g) && e.groupIndex>0 && !e.groupCommand.started) continue;
             local triggerX = e.groupIndex >= 0 ? e.groupCommandX : e.x;
             // The parser adds $30 to ScreenRight_X_Pos and masks the low
