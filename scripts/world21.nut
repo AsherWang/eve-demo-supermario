@@ -157,8 +157,11 @@ function updateWorld21DeathReload(g) {
         g.checkpointPage=g.cameraX>=1536?6:0;g.lives-=1;
         parityRecordEvent(g,"music","silence");
         if(g.lives<=0) {
-            g.state="gameOver";g.player.dead=false;emitSound(g,"game_over");return;
+            g.lives=0;g.state="gameOver";
+            g.world21.gameOverFrames <- 0;
+            return;
         }
+        g.world21.masterTimer <- 0;
     } else if(frame==2) {
         g.cameraX=0;g.displayCameraX=0;
         g.player.nesXForce=0;g.player.nesXMoveForce=0;
@@ -201,6 +204,14 @@ function updateWorld21DeathReload(g) {
         // become a fresh press on the first controllable frame after reload.
         g.input.jumpDown=false;g.input.runDown=false;
     }
+}
+
+function updateWorld21GameOver(g) {
+    g.world21.gameOverFrames+=1;
+    if(g.world21.gameOverFrames==1) emitSound(g,"game_over");
+    if(g.world21.gameOverFrames==7) g.world21.gameOverTimer <- 0x12;
+    // Keep the terminal screen until R while the title-screen flow is pending.
+    // The timer still runs independently so its original expiry is testable.
 }
 
 function runWorld21SelfTest() {
@@ -318,5 +329,24 @@ function runWorld21SelfTest() {
     depth.player.deathFreezeFrames=0;depth.player.y=32;
     updatePlayer(depth,FIXED_DT);
     requireSelfTest(depth.state=="playing","music completion alone must not skip the death fall");
+    local over=createGame();startLevel(over,2,1);over.lives=1;
+    over.player.dead=true;finishPlayerDeath(over);
+    over.world21.masterTimer <- 47;over.intervalTimerControl=16;over.soundEvents.clear();
+    simulateFixed(over,FIXED_DT);
+    requireSelfTest(over.state=="gameOver" && over.lives==0 && over.player.dead &&
+        over.world21.gameOverFrames==0 && over.soundEvents.len()==0,
+        "last-life loss must enter Game Over before its setup/music pass");
+    simulateFixed(over,FIXED_DT);
+    requireSelfTest(over.soundEvents.len()==1 && over.soundEvents[0]=="game_over",
+        "Game Over setup must queue its music exactly once");
+    over.soundEvents.clear();
+    for(local frame=2;frame<=419;frame+=1) simulateFixed(over,FIXED_DT);
+    requireSelfTest(over.world21.gameOverTimer==0 && over.soundEvents.len()==0,
+        "Game Over screen timer must expire after its master freeze and 18 interval ticks");
+    over.score=12300;over.coins=17;over.input.resetQueued=true;
+    simulateFixed(over,FIXED_DT);
+    requireSelfTest(isWorld21(over) && over.state=="playing" && over.lives==3 &&
+        over.score==0 && over.coins==0 && !over.player.dead,
+        "R must start a clean three-life retry from the bounded Game Over screen");
     print("World 2-1 main-route self-test passed.\n");
 }

@@ -173,7 +173,10 @@ function parityStateJson(g, frame) {
     local operMode = 1;
     local operModeTask = 3;
     local engineSubroutine = 8;
-    if (g.state == "playing" && p.dead) {
+    if(isWorld21(g) && g.state=="gameOver") {
+        operMode=3;engineSubroutine=6;
+        operModeTask=g.world21.gameOverFrames==0?0:(g.world21.gameOverFrames<7?1:2);
+    } else if (g.state == "playing" && p.dead) {
         engineSubroutine = 11;
     } else if (g.state == "deathReload") {
         local modeTwoFrame=isWorld21(g) && "lifeScreenEnd" in g.world21?

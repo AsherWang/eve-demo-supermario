@@ -1001,7 +1001,8 @@ function drawHud(g) {
     local hudCoinSet = g.area == "underground" ?
         assets.items.hudCoinsUnderground :
         (g.area == "castle" ? world14Assets.hudCoins : assets.items.hudCoins);
-    screenTexture(hudCoinSet[colorPhase], 88.0, 24.0, 8.0, 8.0);
+    screenTexture(g.state=="gameOverScreen"?assets.items.hudCoinLives:hudCoinSet[colorPhase],
+        88.0, 24.0, 8.0, 8.0);
     screenTexture(assets.hudFont[0x29], 96.0, 24.0, 8.0, 8.0);
     drawHudNumber(g.displayCoins, 2, 104.0, 24.0);
     drawHudGlyphs([0x20, 0x18, 0x1B, 0x15, 0x0D], 144.0, 16.0); // WORLD
@@ -1009,7 +1010,7 @@ function drawHud(g) {
     drawHudGlyphs([0x1D, 0x12, 0x16, 0x0E], 200.0, 16.0); // TIME
     if (!(parityIsEnabled() && g.parity.originPending) &&
         g.state != "nextStageLoad" && g.stageLoadFrames != 166 &&
-        g.state != "areaExitEntrance")
+        g.state != "areaExitEntrance" && g.state != "gameOverScreen")
         drawHudNumber(g.displayTime, 3, 208.0, 24.0,
             !(g.state == "timeBonus" || g.state == "raiseFlag" ||
               g.state == "fireworks" || g.state == "postClearDelay" ||
@@ -1071,6 +1072,18 @@ function areaTransitionOverlay(g) {
 function renderGame(g) {
     gfx.clear();
     renderOffsetY=0.0;
+    if(isWorld21(g) && g.state=="gameOver") {
+        if(g.world21.gameOverFrames<2) {
+            screenRect(0.0,0.0,LOGICAL_WIDTH,LOGICAL_HEIGHT,146.0/255.0,144.0/255.0,1.0);
+        } else {
+            screenRect(0.0,0.0,LOGICAL_WIDTH,LOGICAL_HEIGHT,0.0,0.0,0.0);
+            if(g.world21.gameOverFrames>=8) {
+                g.state="gameOverScreen";drawHud(g);g.state="gameOver";
+                drawHudGlyphs([0x10,0x0a,0x16,0x0e,0x24,0x18,0x1f,0x0e,0x1b],88,128);
+            }
+        }
+        return;
+    }
     if (g.state == "nextStageLoad" && g.stageLoadFrames == 0 &&
         "loadingRenderCameraX" in g) {
         // The first loader pass keeps the completed World 1-3 nametable on

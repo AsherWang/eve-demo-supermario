@@ -207,7 +207,45 @@ level, camera and frame counter match throughout the capture; all selected
 fields match through 2226. Death events are exactly 754, 1393 and 2018. This
 diagnostic does not pass full-scene image/audio gates or reach the level goal.
 
-Next: resolve Game Over/reference life normalization, then complete branch destinations
+## Game Over follow-up (2026-10-29)
+
+The reference decoder now maps NumberOfLives=$ff to zero visible lives and
+also exports `lives_raw` to retain the original byte. Other values remain
+the ROM's stored count plus one, including counts above 127. Old failed
+reference state files are preserved; the same raw RAM trace is decoded afresh
+to `local-parity/world21-runtime/gameover-fix/reference-state.jsonl`.
+
+World 2-1 Game Over now exposes setup/screen/display phases, queues its music
+on setup rather than the preceding lose-life pass, and counts the $12 screen
+timer using the 21-frame divider after the remaining death master-timer freeze.
+Its rendering preserves the scene during the initial handoff, then blacks out,
+then displays the HUD without time digits and GAME OVER at nametable $220b.
+Regression covers the music request, timer expiry, zero-life terminal state
+and a clean three-life R retry. Reference sentinel tests run in release CI.
+
+Actual replay capture now also rejects EVEngine `frame error:` / `Run failed:`
+logs even if the engine produces every requested frame. Failure logs and
+artifacts remain on disk. A first failed Game Over rendering probe is kept in
+`actual/gameover-prefix`; it exposed an invalid integer color argument rather
+than a successful screenshot run. Unit checks cover completed captures with a
+render fault and healthy audio status containing `error=0`.
+
+The terminal screen still waits for R. Automatic return to the title screen
+is not implemented. In the complete-input simulation the first engine-mode
+difference is now 2646, where the ROM leaves Game Over for its title flow;
+the first visible-lives difference is 2647. This is retained as failed evidence.
+
+The final actual-window diagnostic is `actual/gameover-verified` under
+`local-parity/world21-runtime`, with 2650 state frames and 11 screenshots.
+Selected state fields agree through 2645; the title-return failure is preserved
+in `gameover-fix/verified-report.json`. Eight selected images match at zero
+pixel tolerance, including the black loading screen and stable GAME OVER page.
+Three handoff images (2227, 2228, 2230) still fail and are not excluded from the
+report. Stable-page correctness does not imply whole-scene or timing acceptance.
+The corrected capture has no runtime errors; earlier failed probes remain saved.
+
+Next: resolve the Game Over handoff frames and implement title return/new-game flow,
+then complete branch destinations
 and record same-input full-route six-gate acceptance. Opening gates and host
 playability do not mark the level complete in the 32-level inventory.
 

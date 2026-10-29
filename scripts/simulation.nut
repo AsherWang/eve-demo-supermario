@@ -818,6 +818,7 @@ function killPlayer(g, causeJson = "") {
     local p = g.player;
     if (p.dead || g.state != "playing") return;
     p.dead = true;
+    if(isWorld21(g)) g.world21.masterTimer <- 255;
     p.deadTimer = 0.0;
     p.deadFrames = 0;
     p.deathFreezeFrames = 15;
@@ -3005,9 +3006,12 @@ function simulateFixed(g, dt) {
     // UpdateScreen decrements the RAM timer slots before the game-engine
     // subroutine runs.  It continues through pipe/entrance transitions, while
     // RunGameTimer itself is gated by the final subroutine state below.
+    if(isWorld21(g) && "masterTimer" in g.world21 && g.world21.masterTimer>0)
+        g.world21.masterTimer-=1;
     local freezeWorld21Death=isWorld21(g) &&
         ((g.state=="playing" && g.player.dead) ||
-         (g.state=="deathReload" && (g.deathReloadFrames==0 || g.deathReloadFrames==2)));
+         (g.state=="deathReload" && (g.deathReloadFrames==0 || g.deathReloadFrames==2)) ||
+         (g.state=="gameOver" && "masterTimer" in g.world21 && g.world21.masterTimer>0));
     if (!freezeWorld21Death && g.gameTimerControl > 0) g.gameTimerControl -= 1;
     // IntervalTimerControl is a 21-frame divider shared by the enemy interval
     // timers. ScreenRoutineTask leaves TimerControl at one for the first area
@@ -3018,6 +3022,9 @@ function simulateFixed(g, dt) {
         g.intervalTimerControl -= 1;
         if (g.intervalTimerControl < 0) {
             g.intervalTimerControl = 0x14;
+            if(isWorld21(g) && g.state=="gameOver" &&
+                "gameOverTimer" in g.world21 && g.world21.gameOverTimer>0)
+                g.world21.gameOverTimer-=1;
             foreach (enemy in g.goombas) {
                 if (enemy.awake && enemy.alive && enemy.slot >= 0 &&
                     enemy.intervalTimer > 0) {
@@ -3077,6 +3084,8 @@ function simulateFixed(g, dt) {
     } else if (g.state == "deathEntrance") {
         // The ROM exposes one entrance frame before normal control resumes.
         updateDeathReload(g);
+    } else if(isWorld21(g) && g.state=="gameOver") {
+        updateWorld21GameOver(g);
     }
     // Entrance handlers may select normal control during this same frame.
     // RunGameTimer therefore observes the expired control slot immediately,

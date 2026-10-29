@@ -57,6 +57,11 @@ PARITY_CAPTURE_FRAMES <- [{captures}];
 """
 
 
+def runtime_error_lines(log: str) -> list[str]:
+    return [line.strip() for line in log.splitlines()
+            if "frame error:" in line.lower() or "run failed:" in line.lower()]
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Replay a parity movie in the EVEngine remake.")
     parser.add_argument("--movie", type=Path, required=True)
@@ -156,6 +161,10 @@ def main() -> int:
         "".join(json.dumps(item, ensure_ascii=False, separators=(",", ":")) + "\n" for item in events),
         encoding="utf-8",
     )
+    runtime_errors = []
+    for source in [*trace_sources, output / "process-stderr.log"]:
+        if source.is_file():
+            runtime_errors.extend(runtime_error_lines(source.read_text(encoding="utf-8", errors="replace")))
     manifest = {
         "schema": "smb-parity-artifact-v1",
         "producer": "evengine-remake",
@@ -166,11 +175,14 @@ def main() -> int:
         "captured_frames": len(list(frames.glob("frame-*.png"))),
         "state_rows": len(states),
         "event_rows": len(events),
+        "runtime_errors": list(dict.fromkeys(runtime_errors)),
     }
     (output / "manifest.json").write_text(
         json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
     )
     print(f"actual artifacts: {output}")
+    if runtime_errors:
+        raise RuntimeError(f"EVEngine reported runtime errors; preserved logs in {output}: {runtime_errors[0]}")
     return 0
 
 

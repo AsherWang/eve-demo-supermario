@@ -179,8 +179,10 @@ def decode_line(line: str) -> dict:
             "floatey_y": list(ram[0x011E:0x0125]),
             "floatey_timer": list(ram[0x012C:0x0133]),
         },
-        # SMB stores lives minus one; expose the user-visible count.
-        "lives": ram[ADDR["number_of_lives"]] + 1,
+        # SMB stores lives minus one; $ff is its exhausted-life sentinel.
+        # Keep the raw byte for audits instead of exposing 256 visible lives.
+        "lives": 0 if ram[ADDR["number_of_lives"]] == 0xFF else ram[ADDR["number_of_lives"]] + 1,
+        "lives_raw": ram[ADDR["number_of_lives"]],
         # ScoreAndCoinDisplay stores score in units of ten points.
         "score": decimal_digits(ram, ADDR["player_score_display"], 6) * 10,
         "coins": ram[ADDR["coin_tally"]],
