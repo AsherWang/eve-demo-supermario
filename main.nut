@@ -74,6 +74,10 @@ eve_init = function() {
         initializeWorld21Parity(game);
     }
     parityInitialize(game);
+    if(config.previewScenario=="world21-underground") {
+        startLevel(game,2,1);loadWorld21Underground(game);
+        resetPlayerForArea(game,24,32);game.state="preview";
+    }
     if (config.previewScenario == "world12-pipes" || config.previewScenario == "world12-lifts") {
         setupWorld12ActorPreview(game,config.previewScenario);
     } else if (config.previewScenario == "underground") {

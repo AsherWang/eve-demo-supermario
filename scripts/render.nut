@@ -457,7 +457,7 @@ function positiveModulo(value, divisor) {
 }
 
 function drawBackground(g) {
-    if(isWorld21(g)) {drawWorld13Background(g);return;}
+    if(isWorld21(g)) {if(g.area!="underground") drawWorld13Background(g);return;}
     if(g.level==3) {drawWorld13Background(g);return;}
     if(g.level==4) {drawWorld14Background(g);return;}
     if (g.area == "underground") return;

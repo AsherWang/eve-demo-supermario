@@ -156,7 +156,7 @@ function restoreMainArea(g) {
 }
 
 function tryStartAreaTransition(g) {
-    if(g.world==2) return false; // World 2 bonus destinations are not connected yet.
+    if(isWorld21(g)) return tryWorld21BonusPipe(g);
     if(g.level>=3) return false;
     if (g.level == 2) return tryWorld12Pipe(g);
     local p = g.player;
@@ -232,6 +232,7 @@ function updateAreaTransition(g, dt) {
 }
 
 function updateAreaReload(g) {
+    if(isWorld21(g)) {updateWorld21BonusReload(g);return;}
     g.areaReloadFrames += 1;
     local frame = g.areaReloadFrames;
 

@@ -1,6 +1,7 @@
-// World 2-1 main-route prototype. Bonus destinations are not yet connected.
+// World 2-1 main route and underground bonus prototype; sky entry remains pending.
 dofile("scripts/generated/world21_data.nut");
 dofile("scripts/generated/world21_map.nut");
+dofile("scripts/generated/world21_branch_maps.nut");
 
 // Area-link commands update the selected destination; their X column is
 // parser position, not proof that a pipe or vine exists at that column.
@@ -65,6 +66,7 @@ function loadWorld21Assets() {
 }
 
 function startWorld21(g) {
+    if("world21Main" in g) delete g.world21Main;
     local descriptor=world21LevelDescriptor();
     g.world=descriptor.world;g.level=descriptor.level;g.stage=descriptor.stage;g.area="main";
     g.areaWidth=descriptor.metatiles.len();g.romBackgroundCollision=true;
@@ -102,6 +104,12 @@ function startWorld21(g) {
 }
 
 function world21TileTexture(g,tx,ty,tile) {
+    if(g.area=="underground") {
+        if(ty<2 || tx<0 || tx>=ROM_WORLD_2_1_UNDERGROUND_METATILES.len()) return null;
+        local meta=ROM_WORLD_2_1_UNDERGROUND_METATILES[tx][ty-2];
+        if(meta==0 || meta==0xc2) return null;
+        return meta in assets.world12.metatiles?assets.world12.metatiles[meta]:tileTexture(g,tile);
+    }
     if(ty<2) return null;
     local meta=ROM_WORLD_2_1_METATILES[tx][ty-2];
     if(meta==0 || meta==0x24 || meta==0x25 || meta==0x5f || meta==0x60) {
@@ -112,6 +120,83 @@ function world21TileTexture(g,tx,ty,tile) {
     if(tile!=g.world21.baseTiles[tileIndex(tx,ty)]) return tileTexture(g,tile);
     if(meta==0xc0 || meta==0xc1) return assets.tiles.questions[g.displayColorPhase];
     return meta in assets.world21.metatiles?assets.world21.metatiles[meta]:null;
+}
+
+function tryWorld21BonusPipe(g) {
+    local p=g.player;
+    local entering=g.area=="main" && g.input.down && p.grounded &&
+        floor((p.x+3)/16)==103 && floor((p.x+12)/16)==104 &&
+        abs(p.y+p.height-9*16)<1;
+    local leaving=g.area=="underground" && p.grounded && g.input.right &&
+        p.facing>0 && p.x+p.width>=13*16-1;
+    if(!entering && !leaving) return false;
+    g.transitionTimer=0;g.areaTransitionFrames=0;
+    g.areaReloadTarget=entering?"underground":"main";
+    g.state=entering?"pipeDown":"pipeSide";
+    p.nesXForce=0;emitSound(g,"pipe");return true;
+}
+
+function loadWorld21Underground(g) {
+    saveMainArea(g);
+    g.world21.savedActors <- {plants=g.plants,checkpoint=g.checkpointPage};
+    // Snapshot mutable objects without sharing the new branch's actor arrays.
+    g.world21Main <- g.world21;
+    clearAreaObjects(g);g.plants=[];g.platforms=[];
+    g.area="underground";g.areaWidth=16;g.sidePipeX=13;
+    local main=g.world21;
+    g.world21={descriptor=main.descriptor,baseTiles=[],vines=[],springs=[],
+        slotXFractions=[0.0,0.0,0.0,0.0,0.0]};
+    local roles={};
+    foreach(pair in [[0x52,TILE_BRICK],[0x54,TILE_GROUND],[0x14,TILE_PIPE_SHAFT_LEFT],
+        [0x1c,TILE_SIDE_PIPE_TOP_END],[0x1d,TILE_SIDE_PIPE_TOP_SHAFT],
+        [0x1e,TILE_SIDE_PIPE_TOP_JOINT],[0x1f,TILE_SIDE_PIPE_BOTTOM_END],
+        [0x20,TILE_SIDE_PIPE_BOTTOM_SHAFT],[0x21,TILE_SIDE_PIPE_BOTTOM_JOINT]]) roles[pair[0]]<-pair[1];
+    for(local x=0;x<16;x+=1) for(local r=0;r<13;r+=1) {
+        local meta=ROM_WORLD_2_1_UNDERGROUND_METATILES[x][r];
+        if(meta==0xc2) g.levelCoins.append({x=x*16.0,y=(r+2)*16.0,
+            width=16.0,height=16.0,active=true});
+        else setTile(g,x,r+2,meta in roles?roles[meta]:
+            (ROM_WORLD_2_1_UNDERGROUND_BLOCKS[x][r]!=0?TILE_SOLID:TILE_EMPTY));
+    }
+    g.world21.baseTiles=clone g.tiles;
+    g.cameraX=0;g.displayCameraX=0;
+}
+
+function restoreWorld21Main(g) {
+    local main=g.world21Main,actors=main.savedActors;
+    loadSavedMainArea(g);g.areaWidth=ROM_WORLD_2_1_METATILES.len();
+    g.world21=main;g.plants=actors.plants;g.checkpointPage=actors.checkpoint;
+    delete main.savedActors;delete g.world21Main;
+    g.cameraX=7*256.0;g.displayCameraX=g.cameraX;
+    foreach(e in g.goombas) if(e.x<g.cameraX-64) {e.alive=false;e.slot=-1;}
+}
+
+function updateWorld21BonusReload(g) {
+    g.areaReloadFrames+=1;local frame=g.areaReloadFrames;
+    if(frame==1) {
+        g.player.nesXForce=0;g.player.nesXMoveForce=0;g.player.nesXScroll=0;
+        g.player.nesYMoveForce=0;g.player.nesYDummy=0;
+        g.colorRotateOffset=0;g.displayColorPhase=0;g.pendingColorPhase=0;
+        g.colorPhasePending=false;g.vramScrollThirtyTwo=0;
+        g.vramAreaParserTask=0;g.vramBufferAddrCtrl=0;
+    } else if(frame==2) {
+        if(g.areaReloadTarget=="underground") loadWorld21Underground(g);
+        else restoreWorld21Main(g);
+        resetPlayerForArea(g,0,0);g.nesFrameCounter=0;
+        parityRecordEvent(g,"music","silence");
+    } else if(frame==25) {
+        parityRecordEvent(g,"music",g.area=="underground"?"underground":"overworld");
+        g.soundEvents.append("resume_music");
+    } else if(frame==26) {
+        resetPlayerForArea(g,g.area=="underground"?24:7*256+56,
+            g.area=="underground"?32:240);
+        g.player.parityOriginFriction=true;g.player.fallForce=0x28;
+        g.areaEntranceFrames=0;
+        g.state=g.area=="underground"?"areaEntrance":"areaExitEntrance";
+    }
+    if(frame==3 || (frame==21 && g.areaReloadTarget=="underground")) g.vramBufferAddrCtrl=3;
+    else if(frame==21) g.vramBufferAddrCtrl=2;
+    else if(frame>=9 && frame<=20) g.vramBufferAddrCtrl=6;
 }
 
 function growWorld21Vine(g,tx,ty) {
@@ -155,6 +240,7 @@ function updateWorld21Actors(g) {
 }
 
 function parseWorld21PlantColumn(g,task) {
+    if(g.area!="main") return;
     // AreaParser tasks 7 and 3 process the next two columns, 22 metatiles
     // ahead of the camera's 32-pixel boundary. Pipe objects allocate from
     // the same five enemy slots as walkers; a full buffer skips the plant.
@@ -273,6 +359,46 @@ function runWorld21SelfTest() {
     local fresh=world21LevelDescriptor();fresh.goal.flagColumn=1;
     requireSelfTest(descriptor.goal.flagColumn==200,
         "separate level loads must not share mutable descriptor tables");
+    foreach(power in [0,1,2]) {
+        local branch=createGame();startLevel(branch,2,1);
+        branch.goombas=[];branch.plants=[];branch.score=12300;branch.coins=8;
+        branch.time=321;branch.checkpointPage=6;
+        branch.player.big=power>0;branch.player.fire=power==2;
+        branch.player.height=power>0?32.0:16.0;
+        setTile(branch,16,9,TILE_EMPTY);
+        branch.player.x=103*16+10.0;branch.player.y=9*16-branch.player.height;
+        branch.player.grounded=true;branch.input.down=true;
+        requireSelfTest(tryWorld21BonusPipe(branch) && branch.state=="pipeDown",
+            "2-1 underground entry must accept a centered grounded Down press");
+        branch.input.down=false;
+        for(local i=0;i<250 && !(branch.area=="underground" && branch.state=="playing");i+=1)
+            simulateFixed(branch,FIXED_DT);
+        requireSelfTest(branch.area=="underground" && branch.state=="playing" &&
+            branch.levelCoins.len()==19 && branch.player.big==(power>0) &&
+            branch.player.fire==(power==2) && branch.time<=321 && branch.score==12300,
+            "bonus loading must preserve progress and powers and supply nineteen coins");
+        local coin=branch.levelCoins[0];
+        branch.player.x=coin.x;branch.player.y=coin.y-(power>0?4:2);
+        updateLevelCoins(branch);
+        requireSelfTest(!coin.active && branch.coins==9 && branch.score==12500,
+            "2-1 bonus coins must use the shared award path exactly once");
+        updateLevelCoins(branch);
+        requireSelfTest(branch.coins==9,"collected bonus coins must not award twice");
+        branch.player.x=13*16-branch.player.width;
+        branch.player.y=13*16-branch.player.height;branch.player.grounded=true;
+        branch.player.facing=1;branch.input.right=true;
+        requireSelfTest(tryWorld21BonusPipe(branch) && branch.state=="pipeSide",
+            "bonus exit must enter the right-facing side pipe");
+        branch.input.right=false;
+        for(local i=0;i<350 && !(branch.area=="main" && branch.state=="playing");i+=1)
+            simulateFixed(branch,FIXED_DT);
+        requireSelfTest(branch.area=="main" && branch.state=="playing" &&
+            branch.areaWidth==212 && getTile(branch,16,9)==TILE_EMPTY &&
+            branch.player.x==7*256+56 && branch.player.big==(power>0) &&
+            branch.player.fire==(power==2) && branch.score==12500 && branch.coins==9 &&
+            !("world21Main" in branch),
+            "bonus exit must restore main terrain and powers at World 2 return page seven");
+    }
     local hops=0;
     foreach(e in g.goombas) if("greenJump" in e && e.greenJump) hops+=1;
     requireSelfTest(hops==3,"2-1 must retain all three jumping Paratroopas");
