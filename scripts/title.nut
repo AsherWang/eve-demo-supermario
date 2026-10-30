@@ -14,8 +14,10 @@ function beginTitleReturn(g) {
 }
 
 function startTitleNewGame(g) {
+    // Start clears game counters before the next VRAM HUD update. Preserve
+    // the displayed score for the final title frame already queued to PPU.
     g.score=0;g.coins=0;g.lives=3;
-    g.queuedScore=0;g.displayScore=0;g.queuedCoins=0;g.displayCoins=0;
+    g.queuedScore=0;g.queuedCoins=0;g.displayCoins=0;
     g.state="newGameLoad";g.title.loadFrames <- 0;g.checkpointPage=0;
     g.soundEvents.clear();g.player.dead=false;
     g.input.jumpDown=false;g.input.runDown=false;

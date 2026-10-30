@@ -371,3 +371,12 @@ agreement are retained in `local-parity/world21-map-final`.
 - 验证证据：`local-parity/world21-runtime/actual/title-blanking-candidate-pass`、`local-parity/world21-runtime/title-blanking-fix/reports`。3116 帧状态门禁通过，91 张截图中 80 通过、11 失败（此前 18 失败）。2671–2676 和 2918 的差异消除。
 - 剩余截图：2220–2228（294/370 像素）、2236（944 像素）、2751（19 像素）。下一步核对 Game Over 交接期间残留精灵、HUD 出现阶段及 Start 瞬间的精灵状态。
 - 10 组模拟回归和 3 项 Python 测试通过；未发布新 release，也没有把这次诊断回放作为成功通关整关验收。
+
+
+### 2026-10-30：Game Over HUD 与 Start 分数显示交接
+
+- Game Over HUD/文本延后一帧显示，匹配仍处于空白屏的原版帧。Start 清零游戏分数时保留已排队显示的旧分数，直到后续 HUD 更新，避免最终标题帧提前清零。
+- 原生回放使用进程级 `VK_LOADER_LAYERS_DISABLE=~implicit~`。证据：`local-parity/world21-runtime/actual/gameover-hud-fix` 和 `local-parity/world21-runtime/gameover-hud-fix/reports`。
+- 3116 帧状态门禁通过；91 张截图中 82 通过、9 失败（此前 11 失败）。2236 的 944 像素差异和 2751 的 19 像素差异均消除。
+- 剩余仅为 2220–2228 的乌龟绘制区域：前五帧每帧 294 像素、后四帧每帧 370 像素。应继续核对死亡冻结期间敌人图形帧及 OAM 坐标，不调整已通过的游戏状态来掩盖图像问题。
+- 10 组模拟回归、3 项 Python 测试全部通过。未发布新 release；当前证据仍是死亡/标题/重新开局诊断，成功通关整关验收尚未完成。

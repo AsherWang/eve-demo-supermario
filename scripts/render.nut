@@ -1081,7 +1081,7 @@ function renderGame(g) {
             screenRect(0.0,0.0,LOGICAL_WIDTH,LOGICAL_HEIGHT,146.0/255.0,144.0/255.0,1.0);
         } else {
             screenRect(0.0,0.0,LOGICAL_WIDTH,LOGICAL_HEIGHT,0.0,0.0,0.0);
-            if(g.world21.gameOverFrames>=8) {
+            if(g.world21.gameOverFrames>=9) {
                 g.state="gameOverScreen";drawHud(g);g.state="gameOver";
                 drawHudGlyphs([0x10,0x0a,0x16,0x0e,0x24,0x18,0x1f,0x0e,0x1b],88,128);
             }
