@@ -1,0 +1,57 @@
+{
+  "schema": "smb-world21-branches-v1",
+  "rom_sha256": "f61548fdf1670cffefcc4f0b7bdcdd9eaba0c226e3b74f8666071496988248de",
+  "branches": [
+    {
+      "name": "sky",
+      "area_pointer": 43,
+      "streams": {
+        "area": {
+          "cpu_address": "0xa87a",
+          "length": 21,
+          "sha256": "0db8ddb65f8ef5aeccc23b916a97689a3ca0c5b8b6e827728fa5813e948b9963"
+        },
+        "enemies": {
+          "cpu_address": "0x9fa0",
+          "length": 9,
+          "sha256": "e047beeb2f7be842bb926b9aeaaee82af1e46273d2787fb71756a02427b2fd30"
+        }
+      },
+      "world2_returns": [
+        {
+          "offset": 2,
+          "column": 16,
+          "destination": 40,
+          "entrance_page": 10
+        }
+      ]
+    },
+    {
+      "name": "underground",
+      "area_pointer": 66,
+      "streams": {
+        "area": {
+          "cpu_address": "0xad79",
+          "length": 141,
+          "sha256": "95a65bbdc2351f0cfc630edf4a551f32fec91a19d83b9ffa5a9a9eec94e1cc39"
+        },
+        "enemies": {
+          "cpu_address": "0xa133",
+          "length": 45,
+          "sha256": "715cb8c2a50e8e686c0d4619234a647c406078f6787a59a4104f2706125e056f"
+        }
+      },
+      "world2_returns": [
+        {
+          "offset": 3,
+          "column": 18,
+          "destination": 40,
+          "entrance_page": 7
+        }
+      ]
+    }
+  ],
+  "runtime_connected": false,
+  "output": "scripts/generated/world21_branches.nut",
+  "output_sha256": "5ac990597d5c335bd4060d1438be2b25bd1925010463029ae95656cbfe9ff3b2"
+}
