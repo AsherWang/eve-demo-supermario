@@ -768,6 +768,8 @@ function drawEnemy(g, e) {
         y -= 10.0;
     } else if (e.kind == "koopa") {
         local frame = floor(g.simTime * 7.0).tointeger() % 2;
+        // TimerControl suppresses EnemyGfxHandler's alternate CHR frame.
+        if(isWorld21(g) && g.player.dead) frame=0;
         texture = e.vx < 0.0 ? assets.enemies.koopaLeft[frame] :
                                assets.enemies.koopaRight[frame];
         if(levelTexture!=null) texture=levelTexture;
@@ -810,6 +812,14 @@ function drawEnemy(g, e) {
         (e.kind == "goomba" ? e.x + goombaMotionLead : e.x - 1.0);
     local drawY = defeatedGoomba ? y - 8.0 :
         (e.kind == "goomba" ? y - 9.0 : y);
+    if(isWorld21(g) && e.kind=="koopa" &&
+        (visualState=="walking" || visualState=="falling")) {
+        // OAM owns the buffered pre-movement origin; visible scanlines start
+        // one pixel below the stored NES sprite Y coordinate.
+        // A lethal collision stops movement before OAM is rebuilt on
+        // subsequent frozen passes; the live origin then replaces old X.
+        drawX=g.player.dead?e.x:e.displayX;drawY=e.displayY+1.0;
+    }
     if (g.level == 3) {
         if (e.kind == "koopa") {
             // RelativeEnemyPosition uses the pre-movement X and visible OAM

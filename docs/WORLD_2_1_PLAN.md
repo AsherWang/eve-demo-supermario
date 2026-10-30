@@ -380,3 +380,14 @@ agreement are retained in `local-parity/world21-map-final`.
 - 3116 帧状态门禁通过；91 张截图中 82 通过、9 失败（此前 11 失败）。2236 的 944 像素差异和 2751 的 19 像素差异均消除。
 - 剩余仅为 2220–2228 的乌龟绘制区域：前五帧每帧 294 像素、后四帧每帧 370 像素。应继续核对死亡冻结期间敌人图形帧及 OAM 坐标，不调整已通过的游戏状态来掩盖图像问题。
 - 10 组模拟回归、3 项 Python 测试全部通过。未发布新 release；当前证据仍是死亡/标题/重新开局诊断，成功通关整关验收尚未完成。
+
+
+### 2026-10-30：死亡冻结乌龟绘制修复，标题诊断门禁通过
+
+- 对照 EnemyGfxHandler：TimerControl 禁止切换备用 CHR 帧。2-1 死亡期间乌龟固定基础动画帧，修复原先仍按 simTime 切换的贴图。
+- 2-1 普通行走/下落乌龟使用缓冲的 OAM 原点与可见扫描线 Y+1；死亡冻结后使用停止移动的当前 X，避免第二只乌龟保留旧的移动前一像素偏差。
+- 原生 `world-2-1-title-new-game.json` 诊断回放：3116 帧当前状态门禁通过；91 张抽样截图全部逐像素一致，零容差、无缺帧。不是 3116 帧全截图验证，不是成功通关整关验收。
+- 证据：`local-parity/world21-runtime/actual/koopa-freeze-fix`、`local-parity/world21-runtime/koopa-freeze-fix/reports`。首轮仍有 145 像素差异的证据另存 `koopa-oam-fix`，未覆盖。
+- 10 组模拟回归、3 项 Python 测试、原生音频测试及预览包启动/标题/图标/关闭检查全部通过。图形测试使用进程级禁用 Vulkan 隐式层的既有绕过方式。
+- 新预览包：`dist/super-mario-world21-title-verified-win64/SuperMario.exe`。未发布新 release，版本保持 0.0.7。
+- 下一步转回 2-1 奖励区域连接、返回路径和成功通关路线，补充正常行进阶段的图像覆盖；该诊断门禁通过不代表整个 2-1 或全部关卡已验收。
