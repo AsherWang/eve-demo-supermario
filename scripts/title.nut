@@ -145,7 +145,10 @@ function drawTitleFlow(g) {
             drawIntermediateLives(g);return;
         }
         if(frame>=2) {
-            screenRect(0.0,0.0,LOGICAL_WIDTH,LOGICAL_HEIGHT,0.0,0.0,0.0);return;
+            // The uploaded palette is visible while PPU rendering is disabled.
+            local ready=("waitEnd" in g.title) && frame>=g.title.waitEnd+14;
+            screenRect(0.0,0.0,LOGICAL_WIDTH,LOGICAL_HEIGHT,
+                ready?146.0/255.0:0.0,ready?144.0/255.0:0.0,ready?1.0:0.0);return;
         }
     }
     local frame=g.title.frames;
@@ -161,11 +164,15 @@ function drawTitleFlow(g) {
     if(g.state=="titleLoad" && frame<24) {
         screenRect(0.0,0.0,LOGICAL_WIDTH,LOGICAL_HEIGHT,0.0,0.0,0.0);return;
     }
+    // Title CHR copy and setup keep rendering disabled after palette upload.
+    if(g.state=="titleLoad" && frame<=28) {
+        screenRect(0.0,0.0,LOGICAL_WIDTH,LOGICAL_HEIGHT,146.0/255.0,144.0/255.0,1.0);return;
+    }
     drawBackground(g);drawTiles(g);
     local state=g.state;g.state="titleScreen";drawHud(g);g.state=state;
     if(frame>=27) {
         screenTexture(assets.titleOverlay,0,0,256,240);
         drawHudNumber(g.highScore,6,136,184);
     }
-    if(frame>=29) drawPlayer(g);
+    if(frame>=30) drawPlayer(g);
 }

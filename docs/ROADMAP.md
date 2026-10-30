@@ -194,3 +194,13 @@ Game Over 后续：修复参考解码器将 `$ff` 生命下溢算作 256 条命�
 - 绘制候选保存在 `local-parity/world21-runtime/title-blanking-investigation/candidate.patch`，未合入运行源码。连续三次原生验证均在 SDL 创建窗口时因 `vkEnumerateInstanceExtensionProperties returned VK_INCOMPLETE(5)` 失败，尚未进入脚本游戏循环；不是截图门禁通过，也未产生新的完整状态证据。
 - 失败日志分别保留在 `actual/title-blanking-fix`、`actual/title-blanking-fix-retry`、`actual/title-blanking-fix-third`（均相对 `local-parity/world21-runtime`）。候选代码的 10 组无窗口模拟回归通过，但不能证明绘制正确。
 - 下一步先恢复原生图形捕获，再验证候选并核对逐帧空白/精灵显示阶段；未确认前保持已验证运行代码，不发布新包或 release。
+
+
+### 2026-10-30：恢复图形回放并修复标题空白绘制阶段
+
+- 对回放子进程设置 `VK_LOADER_LAYERS_DISABLE=~implicit~` 后窗口初始化恢复，基线 3116 帧状态门禁通过。系统注册了 Steam/OBS 隐式层；证据仅支持禁用隐式层能够绕过本次问题，尚未确定具体故障层。没有修改系统环境或注册表。
+- PowerShell 可复现命令：先 `$env:VK_LOADER_LAYERS_DISABLE='~implicit~'`，再执行 `python tools/parity/run_actual.py` 的正常参数；设置仅在该 shell 及子进程生效。
+- 标题 CHR 复制及初始化阶段保持纯天空背景色，延后玩家精灵显示；新游戏加载在区域调色板已上传而绘制尚未启用时使用天空背景色。未改变模拟状态时序。
+- 验证证据：`local-parity/world21-runtime/actual/title-blanking-candidate-pass`、`local-parity/world21-runtime/title-blanking-fix/reports`。3116 帧状态门禁通过，91 张截图中 80 通过、11 失败（此前 18 失败）。2671–2676 和 2918 的差异消除。
+- 剩余截图：2220–2228（294/370 像素）、2236（944 像素）、2751（19 像素）。下一步核对 Game Over 交接期间残留精灵、HUD 出现阶段及 Start 瞬间的精灵状态。
+- 10 组模拟回归和 3 项 Python 测试通过；未发布新 release，也没有把这次诊断回放作为成功通关整关验收。
