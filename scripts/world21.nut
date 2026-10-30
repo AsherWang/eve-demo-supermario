@@ -2,6 +2,40 @@
 dofile("scripts/generated/world21_data.nut");
 dofile("scripts/generated/world21_map.nut");
 
+// Area-link commands update the selected destination; their X column is
+// parser position, not proof that a pipe or vine exists at that column.
+function decodeWorld21AreaLinks(data,world) {
+    local links=[],page=0,cursor=0;
+    while(cursor<data.len() && data[cursor]!=0xff) {
+        if(cursor+1>=data.len()) throw "truncated enemy stream";
+        local first=data[cursor],second=data[cursor+1],row=first&15;
+        if(second&0x80) page+=1;
+        if(row==15 && !(second&0x80)) {page=second&63;cursor+=2;continue;}
+        if(row==14) {
+            if(cursor+2>=data.len()) throw "truncated area link";
+            local third=data[cursor+2];
+            if((third>>5)==world-1)
+                links.append({streamOffset=cursor,column=page*16+(first>>4),
+                    destination=second,entrancePage=third&31});
+            cursor+=3;
+        } else cursor+=2;
+    }
+    return links;
+}
+
+// A fresh descriptor keeps static source data separate from mutable actors,
+// collision tiles, parser state, timers and per-slot movement accumulators.
+function world21LevelDescriptor() {
+    return {world=2,level=1,stage="world21",areaPointer=0x28,
+        metatiles=ROM_WORLD_2_1_METATILES,blocks=ROM_WORLD_2_1_BLOCKS,
+        enemies=ROM_WORLD_2_1_ENEMIES,entry={x=40,y=176},
+        goal={flagColumn=200,castleColumn=204},
+        checkpoint={cameraThreshold=1536,page=6},
+        music="overworld",palette="ground",time=400,
+        areaLinks=decodeWorld21AreaLinks(ROM_WORLD_2_1_ENEMIES,2),
+        branchesPlayable=false};
+}
+
 function isWorld21(g) {return g.world==2 && g.level==1;}
 
 function initializeWorld21Parity(g) {
@@ -31,11 +65,12 @@ function loadWorld21Assets() {
 }
 
 function startWorld21(g) {
-    g.world=2;g.level=1;g.stage="world21";g.area="main";
-    g.areaWidth=ROM_WORLD_2_1_METATILES.len();g.romBackgroundCollision=true;
+    local descriptor=world21LevelDescriptor();
+    g.world=descriptor.world;g.level=descriptor.level;g.stage=descriptor.stage;g.area="main";
+    g.areaWidth=descriptor.metatiles.len();g.romBackgroundCollision=true;
     clearAreaObjects(g);g.plants=[];g.platforms=[];g.enterablePipes=[];
     g.sidePipeX=-1;g.cameraX=0.0;g.displayCameraX=0.0;
-    local state={baseTiles=[],vines=[],springs=[],
+    local state={descriptor=descriptor,baseTiles=[],vines=[],springs=[],
         slotXFractions=[0.0,0.0,0.0,0.0,0.0]};
     if("world21" in g) g.world21=state; else g.world21 <- state;
     local mapping={};
@@ -57,12 +92,12 @@ function startWorld21(g) {
         if(meta==0x67) state.springs.append({x=x*16.0,y=(row+2)*16.0,control=0,timer=0,force=-7});
     }
     state.baseTiles=clone g.tiles;
-    decodeWorld11Enemies(g,ROM_WORLD_2_1_ENEMIES);
-    g.flagX=200.0*16.0;g.castleX=204.0*16.0;g.flagY=48.0;
+    decodeWorld11Enemies(g,descriptor.enemies);
+    g.flagX=descriptor.goal.flagColumn*16.0;g.castleX=descriptor.goal.castleColumn*16.0;g.flagY=48.0;
     g.preparedFlagY=48.0;g.displayFlagY=48.0;g.castleFlagVisible=false;
-    resetPlayerForArea(g,40,176);g.player.grounded=true;g.player.entranceFalling=false;
+    resetPlayerForArea(g,descriptor.entry.x,descriptor.entry.y);g.player.grounded=true;g.player.entranceFalling=false;
     g.state="playing";g.stateTimer=0.0;g.checkpointPage=0;
-    g.time=400;g.displayTime=400;g.gameTimerControl=23;g.hurryActive=false;
+    g.time=descriptor.time;g.displayTime=descriptor.time;g.gameTimerControl=23;g.hurryActive=false;
     g.soundEvents.append("resume_music");
 }
 
@@ -155,7 +190,8 @@ function updateWorld21DeathReload(g) {
     g.deathReloadFrames+=1;
     local frame=g.deathReloadFrames;
     if(frame==1) {
-        g.checkpointPage=g.cameraX>=1536?6:0;g.lives-=1;
+        g.checkpointPage=g.cameraX>=g.world21.descriptor.checkpoint.cameraThreshold?
+            g.world21.descriptor.checkpoint.page:0;g.lives-=1;
         parityRecordEvent(g,"music","silence");
         if(g.lives<=0) {
             g.lives=0;g.state="gameOver";
@@ -222,6 +258,21 @@ function runWorld21SelfTest() {
         getTile(g,83,5)==TILE_BRICK_VINE && getTile(g,28,5)==TILE_HIDDEN_ONEUP &&
         getTile(g,82,9)==TILE_QUESTION && g.world21.springs.len()==1,
         "2-1 must use the verified map, rewards and spring");
+    local descriptor=g.world21.descriptor,links=descriptor.areaLinks;
+    requireSelfTest(links.len()==2 && links[0].column==63 &&
+        links[0].destination==0x2b && links[0].entrancePage==0 &&
+        links[1].column==111 && links[1].destination==0x42 &&
+        links[1].streamOffset==23 && !descriptor.branchesPlayable,
+        "2-1 must retain verified links without claiming playable branches");
+    requireSelfTest(decodeWorld21AreaLinks(ROM_WORLD_2_1_ENEMIES,1).len()==0,
+        "area links must only select destinations for their encoded world");
+    local selected=decodeWorld21AreaLinks([0x0f,3,0x2e,0x42,0x25,0xff],2);
+    requireSelfTest(selected.len()==1 && selected[0].column==50 &&
+        selected[0].entrancePage==5,
+        "area-link decoding must respect page commands and entrance page bits");
+    local fresh=world21LevelDescriptor();fresh.goal.flagColumn=1;
+    requireSelfTest(descriptor.goal.flagColumn==200,
+        "separate level loads must not share mutable descriptor tables");
     local hops=0;
     foreach(e in g.goombas) if("greenJump" in e && e.greenJump) hops+=1;
     requireSelfTest(hops==3,"2-1 must retain all three jumping Paratroopas");
