@@ -1,3 +1,6 @@
+import hashlib
+import json
+import re
 import sys
 import unittest
 from pathlib import Path
@@ -34,6 +37,26 @@ class BranchStreamTest(unittest.TestCase):
                          (0x8200, bytes([0x1b, 0xff, 0x0e, 0x28, 0x2a, 0xff])))
         self.assertEqual(stream(prg, 0x2b, False),
                          (0x8300, bytes([0, 0, 0x10, 0xfd, 0xfd])))
+
+
+class CapturedBranchMapTest(unittest.TestCase):
+    def test_committed_entry_maps_match_manifest_and_room_geometry(self):
+        root = Path(__file__).resolve().parents[2]
+        data = (root / "scripts/generated/world21_branch_maps.nut").read_bytes()
+        manifest = json.loads((root / "assets/world21/branch-maps-manifest.json").read_text())
+        self.assertEqual(hashlib.sha256(data).hexdigest(), manifest["output_sha256"])
+        self.assertFalse(manifest["runtime_connected"])
+        maps = {}
+        for name, payload in re.findall(r"ROM_WORLD_2_1_(\w+) <- (\[.*?\]);", data.decode(), re.S):
+            maps[name] = json.loads(payload)
+        for name, width in [("SKY", 48), ("UNDERGROUND", 16)]:
+            for kind in ["METATILES", "BLOCKS"]:
+                self.assertEqual(len(maps[name+"_"+kind]), width)
+                self.assertTrue(all(len(column)==13 for column in maps[name+"_"+kind]))
+        underground = maps["UNDERGROUND_METATILES"]
+        self.assertEqual(sum(column.count(0xc2) for column in underground), 19)
+        self.assertEqual(underground[13][9:11], [0x1c, 0x1f])
+        self.assertEqual(underground[15][9:11], [0x1e, 0x21])
 
 
 if __name__ == "__main__":

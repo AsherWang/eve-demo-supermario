@@ -410,3 +410,13 @@ agreement are retained in `local-parity/world21-map-final`.
 - 生成 `scripts/generated/world21_branches.nut` 与 `assets/world21/branches-manifest.json`，记录来源地址、长度、SHA-256、返回命令和 `runtime_connected=false`。这是区域数据流，不是已验证的最终 metatile 地图；运行时代码尚未加载这些流。
 - 重复离线生成结果一致；3 项新增测试覆盖共享房间世界过滤、页/入口位域、指针解引用及操作数终止符边界，并纳入 release CI。原有 3 项 Python 测试、10 组模拟回归通过。没有改动游戏运行源码，未重复图形回放。
 - 下一步使用离线原版解析器捕获这两个区域的 metatile/碰撞地图，确认实际进入与返回的渲染位置，再接通游戏加载和奖励分支回放。当前奖励入口仍不可进入，未发布新 release。
+
+
+### 2026-10-30：奖励入口地图与碰撞数据捕获
+
+- 新增 `tools/parity/capture_world21_branches.py`，用验证 ROM 的 `$88ae` RenderAreaGraphics 回调采集 metatile 与碰撞缓冲，按当前区域数据基址筛选。天空区域设置原版 cloud override；固定玩家在地形上方只是离线地图采集条件，不是游玩证据。
+- 天空入口窗口输出 48 列，地下入口首屏输出 16 列，每列 13 行；提交 `scripts/generated/world21_branch_maps.nut` 和 `assets/world21/branch-maps-manifest.json`，记录 Lua、原始列记录、成功模拟器日志及生成数据哈希。
+- 两个独立模拟器运行各完成 1400 帧，无 Lua 错误。天空观察到 86 列、地下观察到 24 列。初次要求地下 32 列时因缺少 24–31 列而拒绝输出；检查横管/管墙布局后将输出范围明确收窄为入口首屏 16 列，保留所有原始 24 列，不补造后续共享区域。没有证明共享地下整区域完整或可通关。
+- `--reuse-capture` 仅在既有 Lua 与当前配置完全一致、日志含成功 1400 帧摘要且无 Lua 错误时重用采集证据。本次输出使用上述成功采集记录。
+- 新增提交数据哈希、维度、地下 19 枚金币和横向出口管道几何测试。4 项分支测试、3 项既有 Python 测试、10 组模拟回归通过。运行时尚未加载该地图，未重复原生游戏回放、未发布新 release。
+- 下一步接入分支贴图/碰撞与金币、区域加载和返回到第 7/10 页的流程，再连接实际管道/藤蔓入口并单独验证。奖励入口仍不可进入，整关验收未完成。

@@ -1,0 +1,35 @@
+{
+  "rom_sha256": "f61548fdf1670cffefcc4f0b7bdcdd9eaba0c226e3b74f8666071496988248de",
+  "parser_cpu_address": "0x88ae",
+  "captures": [
+    {
+      "name": "sky",
+      "area_pointer": 43,
+      "area_data_address": "0xa87c",
+      "width": 48,
+      "height": 13,
+      "observed_columns": 86,
+      "cloud_override": 1,
+      "columns_sha256": "104b7578d4fa609092207f45468710a32814a631fc699815877d808c839e2aee",
+      "stdout_sha256": "08f9271f1bc6366f921fa254896ef158cf45cf2132b9279aa9589f939cbb253e",
+      "script_sha256": "e3d0047f9ddbcd4dba6f58d6389f1e77719eb7bc2b57876a3909f09336b82905",
+      "scope": "bonus-entry window; not whole shared area"
+    },
+    {
+      "name": "underground",
+      "area_pointer": 66,
+      "area_data_address": "0xad7b",
+      "width": 16,
+      "height": 13,
+      "observed_columns": 24,
+      "cloud_override": 0,
+      "columns_sha256": "34fff99a49333f9385bb0edcde451f734e6c25bf040708a225d30421d836b25f",
+      "stdout_sha256": "e9ec2f347417aad0d97e6a40b651ca27f3ca33b08d43555cfbf5701e3eb02159",
+      "script_sha256": "1cf68343c17cf897ebcaac1f03f8f22e736a1a74e9e196d51b9cd662c21050ea",
+      "scope": "bonus-entry window; not whole shared area"
+    }
+  ],
+  "fixture_player_above_terrain": true,
+  "runtime_connected": false,
+  "output_sha256": "acd0d41a0cb17ac69d8bd824eb468dcaf9675eca306ca17cbf9458cca4571553"
+}
