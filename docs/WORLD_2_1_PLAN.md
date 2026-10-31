@@ -453,3 +453,13 @@ agreement are retained in `local-parity/world21-map-final`.
 - 全部字段仍包括 `enemy0.active` 第 1 帧差异、`enemy0.x` 第 64 帧差异及 `camera_x` 第 293 帧差异。检查点当前未正确跳过屏幕右边界之前的旧敌人命令，死亡加载阶段相机也需进一步核对。分支验证仍未通过，这条回放仍不是成功进入地下房的原版路线。
 - 主路线基线重跑 `actual/plant-fix-main-baseline-retry`：3116 帧状态门禁、91 张抽样截图全部通过。首次启动遇到 Vulkan 初始化失败，日志保留 `actual/plant-fix-main-baseline`；对比报告在 `plant-fix-main-baseline/reports`。
 - 10 组模拟回归、5 项分支 Python 测试及 3 项既有 Python 测试通过。未发布新包/release；下一步补齐检查点敌人流和相机初始化，继续修正分支诊断。天空入口及成功通关整关验收仍未完成。
+
+
+### 2026-10-31：检查点敌人流与加载相机修复
+
+- 检查点初始化按 ScreenRight（camera+255）跳过旧敌人命令，修复此前仅按 ScreenLeft 丢弃导致旧敌人提前生成的问题。
+- 死亡加载第 3 帧恢复检查点相机；复活入口复用相同的植物/敌人初始化，避免下一命漏载植物及重复保留旧命令。辅助函数重命名为 `initializeWorld21Checkpoint`，由真实复活和诊断共同使用。
+- 新增旧命令过滤和加载中相机恢复回归。10 组模拟回归、5 项分支 Python 测试和 3 项既有 Python 测试全部通过。
+- 检查点诊断 `actual/checkpoint-stream-fix` 对原版 `reference/underground-checkpoint-route-v2`：600 帧当前状态门禁全部通过。31 张抽样截图仍有 23 张失败，含植物绘制与加载画面差异；报告 `checkpoint-stream-fix/reports`。该路线会死亡，不是成功地下分支或整关通关证据。
+- 正常入口基线 `actual/checkpoint-stream-main-baseline`：3116 帧状态门禁、91 张抽样截图全部通过，报告 `checkpoint-stream-main-baseline/reports`。
+- 下一步处理检查点截图差异（第 20 帧差异已定位到植物区域），并建立实际成功进入/领取金币/返回地下房的原版路线。未发布新包/release，天空入口及整关验收仍未完成。

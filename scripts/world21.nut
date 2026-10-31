@@ -50,13 +50,15 @@ function initializeWorld21Parity(g) {
     g.player.movingDir=0;
 }
 
-function initializeWorld21CheckpointParity(g,page) {
+function initializeWorld21Checkpoint(g,page) {
     g.cameraX=page*256.0;g.displayCameraX=g.cameraX;
     resetPlayerForArea(g,page*256+40,176);g.player.grounded=true;
     g.player.movingDir=0;g.checkpointPage=page;
     foreach(e in g.goombas) {
         local trigger=e.groupIndex>=0?e.groupCommandX:e.x;
-        if(trigger<g.cameraX) e.alive=false;
+        // The enemy stream skips commands left of ScreenRight, not just
+        // those left of the camera, when loading a checkpoint.
+        if(trigger<g.cameraX+LOGICAL_WIDTH-1) e.alive=false;
     }
     // The initial twelve half-column tasks parse 24 metatile columns before
     // control starts. Pipe objects reserve slots during those loading passes.
@@ -320,6 +322,9 @@ function updateWorld21DeathReload(g) {
         local page=g.checkpointPage,time=g.time,control=g.gameTimerControl;
         g.player=createPlayer();startWorld21(g);
         g.checkpointPage=page;g.time=time;g.displayTime=time;g.gameTimerControl=control;
+        // InitializeArea restores ScreenLeft from the halfway page before
+        // the lives screen finishes, even though rendering stays disabled.
+        g.cameraX=page*256.0;g.displayCameraX=g.cameraX;
         g.soundEvents.clear();g.state="deathReload";
         g.player.x=0;g.player.previousX=0;g.player.y=16;g.player.previousY=16;
         g.player.movingDir=0;
@@ -338,10 +343,7 @@ function updateWorld21DeathReload(g) {
     } else if(frame==end+18) {
         g.player=createPlayer();
         local page=g.checkpointPage;
-        resetPlayerForArea(g,page*256+40,176);
-        g.player.movingDir=0;
-        g.cameraX=page*256.0;g.displayCameraX=g.cameraX;
-        foreach(enemy in g.goombas) if(enemy.x<g.cameraX) enemy.alive=false;
+        initializeWorld21Checkpoint(g,page);
         g.time=401;g.hurryActive=false;g.gameTimerControl=0;g.state="deathEntrance";
     } else if(frame==end+19) {
         g.state="playing";g.stateTimer=0;
@@ -426,7 +428,7 @@ function runWorld21SelfTest() {
             "bonus exit must restore main terrain and powers at World 2 return page seven");
     }
     local cp=createGame();startLevel(cp,2,1);initializeWorld21Parity(cp);
-    initializeWorld21CheckpointParity(cp,6);
+    initializeWorld21Checkpoint(cp,6);
     local loaded=[];foreach(plant in cp.plants) if(plant.awake) loaded.append(plant);
     requireSelfTest(loaded.len()==2 && loaded[0].slot==0 && loaded[0].x==1656 &&
         loaded[0].y==143 && loaded[0].moving && loaded[0].direction==-1 &&
@@ -434,6 +436,17 @@ function runWorld21SelfTest() {
         "checkpoint six must retain the ROM's two parsed plants and pre-control movement");
     requireSelfTest(cp.nesFrameCounter==0x1a && cp.player.movingDir==0,
         "checkpoint initialization must preserve the reference control origin");
+    foreach(enemy in cp.goombas) if(enemy.alive) {
+        local trigger=enemy.groupIndex>=0?enemy.groupCommandX:enemy.x;
+        requireSelfTest(trigger>=1536+255,
+            "checkpoint parsing must discard commands behind ScreenRight, not only ScreenLeft");
+    }
+    local reloadCamera=createGame();startLevel(reloadCamera,2,1);
+    reloadCamera.checkpointPage=6;reloadCamera.deathReloadFrames=2;
+    updateWorld21DeathReload(reloadCamera);
+    requireSelfTest(reloadCamera.cameraX==1536 && reloadCamera.displayCameraX==1536 &&
+        reloadCamera.state=="deathReload",
+        "InitializeArea must restore checkpoint camera while the lives screen is still loading");
     cp.player.x=1647;cp.player.y=128;cp.player.grounded=true;
     loaded[0].y=120;loaded[0].timer=64;loaded[0].moving=false;
     cp.nesFrameCounter=93;updateWorld12Actors(cp);
