@@ -209,7 +209,7 @@ function updateAreaTransition(g, dt) {
         if ((floor(p.x).tointeger() & 0x0F) != 0) {
             p.nesXSpeed = 8;
             applyNesXAcceleration(p, 1,
-                g.areaTransitionFrames == 1 ? 0xD0 : 0x98);
+                g.areaTransitionFrames == 1 && !isWorld21(g) ? 0xD0 : 0x98);
             local deltaX = nesHorizontalDelta(p);
             p.x += deltaX;
             p.vx = p.nesXSpeed * 3.75;
@@ -319,6 +319,7 @@ function updateAreaExitEntrance(g) {
     if (g.areaEntranceFrames >= 96) {
         g.player.grounded = true;
         g.state = "playing";
+        if(isWorld21(g)) g.player.pipeExitPresentationPending <- true;
     }
 }
 
@@ -1250,7 +1251,7 @@ function updateLevelCoins(g) {
             if (floor(coin.x / TILE_SIZE).tointeger() == tx &&
                 floor(coin.y / TILE_SIZE).tointeger() == ty) {
                 coin.active = false;
-                if(g.level==3) coin.visualErasePending <- true;
+                if(g.level==3 || isWorld21(g)) coin.visualErasePending <- true;
                 // EraseCoinMetatile writes through the second VRAM buffer.
                 g.vramBufferAddrCtrl = 6;
                 awardCoin(g);
@@ -2278,7 +2279,7 @@ function updateCamera(g) {
         // pixel from displacements of two or more pixels.
         local positionForScroll = (g.state == "pipeDown" ?
             floor(p.x + 0.5).tofloat() : p.previousX) - g.cameraX;
-        if (g.state == "pipeDown" && g.areaTransitionFrames == 1) {
+        if (g.state == "pipeDown" && g.areaTransitionFrames == 1 && !isWorld21(g)) {
             scrollAmount = p.nesXScroll;
         } else if (positionForScroll >= 80.0) {
             scrollAmount = p.nesXScroll;
@@ -2903,6 +2904,16 @@ function preparePlayerPresentation(g) {
     local canonicalPlayerY = g.player.big && !g.player.crouching ?
         g.player.y : g.player.y - 16.0;
     g.player.preparedRelY = floor(canonicalPlayerY).tofloat();
+    if(isWorld21(g)) {
+        local behind=g.state=="pipeDown" || g.state=="pipeSide" || g.state=="areaExitEntrance";
+        // ExitPipe retains priority for its final pass even when it selects
+        // normal control. OAM priority follows the same staged page as X/Y.
+        if("pipeExitPresentationPending" in g.player) behind=true;
+        g.player.displayBehindBackground <- "preparedBehindBackground" in g.player?
+            g.player.preparedBehindBackground:behind;
+        g.player.preparedBehindBackground <- behind;
+        if("pipeExitPresentationPending" in g.player) delete g.player.pipeExitPresentationPending;
+    }
     g.player.displayAnimationFrame = g.player.preparedAnimationFrame;
     g.player.queuedAnimationFrame = g.player.preparedAnimationFrame;
     g.player.preparedAnimationFrame = g.player.animationFrame;
@@ -3050,6 +3061,7 @@ function simulateFixed(g, dt) {
     }
 
     if (g.state == "playing") {
+        if(isWorld21(g)) g.world21.hudTimeHidden <- false;
         if (g.respawnPrimeDirection != 0) {
             local currentRun = g.input.run;
             g.input.run = g.respawnPrimeRun;
@@ -3072,6 +3084,7 @@ function simulateFixed(g, dt) {
             // Pipe-entry player control is a game-engine subroutine; normal
             // enemy objects still run on the transition's first frame.
             updateGoombas(g, dt);
+            if(isWorld21(g)) updateWorld21Actors(g);
         }
     } else if (g.state == "endLevel" || g.state == "flagSlide" ||
                g.state == "autoWalk" ||
@@ -3082,18 +3095,23 @@ function simulateFixed(g, dt) {
                g.state == "pipeUp") {
         // Normal enemy handlers continue while Mario is being moved through
         // the entrance pipe, until area initialization clears the slots.
-        updateGoombas(g, dt);
+        local finalWorld21PipePass=isWorld21(g) &&
+            g.areaTransitionFrames+1>=(g.state=="pipeSide"?160:48);
+        if(!finalWorld21PipePass) updateGoombas(g, dt);
         updateAreaTransition(g, dt);
+        if(isWorld21(g) && g.state!="areaReload") updateWorld21Actors(g);
     } else if (g.state == "areaReload") {
         updateAreaReload(g);
     } else if (g.state == "areaEntrance") {
         updateAreaEntrance(g);
+        if(isWorld21(g)) updateWorld21Actors(g);
     } else if (g.state == "areaExitEntrance") {
         updateAreaExitEntrance(g);
         // Normal enemy processing resumes on the second pipe-exit entrance
         // frame.  The World 1-1 group therefore allocates at parity frame 765
         // and has already walked for 166 frames when Mario stomps it.
         if (g.areaEntranceFrames >= 2) updateGoombas(g, dt);
+        if(isWorld21(g)) updateWorld21Actors(g);
     } else if (g.state == "deathReload") {
         updateDeathReload(g);
     } else if (g.state == "deathEntrance") {

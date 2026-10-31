@@ -1,7 +1,9 @@
 # World 2-1 implementation plan
 
-Updated 2026-10-29. The main-route runtime prototype and 1-4 to 2-1 transition
-are implemented. Bonus destinations and strict whole-level acceptance remain pending.
+Updated 2026-10-31. The main route, 1-4 to 2-1 transition and underground bonus
+are implemented. A checkpoint-origin underground replay is verified across all
+900 images, selected state fields, events and modeled audio. Sky entry and
+normal-entrance whole-level acceptance remain pending.
 
 ## Verified offline data
 
@@ -65,8 +67,8 @@ The generator fails on missing columns or differing overlap, and records hashes.
 
 The source prototype loads the verified map and enemy stream, including jumping
 green Paratroopas, piranhas, a working spring and growing vine. F5 selects 2-1.
-Vine climbing, cloud and underground destinations/returns remain unimplemented;
-pipe entry is disabled for this stage rather than entering a World 1 bonus room.
+The underground destination/return is connected and verified by the 900-frame
+checkpoint branch replay below. Vine climbing and the cloud branch remain pending.
 2-2 is unavailable; R at the 2-1 settlement restarts 2-1.
 
 - Ten simulation regression groups pass via `python tools/run_world1_regressions.py`.
@@ -463,3 +465,17 @@ agreement are retained in `local-parity/world21-map-final`.
 - 检查点诊断 `actual/checkpoint-stream-fix` 对原版 `reference/underground-checkpoint-route-v2`：600 帧当前状态门禁全部通过。31 张抽样截图仍有 23 张失败，含植物绘制与加载画面差异；报告 `checkpoint-stream-fix/reports`。该路线会死亡，不是成功地下分支或整关通关证据。
 - 正常入口基线 `actual/checkpoint-stream-main-baseline`：3116 帧状态门禁、91 张抽样截图全部通过，报告 `checkpoint-stream-main-baseline/reports`。
 - 下一步处理检查点截图差异（第 20 帧差异已定位到植物区域），并建立实际成功进入/领取金币/返回地下房的原版路线。未发布新包/release，天空入口及整关验收仍未完成。
+
+
+### 2026-10-31：地下成功进出路线完整验证
+
+- 固定输入路线从第 6 页检查点出发，等待植物周期后于 173 帧下管，247 帧开始房间入口，264 帧恢复控制；领取 8 枚金币；490 帧进入横管，676 帧开始主地图管道出口，772 帧恢复控制，900 帧结束时存活并保留 8 金币/1600 分。
+- 版本化回放：`world-2-1-underground-checkpoint-route.json`（抽样）及 `world-2-1-underground-checkpoint-route-all-frames.json`（全部 900 帧截图）。检查点起点仅设置加载位置，没有修改后续玩家、碰撞或地图内存；不是正常入口整关路线。
+- 修复植物双阶段绘制坐标、动画位选择、死亡运动冻结、计时器到零立即执行；下管首帧滚动及运动小数保留、整数管口采样、横管首帧加速、清场帧跳过敌人运动、换区相机清零；返回时按原版重建敌人槽而保留被破坏的地形，避免残留升起的植物。
+- 全帧检查额外发现并修复金币 VRAM 擦除延迟、首入口精灵隐藏、时间 HUD 延迟，以及 OAM 背景优先级的缓冲交接。使用优先级缓冲，未通过修改角色位置去掩盖绘制差异。
+- `reference/underground-all-frames` 的连续视频/存档恢复：900 帧状态与 APU 写入一致。最终宿主 `actual/underground-all-frames-v3`：900 帧当前状态门禁、900 张零容差截图、25 项语义事件时序、5407 次模型 APU 写入全部通过；最终模型写入与用于 PCM 渲染的 v1 模型文件逐字节相同。
+- APU 模型从参考起点的一次声音 RAM 状态初始化，之后使用宿主事件/状态和离线 ROM 音频数据；PCM 渲染复用参考 CPU 写入周期时间表及 Mesen 2A03 硬件模型。`underground-audio/reports/audio-report.json` 中两侧 718749 个 48kHz 双声道样本帧的 PCM SHA-256 相同、误差为零。这不代表设备扬声器输出或实时 WinMM 混音逐样本一致。
+- 原有诊断复验：`underground-final-main-regression` 的 3116 帧状态/91 张截图通过；`underground-final-death-regression` 对应实际目录 `actual/underground-final-death-regression-retry` 的 600 帧状态/31 张截图通过。首轮 Vulkan 窗口失败日志保留，不当作通过。
+- 所有路径均相对 `local-parity/world21-runtime`；最终分支报告在 `underground-all-frames-v3/reports`。v1/v2 失败截图与状态证据保留。10 组模拟回归、8 项 Python 测试和原生混音测试通过。
+- 预览包：`dist/super-mario-world21-underground-verified-win64/SuperMario.exe`，第二次窗口启动/标题/图标/关闭检查通过；首次 Vulkan 初始化失败报告保留。未发布新 release，版本仍为 0.0.7。
+- 本节仅完成地下分支的检查点起点验证。天空分支、正常入口成功整关路线和 32 关严格验收仍待完成；不会登记 2-1 整关为已验收。

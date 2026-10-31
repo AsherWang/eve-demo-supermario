@@ -385,8 +385,12 @@ function updateWorld12Actors(g) {
     foreach(plant in g.plants) {
         if(!plant.active || (!isWorld21(g) &&
             (plant.x>g.cameraX+304 || plant.x<g.cameraX-32))) continue;
-        if(plant.timer>0) plant.timer-=1;
-        else {
+        plant.displayY <- "previousY" in plant?plant.previousY:plant.y;
+        plant.previousY <- plant.y;
+        if(isWorld21(g) && p.dead) continue;
+        local wasWaiting=plant.timer>0;
+        if(wasWaiting) plant.timer-=1;
+        if(!wasWaiting || (isWorld21(g) && plant.timer==0)) {
             if(!plant.moving) {
                 // PlayerEnemyDiff keeps the distance in its low byte; the
                 // page subtraction only chooses its sign before negation.
@@ -417,7 +421,7 @@ function updateWorld12Actors(g) {
             // Piranhas use bounding-box control 9: inclusive [$03,$0e,$0d,$14].
             // PlayerEnemyCollision only runs on even FrameCounter passes.
             local tall=p.big && !p.crouching;
-            touchingPlant=(g.nesFrameCounter&1)==0 && overlaps(
+            touchingPlant=g.state=="playing" && (g.nesFrameCounter&1)==0 && overlaps(
                 floor(p.x)+(tall?2:3),floor(p.y)+(tall?8:4),tall?13:11,tall?25:13,
                 floor(plant.x)+3,floor(plant.y)+14,11,7);
         }

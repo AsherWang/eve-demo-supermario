@@ -73,7 +73,7 @@ eve_init = function() {
         startLevel(game,2,1);
         initializeWorld21Parity(game);
         if("PARITY_CHECKPOINT_PAGE" in getroottable() && PARITY_CHECKPOINT_PAGE>0) {
-            initializeWorld21Checkpoint(game,PARITY_CHECKPOINT_PAGE);
+            initializeWorld21Checkpoint(game,PARITY_CHECKPOINT_PAGE,(game.nesFrameCounter+255)&255);
         }
     }
     parityInitialize(game);

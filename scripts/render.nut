@@ -659,6 +659,7 @@ function marioTexture(g) {
 function drawPlayer(g) {
     local p = g.player;
     if (g.state == "nextStageLoad" && g.stageLoadFrames == 165) return;
+    if(isWorld21(g) && g.state=="areaEntrance" && g.areaEntranceFrames==0) return;
     if (parityIsEnabled() && g.parity.originPending && g.world==1 && g.level==1) return;
     if ((g.state == "timeBonus" && p.courseClearHidden) || g.state == "raiseFlag" ||
         g.state == "fireworks" || g.state == "postClearDelay" ||
@@ -746,7 +747,7 @@ function drawEnemy(g, e) {
     local levelTexture=g.level==3?world13EnemyTexture(g,e,visualState):null;
     local texture = null;
     local y = e.y;
-    if(g.level==3 && e.kind=="goomba") y=e.displayY;
+    if((g.level==3 || isWorld21(g)) && e.kind=="goomba") y=e.displayY;
     local height = 24.0;
     if (visualState == "flipped") {
         texture = e.kind == "koopa" ? assets.enemies.greenShell[0] : assets.enemies.goomba;
@@ -820,6 +821,8 @@ function drawEnemy(g, e) {
         // subsequent frozen passes; the live origin then replaces old X.
         drawX=g.player.dead?e.x:e.displayX;drawY=e.displayY+1.0;
     }
+    if(isWorld21(g) && e.kind=="goomba" &&
+        (visualState=="walking" || visualState=="falling")) drawX=e.displayX;
     if (g.level == 3) {
         if (e.kind == "koopa") {
             // RelativeEnemyPosition uses the pre-movement X and visible OAM
@@ -832,7 +835,7 @@ function drawEnemy(g, e) {
         }
         if(visualState=="walking" || visualState=="falling") drawX=e.displayX;
     }
-    if(g.level==3)
+    if(g.level==3 || (isWorld21(g) && e.kind=="goomba"))
         screenOamTexture(texture,floor(drawX)-visualCameraX(g),floor(drawY),16.0,height,
             // Reconstruct the integer pre-movement coordinate from the
             // host's half-pixel walking phase before computing edge bits.
@@ -1021,7 +1024,8 @@ function drawHud(g) {
     drawHudGlyphs([0x1D, 0x12, 0x16, 0x0E], 200.0, 16.0); // TIME
     if (!(parityIsEnabled() && g.parity.originPending) &&
         g.state != "nextStageLoad" && g.stageLoadFrames != 166 &&
-        g.state != "areaExitEntrance" && g.state != "gameOverScreen" && g.state != "titleScreen")
+        g.state != "areaExitEntrance" && !(isWorld21(g) &&
+            (g.state=="areaEntrance" || ("hudTimeHidden" in g.world21 && g.world21.hudTimeHidden))) && g.state != "gameOverScreen" && g.state != "titleScreen")
         drawHudNumber(g.displayTime, 3, 208.0, 24.0,
             !(g.state == "timeBonus" || g.state == "raiseFlag" ||
               g.state == "fireworks" || g.state == "postClearDelay" ||
@@ -1084,6 +1088,11 @@ function renderGame(g) {
     gfx.clear();
     renderOffsetY=0.0;
     if(g.state=="titleLoad" || g.state=="titleScreen" || g.state=="newGameLoad") {drawTitleFlow(g);return;}
+    if(isWorld21(g) && g.state=="areaReload" && g.areaReloadFrames==0) {
+        g.state=g.areaReloadTarget=="underground"?"pipeDown":"pipeSide";
+        renderGame(g);g.state="areaReload";
+        return;
+    }
     if(isWorld21(g) && g.state=="gameOver") {
         if(g.world21.gameOverFrames==0) {
             g.state="playing";renderGame(g);g.state="gameOver";
@@ -1148,7 +1157,8 @@ function renderGame(g) {
         if (g.deathReloadFrames <= 8) {
             screenRect(0.0, 0.0, LOGICAL_WIDTH, LOGICAL_HEIGHT,
                        146.0 / 255.0, 144.0 / 255.0, 1.0);
-        } else if (g.deathReloadFrames >= areaRenderStart) {
+        } else if ((isWorld21(g) && g.deathReloadFrames==9) ||
+                   g.deathReloadFrames >= areaRenderStart) {
             screenRect(0.0, 0.0, LOGICAL_WIDTH, LOGICAL_HEIGHT,
                        0.0, 0.0, 0.0);
         } else {
@@ -1186,6 +1196,8 @@ function renderGame(g) {
     local playerBehindBackground = g.state == "pipeDown" ||
         g.state == "pipeSide" || g.state == "areaExitEntrance" ||
         (g.level == 2 && g.state == "world12Pipe");
+    if(isWorld21(g) && "displayBehindBackground" in g.player)
+        playerBehindBackground=g.player.displayBehindBackground;
     local playerHidden = g.state == "areaReload";
     if (playerBehindBackground && !playerHidden) drawPlayer(g);
     renderOffsetY=g.displayBackgroundYOffset;

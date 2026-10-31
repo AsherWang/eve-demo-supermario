@@ -2,7 +2,8 @@
 
 Personal-study, ROM-data-driven reconstruction in EVEngine. World 1-1 through
 1-4 are playable; the World 2-1 main-route prototype is under development.
-World 2-1 bonus destinations and strict whole-level acceptance remain pending.
+World 2-1 has a verified underground-branch checkpoint replay; the sky branch
+and strict whole-level acceptance remain pending.
 The packaged game does not include a ROM. Runtime assets were extracted locally
 from a user-provided ROM for this study build.
 
@@ -157,9 +158,12 @@ therefore insufficient to infer cycle-exact audio timing.
 
 World 2-1 development entry: F5 starts its main-route prototype. The source build
 also transitions from the World 1-4 credits into World 2-1 while preserving
-score, coins, lives and powers. The cloud/underground destinations are not yet
-connected; the vine grows without substituting a mushroom, but climbing into
-the cloud area is pending. After World 2-1 Game Over, the source build returns
+score, coins, lives and powers. Its column-103 pipe now enters the nineteen-coin
+underground room and returns at page seven. A checkpoint-origin 900-frame
+enter/collect/return replay passes every captured image, state, semantic event,
+modeled APU write and modeled PCM comparison. This is branch evidence, not a
+normal-entrance whole-level acceptance. The vine grows; climbing into the cloud
+area is pending. After World 2-1 Game Over, the source build returns
 to its original-art single-player title; Enter starts a fresh World 1-1 game.
 The idle demo, two-player selection and A+Start continue are pending.
 World 2-2 is not implemented. These features are not

@@ -50,7 +50,7 @@ function initializeWorld21Parity(g) {
     g.player.movingDir=0;
 }
 
-function initializeWorld21Checkpoint(g,page) {
+function initializeWorld21Checkpoint(g,page,entryCounter=null) {
     g.cameraX=page*256.0;g.displayCameraX=g.cameraX;
     resetPlayerForArea(g,page*256+40,176);g.player.grounded=true;
     g.player.movingDir=0;g.checkpointPage=page;
@@ -70,7 +70,8 @@ function initializeWorld21Checkpoint(g,page) {
     }
     // The entry-control pass immediately preceding the observable origin
     // also runs enemy motion. Reproduce it rather than supplying Y offsets.
-    local counter=g.nesFrameCounter;g.nesFrameCounter=(counter+255)&255;
+    local counter=g.nesFrameCounter;
+    if(entryCounter!=null) g.nesFrameCounter=entryCounter;
     updateWorld12Actors(g);g.nesFrameCounter=counter;
 }
 
@@ -152,14 +153,13 @@ function tryWorld21BonusPipe(g) {
         floor((p.x+3)/16)==103 && floor((p.x+12)/16)==104 &&
         abs(p.y+p.height-9*16)<1;
     local leaving=g.area=="underground" && p.grounded && g.input.right &&
-        // The right collision probe is X+13 (inclusive), not body width 12.
-        // It stops Mario at X=194 against the mouth at 208.
-        p.facing>0 && p.x+14>=13*16;
+        // ROM block probes use integer X and the inclusive X+13 edge.
+        p.facing>0 && floor(p.x)+13>=13*16;
     if(!entering && !leaving) return false;
     g.transitionTimer=0;g.areaTransitionFrames=0;
     g.areaReloadTarget=entering?"underground":"main";
     g.state=entering?"pipeDown":"pipeSide";
-    p.nesXForce=0;emitSound(g,"pipe");return true;
+    emitSound(g,"pipe");return true;
 }
 
 function loadWorld21Underground(g) {
@@ -169,6 +169,7 @@ function loadWorld21Underground(g) {
     g.world21Main <- g.world21;
     clearAreaObjects(g);g.plants=[];g.platforms=[];
     g.area="underground";g.areaWidth=16;g.sidePipeX=13;
+    g.world12SidePipeBottomRow <- 12;
     local main=g.world21;
     g.world21={descriptor=main.descriptor,baseTiles=[],vines=[],springs=[],
         slotXFractions=[0.0,0.0,0.0,0.0,0.0]};
@@ -194,12 +195,25 @@ function restoreWorld21Main(g) {
     g.world21=main;g.plants=actors.plants;g.checkpointPage=actors.checkpoint;
     delete main.savedActors;delete g.world21Main;
     g.cameraX=7*256.0;g.displayCameraX=g.cameraX;
-    foreach(e in g.goombas) if(e.x<g.cameraX-64) {e.alive=false;e.slot=-1;}
+    // Area initialization reparses enemy slots, even when retaining changed
+    // main terrain. A plant frozen at its old raised Y must not greet Mario
+    // inside the return pipe.
+    g.goombas=[];decodeWorld11Enemies(g,g.world21.descriptor.enemies);
+    foreach(plant in g.plants) {
+        plant.y=plant.baseY;plant.direction=1;plant.moving=false;plant.timer=0;
+        plant.active=false;plant.awake=false;plant.retired=false;plant.slot=-1;
+        if("previousY" in plant) delete plant.previousY;
+        if("displayY" in plant) delete plant.displayY;
+    }
+    g.world21.slotXFractions=[0.0,0.0,0.0,0.0,0.0];
+    local checkpoint=g.checkpointPage;initializeWorld21Checkpoint(g,7,0);
+    g.checkpointPage=checkpoint;
 }
 
 function updateWorld21BonusReload(g) {
     g.areaReloadFrames+=1;local frame=g.areaReloadFrames;
     if(frame==1) {
+        g.cameraX=0;g.displayCameraX=0;
         g.player.nesXForce=0;g.player.nesXMoveForce=0;g.player.nesXScroll=0;
         g.player.nesYMoveForce=0;g.player.nesYDummy=0;
         g.colorRotateOffset=0;g.displayColorPhase=0;g.pendingColorPhase=0;
@@ -208,6 +222,7 @@ function updateWorld21BonusReload(g) {
     } else if(frame==2) {
         if(g.areaReloadTarget=="underground") loadWorld21Underground(g);
         else restoreWorld21Main(g);
+        g.world21.hudTimeHidden <- true;
         resetPlayerForArea(g,0,0);g.nesFrameCounter=0;
         parityRecordEvent(g,"music","silence");
     } else if(frame==25) {
@@ -285,8 +300,12 @@ function parseWorld21PlantColumn(g,task) {
 
 function drawWorld21Actors(g,behind) {
     if(behind) {
-        foreach(plant in g.plants) if(plant.active)
-            worldTexture(g,assets.world21.plants[(g.nesFrameCounter/8)%2],plant.x,plant.y+1,16,24);
+        foreach(plant in g.plants) if(plant.active) {
+            local counter=(g.nesFrameCounter+254)&255;
+            local frame=g.player.dead?0:((counter&8)==0?1:0);
+            local y="displayY" in plant?plant.displayY:plant.y;
+            worldTexture(g,assets.world21.plants[frame],plant.x,y+1,16,24);
+        }
         foreach(vine in g.world21.vines)
             for(local y=0;y<vine.height;y+=8)
                 worldTexture(g,y==0?assets.world21.vineTop:assets.world21.vineBody,
@@ -428,7 +447,7 @@ function runWorld21SelfTest() {
             "bonus exit must restore main terrain and powers at World 2 return page seven");
     }
     local cp=createGame();startLevel(cp,2,1);initializeWorld21Parity(cp);
-    initializeWorld21Checkpoint(cp,6);
+    initializeWorld21Checkpoint(cp,6,(cp.nesFrameCounter+255)&255);
     local loaded=[];foreach(plant in cp.plants) if(plant.awake) loaded.append(plant);
     requireSelfTest(loaded.len()==2 && loaded[0].slot==0 && loaded[0].x==1656 &&
         loaded[0].y==143 && loaded[0].moving && loaded[0].direction==-1 &&
@@ -453,6 +472,21 @@ function runWorld21SelfTest() {
     requireSelfTest(!cp.player.dead,"piranha injury must skip odd collision passes");
     cp.nesFrameCounter=94;updateWorld12Actors(cp);
     requireSelfTest(cp.player.dead,"piranha inclusive bounding box must injure on the even pass");
+    local returning=createGame();startLevel(returning,2,1);
+    local returnPlant=null;foreach(plant in returning.plants) if(plant.x==1848) returnPlant=plant;
+    returnPlant.y=returnPlant.baseY-24;returnPlant.awake=true;returnPlant.active=true;
+    returnPlant.slot=0;returnPlant.moving=true;returnPlant.direction=-1;
+    loadWorld21Underground(returning);restoreWorld21Main(returning);
+    requireSelfTest(returnPlant.y==returnPlant.baseY && !returnPlant.moving &&
+        returnPlant.active && returnPlant.awake,
+        "return area initialization must hide a formerly raised plant in the exit pipe");
+    local paused=createGame();startLevel(paused,2,1);initializeWorld21Parity(paused);
+    initializeWorld21Checkpoint(paused,6,25);
+    paused.player.dead=true;local frozen=paused.plants[2];
+    local frozenY=frozen.y,frozenTimer=frozen.timer;
+    for(local i=0;i<10;i+=1) updateWorld12Actors(paused);
+    requireSelfTest(frozen.y==frozenY && frozen.timer==frozenTimer,
+        "death TimerControl must freeze plant movement and its delay timer");
     local hops=0;
     foreach(e in g.goombas) if("greenJump" in e && e.greenJump) hops+=1;
     requireSelfTest(hops==3,"2-1 must retain all three jumping Paratroopas");

@@ -1,0 +1,119 @@
+{
+  "schema": "smb-parity-movie-v1",
+  "name": "world-2-1-underground-checkpoint-route",
+  "level_id": "2-1",
+  "world": 2,
+  "level": 1,
+  "description": "Checkpoint-six underground enter, collect and return candidate; not a normal-entrance whole-level route.",
+  "frames": 900,
+  "reference_bootstrap": {
+    "frames": 600,
+    "inputs": [
+      {
+        "port": 0,
+        "start": 40,
+        "end": 46,
+        "buttons": [
+          "start"
+        ]
+      }
+    ]
+  },
+  "inputs": [
+    {
+      "port": 0,
+      "start": 101,
+      "end": 172,
+      "buttons": [
+        "right"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 130,
+      "end": 159,
+      "buttons": [
+        "a"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 173,
+      "end": 330,
+      "buttons": [
+        "down"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 331,
+      "end": 750,
+      "buttons": [
+        "right"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 360,
+      "end": 389,
+      "buttons": [
+        "a"
+      ]
+    }
+  ],
+  "capture_frames": [
+    0,
+    20,
+    40,
+    60,
+    80,
+    100,
+    120,
+    140,
+    160,
+    172,
+    173,
+    180,
+    200,
+    220,
+    221,
+    222,
+    240,
+    247,
+    260,
+    264,
+    280,
+    300,
+    320,
+    340,
+    360,
+    380,
+    400,
+    420,
+    440,
+    460,
+    480,
+    500,
+    520,
+    540,
+    560,
+    580,
+    600,
+    620,
+    640,
+    660,
+    680,
+    700,
+    720,
+    740,
+    760,
+    780,
+    800,
+    820,
+    840,
+    860,
+    880,
+    899
+  ],
+  "checkpoint_page": 6
+}
