@@ -50,6 +50,28 @@ function initializeWorld21Parity(g) {
     g.player.movingDir=0;
 }
 
+function initializeWorld21CheckpointParity(g,page) {
+    g.cameraX=page*256.0;g.displayCameraX=g.cameraX;
+    resetPlayerForArea(g,page*256+40,176);g.player.grounded=true;
+    g.player.movingDir=0;g.checkpointPage=page;
+    foreach(e in g.goombas) {
+        local trigger=e.groupIndex>=0?e.groupCommandX:e.x;
+        if(trigger<g.cameraX) e.alive=false;
+    }
+    // The initial twelve half-column tasks parse 24 metatile columns before
+    // control starts. Pipe objects reserve slots during those loading passes.
+    foreach(plant in g.plants) {
+        if(plant.x<g.cameraX) plant.retired=true;
+        else if(plant.x<g.cameraX+24*16 && allocateEnemySlot(g,plant)) {
+            plant.awake=true;plant.active=true;
+        }
+    }
+    // The entry-control pass immediately preceding the observable origin
+    // also runs enemy motion. Reproduce it rather than supplying Y offsets.
+    local counter=g.nesFrameCounter;g.nesFrameCounter=(counter+255)&255;
+    updateWorld12Actors(g);g.nesFrameCounter=counter;
+}
+
 function loadWorld21Assets() {
     if(assets==null) loadAssets();
     if("world21" in assets) return;
@@ -403,6 +425,21 @@ function runWorld21SelfTest() {
             !("world21Main" in branch),
             "bonus exit must restore main terrain and powers at World 2 return page seven");
     }
+    local cp=createGame();startLevel(cp,2,1);initializeWorld21Parity(cp);
+    initializeWorld21CheckpointParity(cp,6);
+    local loaded=[];foreach(plant in cp.plants) if(plant.awake) loaded.append(plant);
+    requireSelfTest(loaded.len()==2 && loaded[0].slot==0 && loaded[0].x==1656 &&
+        loaded[0].y==143 && loaded[0].moving && loaded[0].direction==-1 &&
+        loaded[1].slot==1 && loaded[1].x==1848 && loaded[1].y==176 && !loaded[1].moving,
+        "checkpoint six must retain the ROM's two parsed plants and pre-control movement");
+    requireSelfTest(cp.nesFrameCounter==0x1a && cp.player.movingDir==0,
+        "checkpoint initialization must preserve the reference control origin");
+    cp.player.x=1647;cp.player.y=128;cp.player.grounded=true;
+    loaded[0].y=120;loaded[0].timer=64;loaded[0].moving=false;
+    cp.nesFrameCounter=93;updateWorld12Actors(cp);
+    requireSelfTest(!cp.player.dead,"piranha injury must skip odd collision passes");
+    cp.nesFrameCounter=94;updateWorld12Actors(cp);
+    requireSelfTest(cp.player.dead,"piranha inclusive bounding box must injure on the even pass");
     local hops=0;
     foreach(e in g.goombas) if("greenJump" in e && e.greenJump) hops+=1;
     requireSelfTest(hops==3,"2-1 must retain all three jumping Paratroopas");

@@ -73,15 +73,7 @@ eve_init = function() {
         startLevel(game,2,1);
         initializeWorld21Parity(game);
         if("PARITY_CHECKPOINT_PAGE" in getroottable() && PARITY_CHECKPOINT_PAGE>0) {
-            local page=PARITY_CHECKPOINT_PAGE;
-            game.cameraX=page*256.0;game.displayCameraX=game.cameraX;
-            resetPlayerForArea(game,page*256+40,176);game.player.grounded=true;
-            game.checkpointPage=page;
-            foreach(e in game.goombas) {
-                local trigger=e.groupIndex>=0?e.groupCommandX:e.x;
-                if(trigger<game.cameraX) e.alive=false;
-            }
-            foreach(plant in game.plants) if(plant.x<game.cameraX) plant.retired=true;
+            initializeWorld21CheckpointParity(game,PARITY_CHECKPOINT_PAGE);
         }
     }
     parityInitialize(game);

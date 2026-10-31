@@ -388,7 +388,11 @@ function updateWorld12Actors(g) {
         if(plant.timer>0) plant.timer-=1;
         else {
             if(!plant.moving) {
-                if(plant.direction>0 && abs(p.x-plant.x)<33) continue;
+                // PlayerEnemyDiff keeps the distance in its low byte; the
+                // page subtraction only chooses its sign before negation.
+                local distance=abs(floor(p.x).tointeger()-plant.x.tointeger());
+                if(isWorld21(g)) distance=distance & 255;
+                if(plant.direction>0 && distance<33) continue;
                 plant.direction=-plant.direction;plant.moving=true;
             }
             // MovePiranhaPlant compares only the destination of this leg,
@@ -408,8 +412,16 @@ function updateWorld12Actors(g) {
                 plant.active=false;g.score+=200;explodeFireball(ball);emitSound(g,"kick");
             }
         }
-        if(plant.active && plant.y<plant.baseY && !p.dead &&
-           overlaps(p.x+3,p.y+4,10,p.height-4,plant.x+3,plant.y+1,10,22)) {
+        local touchingPlant=overlaps(p.x+3,p.y+4,10,p.height-4,plant.x+3,plant.y+1,10,22);
+        if(isWorld21(g)) {
+            // Piranhas use bounding-box control 9: inclusive [$03,$0e,$0d,$14].
+            // PlayerEnemyCollision only runs on even FrameCounter passes.
+            local tall=p.big && !p.crouching;
+            touchingPlant=(g.nesFrameCounter&1)==0 && overlaps(
+                floor(p.x)+(tall?2:3),floor(p.y)+(tall?8:4),tall?13:11,tall?25:13,
+                floor(plant.x)+3,floor(plant.y)+14,11,7);
+        }
+        if(plant.active && plant.y<plant.baseY && !p.dead && touchingPlant) {
             if(p.starTimer>0) {plant.active=false;g.score+=200;}
             else hurtPlayer(g);
         }
