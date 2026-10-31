@@ -39,6 +39,11 @@ def load_movie(path: Path) -> dict[str, Any]:
         raise ValueError("movie.frames must be a positive integer")
     for section_name in ("inputs",):
         _validate_inputs(data.get(section_name, []), frames, section_name)
+    checkpoint = data.get("checkpoint_page", 0)
+    if type(checkpoint) is not int or not 0 <= checkpoint <= 12 or (
+        checkpoint != 0 and (data.get("world",1),data.get("level",1)) != (2,1)
+    ):
+        raise ValueError("checkpoint_page is only supported for World 2-1 pages 0..12")
     bootstrap = data.get("reference_bootstrap", {})
     bootstrap_frames = bootstrap.get("frames", 0)
     if not isinstance(bootstrap_frames, int) or bootstrap_frames < 0:

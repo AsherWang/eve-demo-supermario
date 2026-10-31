@@ -48,6 +48,7 @@ def squirrel_source(movie: dict, output: Path) -> str:
 PARITY_MOVIE_ENABLED <- true;
 PARITY_START_LEVEL <- {movie.get('level', 1)};
 PARITY_START_WORLD <- {movie.get('world', 1)};
+PARITY_CHECKPOINT_PAGE <- {movie.get('checkpoint_page', 0)};
 PARITY_MOVIE_NAME <- \"{movie_name}\";
 PARITY_OUTPUT_DIR <- \"{output_text}\";
 PARITY_FRAME_MASKS <- [

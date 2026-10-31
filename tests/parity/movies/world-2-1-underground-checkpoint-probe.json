@@ -1,0 +1,98 @@
+{
+  "schema": "smb-parity-movie-v1",
+  "name": "world-2-1-underground-checkpoint-probe",
+  "level_id": "2-1",
+  "world": 2,
+  "level": 1,
+  "description": "Checkpoint-six branch diagnostic, not a normal-entrance whole-level route.",
+  "frames": 600,
+  "reference_bootstrap": {
+    "frames": 600,
+    "inputs": [
+      {
+        "port": 0,
+        "start": 40,
+        "end": 46,
+        "buttons": [
+          "start"
+        ]
+      }
+    ]
+  },
+  "inputs": [
+    {
+      "port": 0,
+      "start": 1,
+      "end": 72,
+      "buttons": [
+        "right"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 30,
+      "end": 59,
+      "buttons": [
+        "a"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 73,
+      "end": 230,
+      "buttons": [
+        "down"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 231,
+      "end": 599,
+      "buttons": [
+        "right"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 260,
+      "end": 289,
+      "buttons": [
+        "a"
+      ]
+    }
+  ],
+  "capture_frames": [
+    0,
+    20,
+    40,
+    60,
+    80,
+    100,
+    120,
+    140,
+    160,
+    180,
+    200,
+    220,
+    240,
+    260,
+    280,
+    300,
+    320,
+    340,
+    360,
+    380,
+    400,
+    420,
+    440,
+    460,
+    480,
+    500,
+    520,
+    540,
+    560,
+    580,
+    599
+  ],
+  "checkpoint_page": 6
+}

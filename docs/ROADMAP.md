@@ -265,3 +265,14 @@ Game Over 后续：修复参考解码器将 `$ff` 生命下溢算作 256 条命�
 - 预览包 `dist/super-mario-world21-underground-win64/SuperMario.exe`：启动、窗口标题、图标、关闭检查通过，配置已恢复正常开局。
 - 天空入口仍未接通；`branchesPlayable=false` 继续代表尚未全部完成。离线采集 manifest 的 `runtime_connected=false` 是生成时状态，当前地下运行进度以本节为准。
 - 下一步建立地下分支从正常入口进出、金币领取、返回状态/图像/音乐的原版对照回放，再实现藤蔓攀爬和天空区域。当前未完成分支严格验收或成功通关整关验收，未发布新 release。
+
+
+### 2026-10-31：检查点分支对照与横管自然进入修复
+
+- 增加只适用于 2-1 的 `checkpoint_page` 回放参数（整数 0–12），同步参考引导、连续视频验证和宿主诊断起点。默认页 0 保持现有正常入口含义；检查点回放不是正常入口整关路线。
+- 参考引导现在核对当前主地图数据基址 `$a7cf`，避免目标区域指针提前选择奖励区域时漏掉起点。连续视频原先遗漏检查点参数，造成存档/冷启动验证失败；现已同步，保留失败 `reference/underground-checkpoint-route`。
+- 新诊断 `tests/parity/movies/world-2-1-underground-checkpoint-probe.json` 共 600 帧。参考录制 `reference/underground-checkpoint-route-v2` 的连续视频与存档恢复全部 600 帧状态、APU 写入一致；这是参考录制可靠性证明，不是宿主一致性通过。
+- 宿主对照证据：`local-parity/world21-runtime/actual/underground-checkpoint-probe`、`local-parity/world21-runtime/underground-checkpoint-comparison`。状态门禁失败，31 张抽样截图有 30 张失败。原版第 68 帧死亡，宿主第 73 帧进入管道；不得将该输入序列标为成功分支验证。
+- 已确认起点差异：原版在第 6 页初始区加载了 X=1656/1848 的两只食人花，而当前宿主检查点诊断只准备了主地图与敌人模板，遗漏初始化期间的可见植物。后续需补齐检查点初始区域解析/演员状态，不能仅调输入绕过初始状态不一致。
+- 真实步行验证另发现地下横管出口会把 Mario 停在 X=194（右侧含边界采样 X+13），旧判断以宽度 12 要求更靠右，导致无法自然进入。现按实际碰撞边界触发；三种能力回归改为从 X=180 真正步行进入出口，覆盖此前直接摆放角色遗漏的问题。
+- 10 组模拟回归、5 项分支/检查点 Python 测试及 3 项既有 Python 测试通过。未发布新包/release；地下分支严格验证、天空入口和整关成功通关验收仍未完成。

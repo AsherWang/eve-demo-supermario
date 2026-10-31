@@ -3,6 +3,7 @@ import json
 import re
 import sys
 import unittest
+import tempfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "tools"))
@@ -57,6 +58,26 @@ class CapturedBranchMapTest(unittest.TestCase):
         self.assertEqual(sum(column.count(0xc2) for column in underground), 19)
         self.assertEqual(underground[13][9:11], [0x1c, 0x1f])
         self.assertEqual(underground[15][9:11], [0x1e, 0x21])
+
+
+class CheckpointMovieTest(unittest.TestCase):
+    def test_checkpoint_scope_and_type_are_validated(self):
+        sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "tools/parity"))
+        from common import load_movie
+        root = Path(__file__).resolve().parents[2]
+        base = json.loads((root / "tests/parity/movies/world-2-1-idle.json").read_text())
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / "movie.json"
+            for value in [True, -1, 13, 6.0]:
+                movie = dict(base, checkpoint_page=value)
+                path.write_text(json.dumps(movie))
+                with self.subTest(value=value), self.assertRaises(ValueError):
+                    load_movie(path)
+            path.write_text(json.dumps(dict(base, checkpoint_page=6)))
+            self.assertEqual(load_movie(path)["checkpoint_page"], 6)
+            path.write_text(json.dumps(dict(base, world=1, checkpoint_page=6)))
+            with self.assertRaises(ValueError):
+                load_movie(path)
 
 
 if __name__ == "__main__":

@@ -19,7 +19,10 @@ emu.addEventCallback(function()
     emu.write(0x0769,1,ram)
     emu.write(0x0772,0,ram)
   elseif selected and not found and emu.read(0x075f,ram)==1
-     and emu.read(0x075c,ram)==0 and emu.read(0x0750,ram)==0x28
+     and emu.read(0x075c,ram)==0
+     -- The destination pointer can already select a bonus link at checkpoints.
+     -- Match the active L_GroundArea9 object-data base instead.
+     and emu.read(0x00e7,ram)==0xcf and emu.read(0x00e8,ram)==0xa7
      and emu.read(0x0770,ram)==1 and emu.read(0x0772,ram)==3
      and emu.read(0x000e,ram)==8 and emu.read(0x0774,ram)==0 then
     found=true

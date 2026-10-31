@@ -244,7 +244,7 @@ def main() -> int:
     bootstrap = movie.get("reference_bootstrap", {})
     bootstrap_frames = bootstrap.get("frames", 0)
     origin_lua = output / "find-origin.lua"
-    origin_lua.write_text(build_world21_origin_lua() if movie.get("world",1)==2 else build_origin_lua(movie.get("level", 1)), encoding="utf-8", newline="\n")
+    origin_lua.write_text(build_world21_origin_lua(movie.get("checkpoint_page",0)) if movie.get("world",1)==2 else build_origin_lua(movie.get("level", 1)), encoding="utf-8", newline="\n")
     origin_state = output / "origin.mss"
     scan_command = [
         str(args.mesen_agent.resolve()),

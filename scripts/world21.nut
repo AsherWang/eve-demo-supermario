@@ -128,7 +128,9 @@ function tryWorld21BonusPipe(g) {
         floor((p.x+3)/16)==103 && floor((p.x+12)/16)==104 &&
         abs(p.y+p.height-9*16)<1;
     local leaving=g.area=="underground" && p.grounded && g.input.right &&
-        p.facing>0 && p.x+p.width>=13*16-1;
+        // The right collision probe is X+13 (inclusive), not body width 12.
+        // It stops Mario at X=194 against the mouth at 208.
+        p.facing>0 && p.x+14>=13*16;
     if(!entering && !leaving) return false;
     g.transitionTimer=0;g.areaTransitionFrames=0;
     g.areaReloadTarget=entering?"underground":"main";
@@ -384,11 +386,13 @@ function runWorld21SelfTest() {
             "2-1 bonus coins must use the shared award path exactly once");
         updateLevelCoins(branch);
         requireSelfTest(branch.coins==9,"collected bonus coins must not award twice");
-        branch.player.x=13*16-branch.player.width;
+        branch.player.x=180.0;
         branch.player.y=13*16-branch.player.height;branch.player.grounded=true;
         branch.player.facing=1;branch.input.right=true;
-        requireSelfTest(tryWorld21BonusPipe(branch) && branch.state=="pipeSide",
-            "bonus exit must enter the right-facing side pipe");
+        for(local i=0;i<80 && branch.state=="playing";i+=1)
+            simulateFixed(branch,FIXED_DT);
+        requireSelfTest(branch.state=="pipeSide",
+            "walking into the bonus exit must enter the pipe from the collision-stop position");
         branch.input.right=false;
         for(local i=0;i<350 && !(branch.area=="main" && branch.state=="playing");i+=1)
             simulateFixed(branch,FIXED_DT);
