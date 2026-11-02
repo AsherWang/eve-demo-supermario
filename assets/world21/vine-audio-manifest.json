@@ -1,0 +1,23 @@
+{
+  "schema": "smb-oracle-audio-assets-v1",
+  "rom_sha256": "f61548fdf1670cffefcc4f0b7bdcdd9eaba0c226e3b74f8666071496988248de",
+  "mesen_sha256": "4143766f2b900e63663ea000655f24fd824f2ce5324c2575025f8bb68030a910",
+  "origin_sha256": "88ed3e70671dd532e8fecf891faf43cb6c81b4e7335583be9d7a388ac192d3a0",
+  "sample_rate": 48000,
+  "channels": 2,
+  "sample_width": 2,
+  "method": "Offline original SoundEngine and Mesen 2A03; unmodified captured PCM",
+  "limitation": "Isolated clips; runtime shared APU channel stealing is not reproduced",
+  "clips": {
+    "vine": {
+      "sha256": "aec8e7145f50206b60a1c5b9fbda544033ac2d75c05304e04035be2dc6f15ab7",
+      "sample_frames": 143696,
+      "queue_address": 254,
+      "queue_value": 4,
+      "emulated_frames": 180,
+      "timer_freeze_after_frame": 700,
+      "note_length_table_adder": 0,
+      "duration_frames": null
+    }
+  }
+}

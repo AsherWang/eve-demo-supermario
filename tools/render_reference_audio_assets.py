@@ -18,6 +18,7 @@ from tool_paths import tool_path
 PROJECT = Path(__file__).resolve().parents[1]
 REQUESTS = {
     "star": (0xFB, 0x40, 1202),
+    "vine": (0xFE, 0x04, 180),
     "underground": (0xFB, 0x04, 10820),
     "hurry": (0xFC, 0x40, 180),
     "overworld_fast": (0xFB, 0x01, 3600),

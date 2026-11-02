@@ -57,10 +57,9 @@ def main() -> None:
             image.save(out/f'{name}-{frame}.png')
             if name=='paratroopa': image.transpose(Image.Transpose.FLIP_LEFT_RIGHT).save(out/f'{name}-{frame}-left.png')
     for name,tile in [('vine-top',0xe0),('vine-body',0xe1)]:
-        image=Image.new('RGBA',(14,8))
-        image.alpha_composite(tile_image(raw[32784:40976],tile,palettes[1],0,True),(0,0))
-        image.alpha_composite(tile_image(raw[32784:40976],0xe1,palettes[1],0,True,flip_x=True),(6,0))
+        image=tile_image(raw[32784:40976],tile,palettes[1],0,True)
         image.save(out/f'{name}.png')
+        if name=='vine-body': image.transpose(Image.Transpose.FLIP_LEFT_RIGHT).save(out/'vine-body-flipped.png')
     (out/'manifest.json').write_text(json.dumps(manifest,indent=2)+'\n',encoding='utf-8')
     print(json.dumps(manifest))
 

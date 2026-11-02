@@ -574,7 +574,7 @@ class SmbApuModel:
                 "fireball": 0x20,
                 "flag": 0x40,
             }
-            sq2 = {"coin": 0x01, "blast": 0x08, "timer_tick": 0x10, "oneup": 0x40}
+            sq2 = {"vine": 0x04, "coin": 0x01, "blast": 0x08, "timer_tick": 0x10, "oneup": 0x40}
             if name == "jump":
                 big = bool(state and state.get("player", {}).get("big"))
                 self.s(0xFF, 0x01 if big else 0x80)
@@ -606,6 +606,8 @@ class SmbApuModel:
                 self.s(0xFB, 0x04)
             elif name == "overworld" and event.get("frame", 0) > 0:
                 self.s(0xFB, 0x01)
+            elif name == "cloud" and event.get("frame", 0) > 0:
+                self.s(0xFB, 0x10)
             elif name == "castle" and event.get("frame", 0) > 0:
                 self.s(0xFB, 0x08)
 

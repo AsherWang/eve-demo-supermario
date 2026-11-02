@@ -6,14 +6,14 @@
       "name": "sky",
       "area_pointer": 43,
       "area_data_address": "0xa87c",
-      "width": 48,
+      "width": 86,
       "height": 13,
       "observed_columns": 86,
       "cloud_override": 1,
       "columns_sha256": "104b7578d4fa609092207f45468710a32814a631fc699815877d808c839e2aee",
-      "stdout_sha256": "08f9271f1bc6366f921fa254896ef158cf45cf2132b9279aa9589f939cbb253e",
-      "script_sha256": "e3d0047f9ddbcd4dba6f58d6389f1e77719eb7bc2b57876a3909f09336b82905",
-      "scope": "bonus-entry window; not whole shared area"
+      "stdout_sha256": "b7bc7a6e57a6b52cd01e8c97f4b8283ed68070fb57c66efa06085d6790462b73",
+      "script_sha256": "de2bc91c94f7ed68cb2ebb051e2df06e8adc5a84d9cce484e8a60dd417cbbc9b",
+      "scope": "full sky parser window through scroll-lock tail"
     },
     {
       "name": "underground",
@@ -24,12 +24,12 @@
       "observed_columns": 24,
       "cloud_override": 0,
       "columns_sha256": "34fff99a49333f9385bb0edcde451f734e6c25bf040708a225d30421d836b25f",
-      "stdout_sha256": "e9ec2f347417aad0d97e6a40b651ca27f3ca33b08d43555cfbf5701e3eb02159",
-      "script_sha256": "1cf68343c17cf897ebcaac1f03f8f22e736a1a74e9e196d51b9cd662c21050ea",
+      "stdout_sha256": "2894df73a664ee26466cdda7a851d4138880b18bd11c967ff054a02501a9388f",
+      "script_sha256": "fd95f47097607ea1914750eed4330edb69eec03a318fc88353888d8a7b158412",
       "scope": "bonus-entry window; not whole shared area"
     }
   ],
   "fixture_player_above_terrain": true,
   "runtime_connected": false,
-  "output_sha256": "acd0d41a0cb17ac69d8bd824eb468dcaf9675eca306ca17cbf9458cca4571553"
+  "output_sha256": "1523b5916d830c2d97851c67f71ac8e5223cd71aa7f6787801f97fe52b72f81e"
 }

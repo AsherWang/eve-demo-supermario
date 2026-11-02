@@ -25,6 +25,7 @@ dofile("scripts/generated/world13_map.nut");
 dofile("scripts/world13.nut");
 dofile("scripts/world14.nut");
 dofile("scripts/world21.nut");
+dofile("scripts/world21_sky.nut");
 dofile("scripts/title.nut");
 dofile("scripts/levels.nut");
 dofile("scripts/render.nut");

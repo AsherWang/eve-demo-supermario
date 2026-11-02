@@ -1,0 +1,34 @@
+{
+  "rom_sha256": "f61548fdf1670cffefcc4f0b7bdcdd9eaba0c226e3b74f8666071496988248de",
+  "tile": 117,
+  "sprite_palette": 2,
+  "width": 48,
+  "height": 8,
+  "output_sha256": "9eb7315fa397e8fba7b7d38fefcc4ff196b07f56ef29399487f5a141684975f9",
+  "sprite_zero_masks": [
+    {
+      "path": "assets/world21/hud-sprite0-0.png",
+      "sha256": "9ff6f0b81bf15f0064e16932e6deb72b3c5c9610d080d0728b6cafba1c71957e"
+    },
+    {
+      "path": "assets/world21/hud-sprite0-1.png",
+      "sha256": "9ff6f0b81bf15f0064e16932e6deb72b3c5c9610d080d0728b6cafba1c71957e"
+    },
+    {
+      "path": "assets/world21/hud-sprite0-2.png",
+      "sha256": "9ff6f0b81bf15f0064e16932e6deb72b3c5c9610d080d0728b6cafba1c71957e"
+    },
+    {
+      "path": "assets/world21/hud-sprite0-3.png",
+      "sha256": "79bda3ddb61bfe8b9e44008b3d050ca696f50c535974a0666cac29d5075e5c25"
+    },
+    {
+      "path": "assets/world21/hud-sprite0-4.png",
+      "sha256": "b2a6090b4eb3c0409c41b185a44fae58cfbd1b784f9d5d86edbc0ae7f057c976"
+    },
+    {
+      "path": "assets/world21/hud-sprite0-5.png",
+      "sha256": "79bda3ddb61bfe8b9e44008b3d050ca696f50c535974a0666cac29d5075e5c25"
+    }
+  ]
+}

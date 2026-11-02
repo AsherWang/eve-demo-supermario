@@ -9,7 +9,7 @@ function loadAudio() {
         throw "Native audio plugin failed to load. Run tools/build_native_audio.ps1.";
     nativeAudio = eve.NativeAudio();
     local names = [
-        "jump", "jump_big", "coin", "bump", "break", "powerup", "powerup_reveal",
+        "jump", "jump_big", "vine", "coin", "bump", "break", "powerup", "powerup_reveal",
         "oneup", "stomp", "kick", "fireball", "pipe", "death", "flag",
         "course_clear", "game_over", "blast", "overworld", "star", "underground",
         "hurry", "overworld_fast", "underground_fast", "star_fast", "timer_tick",
@@ -59,7 +59,8 @@ function resumeMusic(useStarMusic = false) {
     if (nativeAudio == null) return;
     local name = useStarMusic ? "star" :
         ((game != null && game.area == "castle") ? "castle_theme" :
-         ((game != null && game.area == "underground") ? "underground" : "overworld"));
+         ((game != null && game.area == "underground") ? "underground" :
+          ((game != null && game.area == "sky") ? "star" : "overworld")));
     if (game != null && game.hurryActive)
         name = name == "castle_theme" ? "castle_fast" : name + "_fast";
     nativeAudio.playMusic(name);

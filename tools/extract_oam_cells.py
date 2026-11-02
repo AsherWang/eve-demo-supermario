@@ -10,6 +10,8 @@ def main():
     sources = sorted((ROOT / 'assets/mario').glob('*.png'))
     sources += sorted((ROOT / 'assets/world13').glob('red-*.png'))
     sources += [ROOT / 'assets/world13/platform.png']
+    sources += sorted((ROOT / 'assets/world21').glob('plant-*.png'))
+    sources += [ROOT / 'assets/world21/cloud-platform.png']
     sources += [ROOT / 'assets/scenery/flagpole-flag.png']
     sources += sorted((ROOT / 'assets/enemies').glob('goomba*.png'))
     entries = []

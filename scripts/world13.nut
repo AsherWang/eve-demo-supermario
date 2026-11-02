@@ -270,7 +270,7 @@ function initializeWorld13Parity(g) {
     resetPlayerForArea(g,40,176);g.player.grounded=true;
 }
 
-function world13PlatformRider(g,platform,oldX,oldY,newX,newY) {
+function world13PlatformRider(g,platform,oldX,oldY,newX,newY,playerRightEdge=null) {
     local p=g.player;
     if(p.dead || p.nesYSpeed<0.0) return;
     local previousFeet=p.previousY+p.height;
@@ -282,7 +282,8 @@ function world13PlatformRider(g,platform,oldX,oldY,newX,newY) {
     local right=oldX>newX?oldX:newX;
     // Platform and player bounds are inclusive in the ROM collision pass.
     // Treating an exact edge contact as a miss drops the first landing frame.
-    if(p.x+p.width<left || p.x>right+platform.width) return;
+    local extent=playerRightEdge==null?p.width:playerRightEdge;
+    if(p.x+extent<left || p.x>right+platform.width) return;
     p.x+=newX-oldX;
     p.pendingPlatformXScroll+=(newX-oldX).tointeger();
     p.y=newY-p.height;p.grounded=true;p.entranceFalling=false;

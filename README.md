@@ -2,8 +2,8 @@
 
 Personal-study, ROM-data-driven reconstruction in EVEngine. World 1-1 through
 1-4 are playable; the World 2-1 main-route prototype is under development.
-World 2-1 has a verified underground-branch checkpoint replay; the sky branch
-and strict whole-level acceptance remain pending.
+World 2-1 includes underground and vine/sky bonus branches, with checkpoint-origin
+replays tracked in the implementation plan. Strict whole-level acceptance remains pending.
 The packaged game does not include a ROM. Runtime assets were extracted locally
 from a user-provided ROM for this study build.
 

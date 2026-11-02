@@ -457,7 +457,7 @@ function positiveModulo(value, divisor) {
 }
 
 function drawBackground(g) {
-    if(isWorld21(g)) {if(g.area!="underground") drawWorld13Background(g);return;}
+    if(isWorld21(g)) {if(g.area=="main") drawWorld13Background(g);return;}
     if(g.level==3) {drawWorld13Background(g);return;}
     if(g.level==4) {drawWorld14Background(g);return;}
     if (g.area == "underground") return;
@@ -537,7 +537,9 @@ function drawTiles(g) {
             }
             if(isWorld21(g)) {
                 local texture=world21TileTexture(g,tx,ty,tile);
-                if(texture!=null) worldTexture(g,texture,tx*16.0,ty*16.0,16,16);
+                local vineBump=g.bump.active && g.bump.tile==TILE_BRICK_VINE &&
+                    g.bump.tx==tx && g.bump.ty==ty && g.bump.frame>1;
+                if(texture!=null && !vineBump) worldTexture(g,texture,tx*16.0,ty*16.0,16,16);
                 continue;
             }
             if(g.level>=3) {
@@ -712,7 +714,7 @@ function drawLevelCoins(g) {
     foreach (coin in g.levelCoins) {
         if (!coin.active && !("visualErasePending" in coin && coin.visualErasePending)) continue;
         local phase = g.displayColorPhase;
-        local texture = g.level == 3 ? assets.world13.coins[phase] :
+        local texture = g.level == 3 || (isWorld21(g) && g.area=="sky") ? assets.world13.coins[phase] :
             assets.items.undergroundCoins[phase];
         worldTexture(g, texture,
                      floor(coin.x), floor(coin.y), 16.0, 16.0);
@@ -742,7 +744,7 @@ function drawEnemy(g, e) {
     // offscreen region (EnemyOffscrBitsMasked bit 2).  Letting the host clip
     // the corrected 16px texture would leak a one-pixel sliver that the NES
     // OAM writer has already hidden.
-    if (e.x < g.cameraX && g.level!=3) return;
+    if (e.x < g.cameraX && g.level!=3 && !(isWorld21(g) && e.kind=="goomba")) return;
     local visualState = e.displayState;
     local levelTexture=g.level==3?world13EnemyTexture(g,e,visualState):null;
     local texture = null;
@@ -1068,6 +1070,10 @@ function drawIntermediateLives(g) {
 // staged area spawn leaks onto the screen as a one-frame teleport.
 function areaTransitionOverlay(g) {
     if (g.state == "areaReload") {
+        if(isWorld21(g) && g.areaReloadTarget=="main" &&
+            (g.area=="sky" || ("returnPage" in g.world21 && g.world21.returnPage==10)) &&
+            g.areaReloadFrames<=3) return "sky";
+        if(isWorld21(g) && g.areaReloadTarget=="sky" && g.areaReloadFrames<=3) return "sky";
         if (g.areaReloadTarget == "underground") {
             if (g.areaReloadFrames <= 3)
                 return "sky";
@@ -1229,5 +1235,7 @@ function renderGame(g) {
     if (g.level == 4) drawWorld14Actors(g, false);
     if(isWorld21(g)) drawWorld21Actors(g,false);
     if (!playerBehindBackground && !playerHidden) drawPlayer(g);
+    if(isWorld21(g) && g.area!="underground")
+        screenTexture(assets.world21.spriteZeroMasks[g.displayColorPhase],88,25,8,8);
     if(!hudBeforeSprites) drawHud(g);
 }

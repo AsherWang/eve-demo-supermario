@@ -1,9 +1,10 @@
 # World 2-1 implementation plan
 
-Updated 2026-10-31. The main route, 1-4 to 2-1 transition and underground bonus
-are implemented. A checkpoint-origin underground replay is verified across all
-900 images, selected state fields, events and modeled audio. Sky entry and
-normal-entrance whole-level acceptance remain pending.
+Updated 2026-11-02. The main route, 1-4 to 2-1 transition, underground bonus
+and vine/sky bonus are implemented. Checkpoint-origin branch diagnostics cover
+natural entry, automatic entrance, platforms and return to the main route.
+Strict normal-entrance whole-level acceptance remains pending.
+
 
 ## Verified offline data
 
@@ -45,11 +46,11 @@ The generator fails on missing columns or differing overlap, and records hashes.
 
 - [x] Introduce explicit world/stage identity while keeping existing World 1
   loaders and regressions stable. Do not overload stage number 1 as World 1-1.
-- [ ] Define a small level descriptor for map, enemy stream, item locations,
+- [x] Define a small level descriptor for map, enemy stream, item locations,
   entry, goal, checkpoint, music and palette. Keep mutable area state separate.
-- [ ] Implement the 2-1 main route: enemies, pipes, group spawns, jumping green
+- [x] Implement the 2-1 main-route prototype: enemies, pipes, group spawns, jumping green
   Paratroopas and jumpspring behavior. Reuse shared movement/collision rules.
-- [ ] Implement vine growth/climbing, cloud-area return, underground-area
+- [x] Implement vine growth/climbing, cloud-area return, underground-area
   return, and correct destination/return links. Do not substitute a mushroom
   for the vine reward or label inaccessible branches complete.
 - [x] Connect 1-4 to 2-1 and preserve score, coins, lives and powers. Reset the
@@ -68,7 +69,8 @@ The generator fails on missing columns or differing overlap, and records hashes.
 The source prototype loads the verified map and enemy stream, including jumping
 green Paratroopas, piranhas, a working spring and growing vine. F5 selects 2-1.
 The underground destination/return is connected and verified by the 900-frame
-checkpoint branch replay below. Vine climbing and the cloud branch remain pending.
+checkpoint branch replay below. Vine climbing and the cloud branch are connected;
+their checkpoint validation is recorded in the 2026-11-02 section.
 2-2 is unavailable; R at the 2-1 settlement restarts 2-1.
 
 - Ten simulation regression groups pass via `python tools/run_world1_regressions.py`.
@@ -479,3 +481,19 @@ agreement are retained in `local-parity/world21-map-final`.
 - 所有路径均相对 `local-parity/world21-runtime`；最终分支报告在 `underground-all-frames-v3/reports`。v1/v2 失败截图与状态证据保留。10 组模拟回归、8 项 Python 测试和原生混音测试通过。
 - 预览包：`dist/super-mario-world21-underground-verified-win64/SuperMario.exe`，第二次窗口启动/标题/图标/关闭检查通过；首次 Vulkan 初始化失败报告保留。未发布新 release，版本仍为 0.0.7。
 - 本节仅完成地下分支的检查点起点验证。天空分支、正常入口成功整关路线和 32 关严格验收仍待完成；不会登记 2-1 整关为已验收。
+
+
+### 2026-11-02：藤蔓与天空奖励分支
+
+- 接入主图第 83 列藤蔓砖块、薄藤蔓接触范围、上/下爬、侧换边及跳离、自动爬升切区；天空入口等待藤蔓生长后自动爬入并侧移释放。按原版两次 SetupVine 写入的合并结果生长到 96 像素，原生声音只播放一次。
+- 天空静态地图重新完整采集 86 列，包含 41 枚金币；第 62 列开始无云层地面。原版大云平台使用 48×8、CHR $75、精灵调色板 2，首次站上后以每帧 1 像素向右移动。
+- 云区终点命令在解析器提前 22 列处理时锁定相机到 X=992；滚动量按真实位移归零。平台右移时采用玩家 X+13 的原版包含边界，修复提前失去支撑和移出平台后仍被承载。
+- 云区掉落在屏幕以下先停止滚动/计时，到原版高字节深度门槛后返回主图第 10 页，从顶端正常下落；不扣命，保留金币、分数、强化和主图地形改动。返回入口按 Y>=48 交还控制，恢复首帧加速度。
+- 完整路线包含第 4 页检查点后的真实固定按键接近、跳管、顶出藤蔓、跳到上层、爬藤、进入天空、乘云、离开云和返回；没有在路线途中重写模拟器玩家、碰撞或地图内存。第 5 页直接起点缺少原版跨页物体延续，因此未用它替代成功路线。
+- 修复全帧检查发现的同组后续敌人当帧运动、藤蔓双缓冲高度、交错 8×8 精灵、边界裁切、砖块弹起的 OAM/背景优先级、天空入口马里奥背景优先级，以及 sprite 0 对 HUD 重叠像素的遮挡。
+- 三种形态的分支往返、侧换边释放、云平台首乘/持续承载/边缘脱离及地形/强化保留均纳入十组模拟回归。新增快速状态诊断工具 `tools/parity/run_world21_simulation.py`，明确不代替实际窗口画面或设备音频验收。
+- 最终全帧证据：`reference/sky-cloud-all-frames` 的连续视频/存档回放 2400 帧状态和 APU 写入一致；`actual/sky-cloud-all-frames-v4` 对应 `sky-cloud-all-frames-v4/reports` 的 2400 帧选定状态字段、2400 张零容差截图、16 项事件和 19219 次模型 APU 写入全部通过，无缺帧。v1/v2/v3 失败证据保留，最终没有放宽比较阈值。
+- `sky-cloud-all-frames-v4/audio/reports/audio-report.json`：1916776 个 48kHz 双声道 PCM 样本帧逐样本一致（SHA-256 `88e02e0f774cc7f00ef38dd60733791b86ca7cba54e84e90df210bb45e9f2e85`）。同样属于参考周期时间表及 Mesen 2A03 模型上的音频验证，不代表实时原生混音/扬声器逐样本一致。另一条 2000 帧云层地面掉落路线也通过状态、事件、15779 次模型 APU 写入和模型 PCM；没有据此声称其全部画面已验收。
+- 共享代码复验：`sky-final-underground/reports` 的地下 900 帧选定状态、900 张全帧画面、事件和 5407 次模型 APU 写入均通过，模型写入与已验证地下 PCM 的版本完全相同；`sky-final-main-regression/reports` 的 3116 帧死亡/标题返回/新游戏状态及 91 张抽样截图通过。
+- 十组模拟回归、六项分支/资源 Python 测试、三项既有 Python 测试及原生混音单元测试通过。构建包 `dist/super-mario-world21-sky-verified-win64/SuperMario.exe`；`sky-cloud-all-frames-v4/package-startup.json` 的标题、大小图标、首帧显示及正常关闭检查通过。
+- 所有证据目录均相对 `local-parity/world21-runtime`。本节完成天空分支的检查点起点验证，下一项为正常入口成功整关路线；2-1 仍未登记为整关严格验收通过。版本保持 0.0.7，未发布新 release。

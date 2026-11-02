@@ -326,6 +326,13 @@ function updateAreaExitEntrance(g) {
 function updateAreaEntrance(g) {
     g.areaEntranceFrames += 1;
     local frame = g.areaEntranceFrames;
+    if(isWorld21(g) && g.area=="main" && "returnPage" in g.world21 && g.world21.returnPage==10) {
+        local p=g.player, canonicalY=p.y-(p.big?0:16);
+        if(frame==1) {p.grounded=false;p.entranceFalling=true;}
+        else if(canonicalY>=48) g.state="playing";
+        else {p.y+=nesVerticalDelta(p,false);p.previousY=p.y;p.vy=p.nesYSpeed*NES_FRAME_RATE;}
+        return;
+    }
     // The first entrance frame is stationary.  Frames 2..16 apply the normal
     // fixed-point gravity helper, and frame 17 merely enables player control.
     if (frame >= 2 && frame <= 16) {
@@ -966,6 +973,8 @@ function updateNesHorizontalPhysics(g, p, direction) {
     local inputAllowed = direction > 0 ? (p.collisionBits & 0x01) != 0 :
         (direction < 0 ? (p.collisionBits & 0x02) != 0 : false);
     local physicsDirection = inputAllowed ? direction : 0;
+    // Animation speed handling can stop a slow skid before friction runs.
+    oldSign = p.nesXSpeed > 0 ? 1 : (p.nesXSpeed < 0 ? -1 : 0);
 
     if (physicsDirection == 0) {
         // The airborne handler only calls horizontal friction when a left or
@@ -1131,6 +1140,7 @@ function updatePlayer(g, dt) {
         return;
     }
 
+    if(isWorld21(g) && updateWorld21Climbing(g)) return;
     if (g.input.fireQueued && p.fire) spawnFireball(g);
 
     setCrouching(g, p, p.big && p.grounded && g.input.down);
@@ -1219,7 +1229,10 @@ function updatePlayer(g, dt) {
         }
     }
 
-    if (p.y > LOGICAL_HEIGHT + 32.0) killPlayer(g);
+    if(isWorld21(g) && g.area=="sky") {
+        if(p.x>g.cameraX+239) {p.x=g.cameraX+239;p.nesXSpeed=0;p.vx=0;}
+        if(p.y-(p.big?0:16)>=3*256) beginWorld21SkyReturn(g);
+    } else if (p.y > LOGICAL_HEIGHT + 32.0) killPlayer(g);
     if (p.x < g.cameraX) {
         p.x = g.cameraX;
         if (p.vx < 0.0) p.vx = 0.0;
@@ -1997,7 +2010,8 @@ function updateGoombas(g, dt) {
     // Enemy stream parsing follows ScrollHandler in the original frame.  Use
     // the screen edge that this frame's pending scroll will expose.
     local projectedCameraX = g.cameraX;
-    if (p.nesXScroll > 0 && !p.scrollSideCollisionTimer) {
+    if (p.nesXScroll > 0 && !p.scrollSideCollisionTimer &&
+        !(isWorld21(g) && g.area=="sky" && p.previousY-(p.big?0:16)>=256)) {
         local positionForScroll = p.previousX - g.cameraX;
         if (positionForScroll >= 80.0) {
             local scroll = p.nesXScroll;
@@ -2076,7 +2090,10 @@ function updateGoombas(g, dt) {
             }
             if(isWorld21(g) && e.groupIndex==0) e.groupCommand.started=true;
             e.awake = true;
-            continue;
+            // SpawnEnemyGroup initializes later slots before the enemy loop
+            // reaches them; those members move on this same pass.
+            if(!(isWorld21(g) && e.groupIndex>0)) continue;
+            e.previousX=e.x;e.previousY=e.y;
         }
         if (e.kind == "koopa" && e.state == "shell") {
             e.shellFrames = e.intervalTimer * NES_INTERVAL_FRAMES;
@@ -2273,7 +2290,8 @@ function updateCamera(g) {
          g.flagContactScrollPending ||
          (g.state == "endLevel" && !g.endLevelScrollLocked)) &&
         (!p.dead || p.deadTimer == 0.0) &&
-        p.nesXScroll > 0 && !p.scrollSideCollisionTimer) {
+        p.nesXScroll > 0 && !p.scrollSideCollisionTimer &&
+        !(isWorld21(g) && g.area=="sky" && p.previousY-(p.big?0:16)>=256)) {
         // Player_Pos_ForScroll is prepared from the preceding frame's player
         // position. ScrollHandler starts at $50; below $70 it removes one
         // pixel from displacements of two or more pixels.
@@ -2287,9 +2305,13 @@ function updateCamera(g) {
                 scrollAmount -= 1;
         }
     }
+    local cameraBeforeScroll=g.cameraX;
     g.cameraX += scrollAmount;
     local maximum = g.areaWidth * TILE_SIZE - LOGICAL_WIDTH;
+    // Sky end command at column 84 is consumed by the parser 22 columns ahead.
+    if(isWorld21(g) && g.area=="sky") maximum=62*TILE_SIZE;
     g.cameraX = clampValue(g.cameraX, 0.0, maximum.tofloat());
+    if(isWorld21(g) && g.area=="sky") scrollAmount=g.cameraX-cameraBeforeScroll;
     // The PPU renders the frame from the left edge that existed before this
     // pass applied ScrollAmount.  Keep that display edge separate from the
     // RAM-side ScreenLeft_X_Pos used by gameplay and parity state checks.
@@ -2613,6 +2635,14 @@ function updatePlayerAnimationState(g) {
     local p = g.player;
 
     if (p.dead) return;
+    if(isWorld21(g) && "vineClimbing" in p && p.vineClimbing) {
+        if(p.nesYSpeed==0) {p.animationFrame=-5;p.playerAnimCtrl=0;return;}
+        p.animationFrame=(p.playerAnimCtrl&1)==0?-5:-6;
+        if(p.nesYSpeed!=0 && p.playerAnimTimer==0) {
+            p.playerAnimTimer=p.playerAnimTimerSet;p.playerAnimCtrl=(p.playerAnimCtrl+1)&1;
+        }
+        return;
+    }
     if (g.state == "flagSlide") {
         // Player_State $03 with downward Y speed uses the two climbing frames.
         // ClimbingMovement starts from $08, then halves it for positive
@@ -2654,7 +2684,8 @@ function updatePlayerAnimationState(g) {
         p.playerAnimCtrl = 0;
         return;
     }
-    if (p.skidding) {
+    if (p.skidding || (isWorld21(g) && p.grounded && p.nesXSpeedAbsolute>=0x0b &&
+        p.facing!=(p.movingDir==1?1:-1))) {
         p.animationFrame = -4;
         p.playerAnimCtrl = 0;
         return;
@@ -2905,7 +2936,7 @@ function preparePlayerPresentation(g) {
         g.player.y : g.player.y - 16.0;
     g.player.preparedRelY = floor(canonicalPlayerY).tofloat();
     if(isWorld21(g)) {
-        local behind=g.state=="pipeDown" || g.state=="pipeSide" || g.state=="areaExitEntrance";
+        local behind=g.state=="pipeDown" || g.state=="pipeSide" || g.state=="areaExitEntrance" || g.state=="skyEntrance";
         // ExitPipe retains priority for its final pass even when it selects
         // normal control. OAM priority follows the same staged page as X/Y.
         if("pipeExitPresentationPending" in g.player) behind=true;
@@ -3008,7 +3039,7 @@ function simulateFixed(g, dt) {
     local processPlayerAnimation = !g.player.dead &&
         (animationState == "playing" || animationState == "pipeDown" ||
          animationState == "pipeSide" || animationState == "areaEntrance" ||
-          animationState == "areaExitEntrance" || animationState == "endLevel" ||
+          animationState == "areaExitEntrance" || animationState == "skyEntrance" || animationState == "endLevel" ||
           animationState == "flagSlide" || animationState == "autoWalk");
     if (processPlayerAnimation && g.player.playerAnimTimer > 0)
         g.player.playerAnimTimer -= 1;
@@ -3100,6 +3131,8 @@ function simulateFixed(g, dt) {
         if(!finalWorld21PipePass) updateGoombas(g, dt);
         updateAreaTransition(g, dt);
         if(isWorld21(g) && g.state!="areaReload") updateWorld21Actors(g);
+    } else if(isWorld21(g) && g.state=="skyEntrance") {
+        updateWorld21SkyEntrance(g);updateWorld21Actors(g);
     } else if (g.state == "areaReload") {
         updateAreaReload(g);
     } else if (g.state == "areaEntrance") {
@@ -3123,7 +3156,9 @@ function simulateFixed(g, dt) {
     // Entrance handlers may select normal control during this same frame.
     // RunGameTimer therefore observes the expired control slot immediately,
     // as seen at underground-entry, pipe-exit, and death-respawn boundaries.
-    if (g.state == "playing" && !g.player.dead) updateTimer(g);
+    if (g.state == "playing" && !g.player.dead &&
+        !(isWorld21(g) && (("vineAuto" in g.player && g.player.vineAuto) ||
+          (g.area=="sky" && g.player.y-(g.player.big?0:16)>=256)))) updateTimer(g);
     if (processPlayerAnimation) {
         if (animationState == "pipeSide") {
             g.player.nesXSpeedAbsolute = abs(g.player.nesXSpeed);
@@ -3159,13 +3194,13 @@ function simulateFixed(g, dt) {
     local ranGameEngine = animationState == "playing" ||
         animationState == "pipeDown" || animationState == "pipeSide" ||
         animationState == "pipeUp" || animationState == "areaEntrance" ||
-        animationState == "areaExitEntrance" ||
+        animationState == "areaExitEntrance" || animationState == "skyEntrance" ||
         animationState == "deathEntrance" || animationState == "endLevel" ||
         animationState == "flagSlide" || animationState == "autoWalk" ||
         animationState == "timeBonus" || animationState == "raiseFlag" ||
         animationState == "fireworks" || animationState == "postClearDelay" ||
         (animationState == "areaReload" &&
-            (g.state == "areaEntrance" || g.state == "areaExitEntrance")) ||
+            (g.state == "areaEntrance" || g.state == "areaExitEntrance" || g.state == "skyEntrance")) ||
         (animationState == "deathReload" && g.state == "deathEntrance");
     if (ranGameEngine) updateVramAreaParserScheduler(g);
     // Misc object processing consumes this pass's ScrollAmount.  Updating it
@@ -3185,7 +3220,8 @@ function simulateFixed(g, dt) {
         if(g.score!=scoreBeforeVram) g.vramPrimaryBytes+=9;
         if(g.time!=timeBeforeVram) g.vramPrimaryBytes+=6;
     }
-    if (ranGameEngine && (g.nesFrameCounter & 0x07) == 0 &&
+    if (ranGameEngine && !(isWorld21(g) && g.state=="areaReload" && g.areaReloadFrames==0) &&
+        (g.nesFrameCounter & 0x07) == 0 &&
         (g.level!=3 || g.vramPrimaryBytes<0x31)) {
         if(g.level==3) g.vramPrimaryBytes+=7;
         g.pendingColorPhase = g.colorRotateOffset;

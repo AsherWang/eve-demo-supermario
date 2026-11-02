@@ -414,6 +414,45 @@ OAM_TEXTURE_CELLS <- [
     ]
   ],
   [
+    "assets/world21/plant-0.png",
+    2,
+    3,
+    [
+      "assets/oam-cells/world21/plant-0/0-0.png",
+      "assets/oam-cells/world21/plant-0/0-1.png",
+      "assets/oam-cells/world21/plant-0/1-0.png",
+      "assets/oam-cells/world21/plant-0/1-1.png",
+      "assets/oam-cells/world21/plant-0/2-0.png",
+      "assets/oam-cells/world21/plant-0/2-1.png"
+    ]
+  ],
+  [
+    "assets/world21/plant-1.png",
+    2,
+    3,
+    [
+      "assets/oam-cells/world21/plant-1/0-0.png",
+      "assets/oam-cells/world21/plant-1/0-1.png",
+      "assets/oam-cells/world21/plant-1/1-0.png",
+      "assets/oam-cells/world21/plant-1/1-1.png",
+      "assets/oam-cells/world21/plant-1/2-0.png",
+      "assets/oam-cells/world21/plant-1/2-1.png"
+    ]
+  ],
+  [
+    "assets/world21/cloud-platform.png",
+    6,
+    1,
+    [
+      "assets/oam-cells/world21/cloud-platform/0-0.png",
+      "assets/oam-cells/world21/cloud-platform/0-1.png",
+      "assets/oam-cells/world21/cloud-platform/0-2.png",
+      "assets/oam-cells/world21/cloud-platform/0-3.png",
+      "assets/oam-cells/world21/cloud-platform/0-4.png",
+      "assets/oam-cells/world21/cloud-platform/0-5.png"
+    ]
+  ],
+  [
     "assets/scenery/flagpole-flag.png",
     2,
     2,

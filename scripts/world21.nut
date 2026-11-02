@@ -1,4 +1,4 @@
-// World 2-1 main route and underground bonus prototype; sky entry remains pending.
+// World 2-1 main route and connected underground/sky bonus branches.
 dofile("scripts/generated/world21_data.nut");
 dofile("scripts/generated/world21_map.nut");
 dofile("scripts/generated/world21_branch_maps.nut");
@@ -34,7 +34,7 @@ function world21LevelDescriptor() {
         checkpoint={cameraThreshold=1536,page=6},
         music="overworld",palette="ground",time=400,
         areaLinks=decodeWorld21AreaLinks(ROM_WORLD_2_1_ENEMIES,2),
-        branchesPlayable=false};
+        branchesPlayable=true};
 }
 
 function isWorld21(g) {return g.world==2 && g.level==1;}
@@ -82,12 +82,20 @@ function loadWorld21Assets() {
     foreach(column in ROM_WORLD_2_1_METATILES) foreach(meta in column)
         if(meta!=0 && !(meta in metatiles))
             metatiles[meta] <- loadTexture("assets/world13/metatile-"+meta+".png");
+    foreach(column in ROM_WORLD_2_1_SKY_METATILES) foreach(meta in column)
+        if(meta!=0 && !(meta in metatiles)) metatiles[meta] <- loadTexture("assets/world13/metatile-"+meta+".png");
     assets.world21 <- {metatiles=metatiles,
+        cloud=loadTexture("assets/world21/cloud-platform.png"),
+        spriteZeroMasks=[loadTexture("assets/world21/hud-sprite0-0.png"),
+            loadTexture("assets/world21/hud-sprite0-1.png"),loadTexture("assets/world21/hud-sprite0-2.png"),
+            loadTexture("assets/world21/hud-sprite0-3.png"),loadTexture("assets/world21/hud-sprite0-4.png"),
+            loadTexture("assets/world21/hud-sprite0-5.png")],
         wingsRight=[loadTexture("assets/world21/paratroopa-0.png"),loadTexture("assets/world21/paratroopa-1.png")],
         wingsLeft=[loadTexture("assets/world21/paratroopa-0-left.png"),loadTexture("assets/world21/paratroopa-1-left.png")],
         plants=[loadTexture("assets/world21/plant-0.png"),loadTexture("assets/world21/plant-1.png")],
         springs=[loadTexture("assets/world21/spring-0.png"),loadTexture("assets/world21/spring-1.png"),loadTexture("assets/world21/spring-2.png")],
-        vineTop=loadTexture("assets/world21/vine-top.png"),vineBody=loadTexture("assets/world21/vine-body.png")};
+        vineTop=loadTexture("assets/world21/vine-top.png"),vineBody=loadTexture("assets/world21/vine-body.png"),
+        vineBodyFlipped=loadTexture("assets/world21/vine-body-flipped.png")};
 }
 
 function startWorld21(g) {
@@ -129,6 +137,12 @@ function startWorld21(g) {
 }
 
 function world21TileTexture(g,tx,ty,tile) {
+    if(g.area=="sky") {
+        if(ty<2 || tx<0 || tx>=ROM_WORLD_2_1_SKY_METATILES.len()) return null;
+        local meta=ROM_WORLD_2_1_SKY_METATILES[tx][ty-2];
+        if(meta==0 || meta==0xc2) return null;
+        return meta in assets.world21.metatiles?assets.world21.metatiles[meta]:null;
+    }
     if(g.area=="underground") {
         if(ty<2 || tx<0 || tx>=ROM_WORLD_2_1_UNDERGROUND_METATILES.len()) return null;
         local meta=ROM_WORLD_2_1_UNDERGROUND_METATILES[tx][ty-2];
@@ -189,12 +203,12 @@ function loadWorld21Underground(g) {
     g.cameraX=0;g.displayCameraX=0;
 }
 
-function restoreWorld21Main(g) {
+function restoreWorld21Main(g,page=7) {
     local main=g.world21Main,actors=main.savedActors;
     loadSavedMainArea(g);g.areaWidth=ROM_WORLD_2_1_METATILES.len();
     g.world21=main;g.plants=actors.plants;g.checkpointPage=actors.checkpoint;
     delete main.savedActors;delete g.world21Main;
-    g.cameraX=7*256.0;g.displayCameraX=g.cameraX;
+    g.cameraX=page*256.0;g.displayCameraX=g.cameraX;
     // Area initialization reparses enemy slots, even when retaining changed
     // main terrain. A plant frozen at its old raised Y must not greet Mario
     // inside the return pipe.
@@ -206,7 +220,7 @@ function restoreWorld21Main(g) {
         if("displayY" in plant) delete plant.displayY;
     }
     g.world21.slotXFractions=[0.0,0.0,0.0,0.0,0.0];
-    local checkpoint=g.checkpointPage;initializeWorld21Checkpoint(g,7,0);
+    local checkpoint=g.checkpointPage;initializeWorld21Checkpoint(g,page,0);
     g.checkpointPage=checkpoint;
 }
 
@@ -221,19 +235,33 @@ function updateWorld21BonusReload(g) {
         g.vramAreaParserTask=0;g.vramBufferAddrCtrl=0;
     } else if(frame==2) {
         if(g.areaReloadTarget=="underground") loadWorld21Underground(g);
-        else restoreWorld21Main(g);
+        else if(g.areaReloadTarget=="sky") loadWorld21Sky(g);
+        else {
+            local page=g.area=="sky"?10:7;
+            restoreWorld21Main(g,page);
+            g.world21.returnPage <- page;
+        }
         g.world21.hudTimeHidden <- true;
         resetPlayerForArea(g,0,0);g.nesFrameCounter=0;
-        parityRecordEvent(g,"music","silence");
+        parityRecordEvent(g,"music","silence");g.soundEvents.append("silence_music");
     } else if(frame==25) {
-        parityRecordEvent(g,"music",g.area=="underground"?"underground":"overworld");
+        parityRecordEvent(g,"music",g.area=="underground"?"underground":(g.area=="sky"?"cloud":"overworld"));
         g.soundEvents.append("resume_music");
     } else if(frame==26) {
-        resetPlayerForArea(g,g.area=="underground"?24:7*256+56,
+        local returnPage="returnPage" in g.world21?g.world21.returnPage:7;
+        resetPlayerForArea(g,g.area=="underground"?24:(g.area=="sky"?56:returnPage*256+56),
             g.area=="underground"?32:240);
         g.player.parityOriginFriction=true;g.player.fallForce=0x28;
         g.areaEntranceFrames=0;
-        g.state=g.area=="underground"?"areaEntrance":"areaExitEntrance";
+        if(g.area=="sky") {
+            g.player.vineClimbing <- true;g.player.vineAuto <- false;
+            g.player.vineX <- 64.0;g.player.grounded=false;g.state="skyEntrance";
+            emitWorld21VineSound(g);
+        } else if("returnPage" in g.world21 && g.world21.returnPage==10) {
+            resetPlayerForArea(g,10*256+40,0);g.player.entranceFalling=true;
+            g.player.fallForce=0x28;g.player.parityOriginFriction=true;
+            g.state="areaEntrance";
+        } else g.state=g.area=="underground"?"areaEntrance":"areaExitEntrance";
     }
     if(frame==3 || (frame==21 && g.areaReloadTarget=="underground")) g.vramBufferAddrCtrl=3;
     else if(frame==21) g.vramBufferAddrCtrl=2;
@@ -242,10 +270,13 @@ function updateWorld21BonusReload(g) {
 
 function growWorld21Vine(g,tx,ty) {
     retainOldTileForPpu(g,tx,ty,TILE_BRICK_VINE);
+    bumpEnemiesAbove(g,tx,ty);
+    g.bump.active=true;g.bump.tx=tx;g.bump.ty=ty;g.bump.tile=TILE_BRICK_VINE;
+    g.bump.time=0.0;g.bump.frame=0;g.bump.powerupPending=false;
     setTile(g,tx,ty,TILE_USED);
-    g.world21.vines.append({x=tx*16.0,y=ty*16.0,height=0.0});
-    emitSound(g,"powerup","reveal");
-    parityRecordEvent(g,"gameplay","vine_revealed");
+    g.world21.vines.append({x=tx*16.0,y=ty*16.0,height=0.0,maximum=96});
+    emitSound(g,"bump");parityRecordEvent(g,"gameplay","block_hit");
+    emitWorld21VineSound(g);
 }
 
 function updateWorld21Actors(g) {
@@ -255,7 +286,13 @@ function updateWorld21Actors(g) {
     }
     // Shared piranha behavior; this course has no World 1-2 lift objects.
     updateWorld12Actors(g);
-    foreach(vine in g.world21.vines) if(vine.height<96.0) vine.height+=0.5;
+    foreach(vine in g.world21.vines) {
+        vine.displayHeight <- vine.height;
+        local maximum="maximum" in vine?vine.maximum:96;
+        if(vine.height<maximum && (g.nesFrameCounter&2)!=0) vine.height+=1;
+    }
+    if(g.state=="playing") attachWorld21Vine(g);
+    updateWorld21CloudPlatform(g);
     local p=g.player;
     foreach(spring in g.world21.springs) {
         if(spring.control==0) {
@@ -300,20 +337,40 @@ function parseWorld21PlantColumn(g,task) {
 
 function drawWorld21Actors(g,behind) {
     if(behind) {
+        // A bouncing block is OAM over a blank nametable cell. Vine sprites
+        // win its sprite priority until the replacement metatile is written.
+        if(g.bump.active && g.bump.tile==TILE_BRICK_VINE && g.bump.frame>1) {
+            local offsets=[-1,-3,-5,-6,-6,-7,-7,-7,-6,-5,-4,-3,-1,1];
+            local offset=offsets[clampValue(g.bump.frame-2,0,offsets.len()-1).tointeger()];
+            worldTexture(g,assets.tiles.used,g.bump.tx*16.0,g.bump.ty*16.0+offset,16,16);
+        }
         foreach(plant in g.plants) if(plant.active) {
             local counter=(g.nesFrameCounter+254)&255;
             local frame=g.player.dead?0:((counter&8)==0?1:0);
             local y="displayY" in plant?plant.displayY:plant.y;
-            worldTexture(g,assets.world21.plants[frame],plant.x,y+1,16,24);
+            screenOamTexture(assets.world21.plants[frame],plant.x-visualCameraX(g),y+1,16,24);
         }
-        foreach(vine in g.world21.vines)
-            for(local y=0;y<vine.height;y+=8)
-                worldTexture(g,y==0?assets.world21.vineTop:assets.world21.vineBody,
-                    vine.x,vine.y-vine.height+y,14,8);
-    } else foreach(spring in g.world21.springs) if(spring.control>0) {
+        foreach(vine in g.world21.vines) if(("displayHeight" in vine?vine.displayHeight:vine.height)>=8 && vine.x-visualCameraX(g)>=0)
+            for(local i=0;i<12;i+=1) {
+                local height="displayHeight" in vine?vine.displayHeight:vine.height;
+                local y=vine.y-height+i*8;
+                if(y>vine.y || y<0 || y>=239) continue;
+                local flipped=(i&1)!=0;
+                local texture=i==0?assets.world21.vineTop:
+                    (flipped?assets.world21.vineBodyFlipped:assets.world21.vineBody);
+                local x=vine.x+(flipped?6:0)-visualCameraX(g);
+                if(x>=0 && x<256) screenTexture(texture,x,y+1,8,8);
+            }
+    } else {
+        if(g.area=="sky" && g.world21.cloudPlatform.active) {
+            local cloud=g.world21.cloudPlatform;
+            screenOamTexture(assets.world21.cloud,cloud.displayX-visualCameraX(g),cloud.y+1,48,8);
+        }
+        foreach(spring in g.world21.springs) if(spring.control>0) {
         local frames=[0,0,1,2,1];local offsets=[0,0,8,16,8];
         worldTexture(g,assets.world21.springs[frames[spring.control]],spring.x,
             spring.y+offsets[spring.control]+1,16,24);
+        }
     }
 }
 
@@ -393,8 +450,8 @@ function runWorld21SelfTest() {
     requireSelfTest(links.len()==2 && links[0].column==63 &&
         links[0].destination==0x2b && links[0].entrancePage==0 &&
         links[1].column==111 && links[1].destination==0x42 &&
-        links[1].streamOffset==23 && !descriptor.branchesPlayable,
-        "2-1 must retain verified links without claiming playable branches");
+        links[1].streamOffset==23 && descriptor.branchesPlayable,
+        "2-1 must retain verified links for both connected bonus branches");
     requireSelfTest(decodeWorld21AreaLinks(ROM_WORLD_2_1_ENEMIES,1).len()==0,
         "area links must only select destinations for their encoded world");
     local selected=decodeWorld21AreaLinks([0x0f,3,0x2e,0x42,0x25,0xff],2);
@@ -654,5 +711,6 @@ function runWorld21SelfTest() {
         over.score==0 && over.coins==0 && !over.player.dead && !over.player.big &&
         over.highScore==12300 && over.checkpointPage==0,
         "Enter on the title must start a clean three-life World 1-1 game and retain only the top score");
+    runWorld21SkySelfTest();
     print("World 2-1 main-route self-test passed.\n");
 }

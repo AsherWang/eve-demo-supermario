@@ -50,14 +50,33 @@ class CapturedBranchMapTest(unittest.TestCase):
         maps = {}
         for name, payload in re.findall(r"ROM_WORLD_2_1_(\w+) <- (\[.*?\]);", data.decode(), re.S):
             maps[name] = json.loads(payload)
-        for name, width in [("SKY", 48), ("UNDERGROUND", 16)]:
+        for name, width in [("SKY", 86), ("UNDERGROUND", 16)]:
             for kind in ["METATILES", "BLOCKS"]:
                 self.assertEqual(len(maps[name+"_"+kind]), width)
                 self.assertTrue(all(len(column)==13 for column in maps[name+"_"+kind]))
+        sky=maps["SKY_METATILES"]
+        self.assertEqual(sum(column.count(0xc2) for column in sky),41)
+        self.assertEqual(sky[61][11],0x88)
+        self.assertEqual(sky[62][11],0)
         underground = maps["UNDERGROUND_METATILES"]
         self.assertEqual(sum(column.count(0xc2) for column in underground), 19)
         self.assertEqual(underground[13][9:11], [0x1c, 0x1f])
         self.assertEqual(underground[15][9:11], [0x1e, 0x21])
+
+
+class SkyAssetTest(unittest.TestCase):
+    def test_platform_and_vine_audio_match_recorded_offline_assets(self):
+        root=Path(__file__).resolve().parents[2]
+        manifest=json.loads((root/'assets/world21/sky-assets-manifest.json').read_text())
+        self.assertEqual((manifest['tile'],manifest['sprite_palette'],manifest['width'],manifest['height']),
+                         (0x75,2,48,8))
+        self.assertEqual(hashlib.sha256((root/'assets/world21/cloud-platform.png').read_bytes()).hexdigest(),
+                         manifest['output_sha256'])
+        for item in manifest['sprite_zero_masks']:
+            self.assertEqual(hashlib.sha256((root/item['path']).read_bytes()).hexdigest(),item['sha256'])
+        audio=json.loads((root/'assets/world21/vine-audio-manifest.json').read_text())['clips']['vine']
+        self.assertEqual((audio['queue_address'],audio['queue_value']),(0xfe,4))
+        self.assertEqual(hashlib.sha256((root/'assets/audio/vine.wav').read_bytes()).hexdigest(),audio['sha256'])
 
 
 class CheckpointMovieTest(unittest.TestCase):

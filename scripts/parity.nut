@@ -207,6 +207,10 @@ function parityStateJson(g, frame) {
         }
     } else if (g.state == "deathEntrance") {
         engineSubroutine = 7;
+    } else if (g.state == "skyEntrance") {
+        engineSubroutine = 7;
+    } else if (g.state == "playing" && "vineAuto" in p && p.vineAuto) {
+        engineSubroutine = 1;
     } else if (g.state == "pipeDown") {
         engineSubroutine = 3;
     } else if (g.state == "pipeSide") {
@@ -215,7 +219,8 @@ function parityStateJson(g, frame) {
         engineSubroutine = 0;
         if (g.areaReloadFrames <= 1) {
             operModeTask = 0;
-            engineSubroutine = g.areaReloadTarget == "main" ? 2 : 3;
+            engineSubroutine = g.areaReloadTarget=="sky"?1:
+                (g.area=="sky"?8:(g.areaReloadTarget == "main" ? 2 : 3));
         } else if (g.areaReloadFrames < 24) {
             operModeTask = 1;
         } else if (g.areaReloadFrames == 24) {
@@ -239,7 +244,11 @@ function parityStateJson(g, frame) {
         engineSubroutine = 4;
     }
     local playerStateRaw = 0;
-    if (g.state == "areaEntrance") {
+    if(g.state=="areaReload" && g.area=="sky" && g.areaReloadFrames<=1) {
+        playerStateRaw=2;
+    } else if ("vineClimbing" in p && p.vineClimbing) {
+        playerStateRaw = 3;
+    } else if (g.state == "areaEntrance") {
         playerStateRaw = g.areaEntranceFrames == 0 ? 0 : 2;
     } else if (g.state == "areaExitEntrance") {
         playerStateRaw = 0;
