@@ -5,8 +5,7 @@ function startWorld1Stage(g, stage, newLife=false) {
 }
 
 function startLevel(g, world, stage, newLife=false) {
-    if((world!=1 || stage<1 || stage>4) && !(world==2 && stage==1))
-        throw "Unsupported world/stage";
+    local definition=getLevelData(world,stage);
     local score=g.score, coins=g.coins, lives=g.lives, input=g.input;
     local frameCounter=g.nesFrameCounter;
     local big=!newLife && g.player.big, fire=!newLife && g.player.fire;
@@ -16,14 +15,8 @@ function startLevel(g, world, stage, newLife=false) {
     g.coins=coins;g.queuedCoins=coins;g.displayCoins=coins;
     g.lives=lives;g.input=input;
     g.player.big=big;g.player.fire=fire;g.player.height=big?32.0:16.0;
-    if(world==2) {g.nesFrameCounter=frameCounter;startWorld21(g);}
-    else if(stage==1) {
-        resetPlayerForArea(g,40,176);
-        g.soundEvents.append("resume_music");
-    } else if(stage==2) startWorld12(g);
-    else if(stage==3) startWorld13(g);
-    else if(stage==4) startWorld14(g);
-    else throw "World 1 stage must be in 1..4";
+    if(world==2) g.nesFrameCounter=frameCounter;
+    definition.load(g);
 }
 
 function updateWorld1StageDeath(g) {
