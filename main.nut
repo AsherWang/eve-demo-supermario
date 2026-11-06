@@ -17,6 +17,7 @@ dofile("scripts/generated/world12_map.nut");
 dofile("scripts/generated/world12_bonus_map.nut");
 dofile("scripts/generated/parity_movie.nut");
 dofile("scripts/player.nut");
+dofile("scripts/level_state.nut");
 dofile("scripts/level.nut");
 dofile("scripts/audio.nut");
 dofile("scripts/simulation.nut");
@@ -48,6 +49,7 @@ eve_init = function() {
     loadTitleAssets();
     loadAudio();
     if (!("startupSelfTests" in config) || config.startupSelfTests || parityIsEnabled()) {
+        runAreaStateSelfTest();
         runSimulationSelfTest();
         runWorld12SelfTest();
         runWorld13SelfTest();

@@ -303,17 +303,6 @@ function decodeUndergroundBonusRoom(g) {
         setTile(g, 15, row, TILE_PIPE_SHAFT_LEFT);
 }
 
-function clearAreaObjects(g) {
-    g.tiles = array(LEVEL_WIDTH * LEVEL_HEIGHT, TILE_EMPTY);
-    g.goombas = [];
-    g.powerups = [];
-    g.fireballs = [];
-    g.brickDebris = [];
-    g.levelCoins = [];
-    g.brickCoinTimer = 0.0;
-    g.brickCoinStarted = false;
-}
-
 function buildLevel(g) {
     g.area = "main";
     g.areaWidth = LEVEL_WIDTH;
