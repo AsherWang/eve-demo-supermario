@@ -79,4 +79,3 @@ function createPlayer() {
         deathFreezeFrames = 0
     };
 }
-
