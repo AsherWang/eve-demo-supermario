@@ -401,7 +401,9 @@ function updateWorld21DeathReload(g) {
         // InitializeArea restores ScreenLeft from the halfway page before
         // the lives screen finishes, even though rendering stays disabled.
         g.cameraX=page*256.0;g.displayCameraX=g.cameraX;
-        g.soundEvents.clear();g.state="deathReload";
+        g.world21.hudTimeHidden <- true;
+        g.soundEvents.clear();g.soundEvents.append("silence_music");
+        parityRecordEvent(g,"music","silence");g.state="deathReload";
         g.player.x=0;g.player.previousX=0;g.player.y=16;g.player.previousY=16;
         g.player.movingDir=0;
         g.nesFrameCounter=0;

@@ -31,6 +31,8 @@ or endorsed by Nintendo.
 - Development/parity startup regression suite covering layout, objects, movement and state changes
 - World 1-2 underground map and coin room from the original ROM parser's metatiles
 - World 1-2 entrance, pipe return, surface exit, lifts, piranha plants and roof route
+- Playable World 1-3 and World 1-4, including stage transitions and the castle ending
+- World 2-1 prototype with underground coins, climbable vines and a moving-cloud sky branch
 
 World 1-2 implementation and its current comparison coverage are documented in
 [`docs/WORLD_1_2_PLAN.md`](docs/WORLD_1_2_PLAN.md). Warp Zone destinations beyond
@@ -53,6 +55,8 @@ Whole-level acceptance evidence for all 32 stages is tracked using
 - Reset (or restart after Game Over): R
 - Start a new single-player game from the returned title screen: Enter (or R)
 - Start World 1-2 at its entrance: F2 (or finish World 1-1)
+- Start World 1-3 / World 1-4: F3 / F4
+- Start the World 2-1 development prototype: F5
 
 For development, set `startLevel = 2` in `config.nut`; `startArea` accepts
 `intro`, `underground`, `bonus`, or `exit` to inspect that World 1-2 area.
@@ -162,8 +166,10 @@ score, coins, lives and powers. Its column-103 pipe now enters the nineteen-coin
 underground room and returns at page seven. A checkpoint-origin 900-frame
 enter/collect/return replay passes every captured image, state, semantic event,
 modeled APU write and modeled PCM comparison. This is branch evidence, not a
-normal-entrance whole-level acceptance. The vine grows; climbing into the cloud
-area is pending. After World 2-1 Game Over, the source build returns
+normal-entrance whole-level acceptance. The vine/sky round trip is also connected:
+a checkpoint-origin 2400-frame replay passes every captured image, selected
+state field, event and modeled audio comparison. After World 2-1 Game Over,
+the source build returns
 to its original-art single-player title; Enter starts a fresh World 1-1 game.
 The idle demo, two-player selection and A+Start continue are pending.
 World 2-2 is not implemented. These features are not

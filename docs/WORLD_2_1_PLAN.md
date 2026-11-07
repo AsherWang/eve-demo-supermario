@@ -497,3 +497,39 @@ agreement are retained in `local-parity/world21-map-final`.
 - 共享代码复验：`sky-final-underground/reports` 的地下 900 帧选定状态、900 张全帧画面、事件和 5407 次模型 APU 写入均通过，模型写入与已验证地下 PCM 的版本完全相同；`sky-final-main-regression/reports` 的 3116 帧死亡/标题返回/新游戏状态及 91 张抽样截图通过。
 - 十组模拟回归、六项分支/资源 Python 测试、三项既有 Python 测试及原生混音单元测试通过。构建包 `dist/super-mario-world21-sky-verified-win64/SuperMario.exe`；`sky-cloud-all-frames-v4/package-startup.json` 的标题、大小图标、首帧显示及正常关闭检查通过。
 - 所有证据目录均相对 `local-parity/world21-runtime`。本节完成天空分支的检查点起点验证，下一项为正常入口成功整关路线；2-1 仍未登记为整关严格验收通过。版本保持 0.0.7，未发布新 release。
+
+
+### 2026-11-07：长按踩踏、敌人 OAM 与死亡重载收敛
+
+- 长按 A 的跳跃到达顶点后永久切换为下落重力；随后踩踏改变垂直速度时不再错误恢复起跳重力。乌龟 40 帧 ROM 回弹自检同时覆盖松开和持续按住 A。
+- 2-1 敌人互撞使用整数碰撞边界及龟壳原始高度；被踩栗宝宝失去支撑后继续下落，保留原状态字节和对象槽小数位置。绿龟转向、动画、龟壳绘制位置及屏幕边缘裁切采用 OAM 分块素材。
+- OAM 提取器只采集实际龟壳帧，排除 `green-shell-*-inspect.png` 检查图；生成结果重复执行字节一致。新增 36 张运行时精灵切片，未纳入检查图的 192 张冗余切片。
+- 死亡重载第 3 帧清理区域音乐队列并实际发出静音，同时隐藏时间 HUD。显示流程按 ScreenRoutines、ResetSpritesAndScreenTimer 和 NMI/OAM 交接分开处理旧场景、天空色清屏、黑屏、续命页及重新入场；续命页末帧提前清除角色精灵，重新入场首帧隐藏角色。
+- 新增 `world-2-1-held-jump-stomp-probe.json` 与 `world-2-1-held-jump-stomp-probe-all-frames.json`。正常入口起点、1601 帧固定输入，覆盖长按踩踏、敌人落下及两次死亡重生；这是一条诊断，未成功通关。
+- 地下检查点分支 900 帧、天空检查点分支 2400 帧再次通过选定状态、全部零容差画面、事件、模型 APU、模型 PCM 和产物契约检查。证据：`local-parity/current-validation-20261107/{underground-all-frames,sky-cloud-all-frames}/reports`。这轮分支回放先于随后仅针对死亡画面的修正，未扩大为任意路径或设备音频验证。
+- 旧通关候选的 3210 帧模拟诊断与最新参考解码器对照后，选定玩家/镜头/进度字段一致；原版与宿主均在 936、1884、2440 帧死亡。剩余字段差异从 `enemy0.x` 第 637 帧（583 对 582）和 `powerup.state_raw` / `powerup.y` 第 1434 帧开始；没有因参考生命下溢解码错误继续报告 256 命。证据：`local-parity/current-validation-20261107/route-candidate-simulation/reports`，它没有渲染或音频验收。
+- 本机根目录直接回放的热重载扫描耗时约 24 秒，回放未在默认超时内完成；日志保留在 `current-validation-20261107/held-jump-stomp-all-frames/actual`。后续使用隔离源码副本，仅关闭热重载，保留 parity 强制启动自检；实际窗口回放串行执行。另保留 `current-validation-20261107/main-route/actual-isolated` 中本轮中间版本的绘制参数类型错误；最终版将颜色零值改为浮点数后重新验证。
+
+最终踩踏诊断：1601 帧选定状态、28 项语义事件、8804 次模型 APU 写入、模型 PCM 和产物契约通过；全帧画面由本轮修正前的 30 帧失败降至 10 帧，零缺帧，阈值仍为零。剩余帧为 354 / 375 / 376 / 379 / 473 / 474 / 1153 / 1154 / 1588 / 1589，涉及转向、死亡瞬间的 OAM/玩家图像及起跳显示缓冲，仍保留失败。新录像统一为 Git 规定的 LF，按提交文件哈希重新采集参考和预览包实际窗口；两侧各 1601 张重采 PNG 与换行统一前逐文件相同。最终报告：`local-parity/committed-validation-20261107/reports/world-2-1-held-jump-stomp-probe-all-frames`。
+
+预览包：`dist/super-mario-world21-stomp-preview-20261107-win64/SuperMario.exe`。原生构建/混音测试及首帧显示、窗口标题、大小图标、正常关闭检查通过，启动报告在 `local-parity/committed-validation-20261107/package-startup.json`。最终窗口回放首轮 Vulkan 初始化失败保留在该目录的 `actual/world-2-1-held-jump-stomp-probe-all-frames-startup-failure`；重试仅对该进程禁用隐式 Vulkan 层，未修改系统设置。
+
+快速及共享代码回归：10 组模拟回归、23 项 Python 测试和原生混音 CTest 通过；World 1 七条既有 ROM 回放共 4260 帧状态、各自指定的采样画面、事件、APU、PCM 和产物门禁全部通过。前六条报告在 `local-parity/final-validation-20261107/w1`，高旗杆重试报告在 `local-parity/verified-validation-20261107/w1/world-1-1-high-flag`；首轮 Vulkan 初始化失败日志保留在前一目录。
+
+本轮补跑主线诊断的全帧及音频门禁：3116 帧选定状态通过，3116 张画面中 58 张失败；事件缺少第 2649 帧标题初始化静音，模型 APU 从第 2647 帧开始不一致。虽然 PCM 文件相同，重放清单存在 467 次地址不匹配和 942 次缺少参考写入，产物门禁正确失败，不能将 PCM 一致当作模型音频通过。证据：`local-parity/final-validation-20261107/main-route/reports`。它补充了旧 91 张抽样截图和状态记录，不能据旧记录推断全帧/音频通过。
+
+后续顺序：先收敛剩余敌人/玩家显示缓冲差异、正常入口敌人 X 和道具出现/运动时序，以及标题静音事件和 APU 模型，再建立真正成功的正常入口路线，补齐 2-2 及跨关衔接。仍不登记 2-1 为整关完成，发布版本保持 0.0.7。
+
+重建任一用例时，可以先构建一个隔离 Windows 包，再分别生成参考和实际产物；启用 parity 会强制运行启动自检，即使包配置关闭常规启动自检。以下命令生成新的参考，不依赖本机旧报告：
+
+```powershell
+./tools/package_windows.ps1 -Output dist/parity-check
+$case = 'world-2-1-held-jump-stomp-probe-all-frames'
+$movie = "tests/parity/movies/$case.json"
+$rom = 'roms/Super Mario Bros. (World).nes'
+python tools/parity/run_reference.py --rom $rom --movie $movie --output "local-parity/recheck/reference/$case"
+python tools/parity/run_actual.py --movie $movie --project dist/parity-check --timeout 600 --output "local-parity/recheck/actual/$case"
+python tools/parity/run_case.py --rom $rom --movie $movie --artifacts local-parity/recheck --skip-runs
+```
+
+`run_case.py` 会保留失败门禁；上述踩踏诊断存在已知画面差异，不能预期整体退出码为零。模型音频仍由宿主事件/状态生成寄存器值，PCM 使用原版周期时间表及 Mesen 2A03，不代表实际扬声器输出逐样本一致。

@@ -1209,9 +1209,9 @@ function updatePlayer(g, dt) {
         }
     } else {
         p.grounded = false;
-        // Once A is released while rising, Player_Active_Gravity switches to
-        // the fall value and a later mid-air re-press cannot restore it.
-        if (p.nesYSpeed < 0 && !g.input.jumpDown)
+        // Player_Active_Gravity switches permanently to falling on release
+        // or at the apex. A stomp changes speed but must retain that gravity.
+        if (p.nesYSpeed >= 0 || !g.input.jumpDown)
             p.jumpGravityActive = false;
         local deltaY = nesVerticalDelta(p, p.jumpGravityActive);
         p.vy = deltaY / dt;
@@ -1980,6 +1980,15 @@ function updateNormalEnemyCollisions(g) {
             // origin+13 inclusive (11 pixels), not the full sprite width.
             local touching = overlaps(first.x + 3.0, first.y, 11.0, first.height,
                                       second.x + 3.0, second.y, 11.0, second.height);
+            if(isWorld21(g)) {
+                local firstKoopa=first.kind=="koopa",secondKoopa=second.kind=="koopa";
+                local firstShell=firstKoopa && (first.state=="shell" || first.state=="shellMoving");
+                local secondShell=secondKoopa && (second.state=="shell" || second.state=="shellMoving");
+                touching=overlaps(floor(first.x)+(firstKoopa?2:3),
+                    floor(first.y)-(firstShell?10:0)+(firstKoopa?8:4),firstKoopa?13:11,firstKoopa?25:7,
+                    floor(second.x)+(secondKoopa?2:3),
+                    floor(second.y)-(secondShell?10:0)+(secondKoopa?8:4),secondKoopa?13:11,secondKoopa?25:7);
+            }
             if (!touching) {
                 first.enemyCollisionMask = first.enemyCollisionMask & ~firstBit;
                 second.enemyCollisionMask = second.enemyCollisionMask & ~secondBit;
@@ -2051,6 +2060,23 @@ function updateGoombas(g, dt) {
                     e.alive = false;
                     releaseEnemySlot(e);
                 }
+            }
+            if(isWorld21(g) && e.alive) {
+                local row=floor((e.y+e.height)/16).tointeger();
+                local col=floor((e.x+8)/16).tointeger();
+                if(!("defeatedMotionRaw" in e)) e.defeatedMotionRaw <- 4;
+                // EnemyBGCollision maps state $04 to $02 without a floor.
+                // The flattened graphic persists while the enemy falls.
+                if(e.defeatedMotionRaw==4 && !isSolidAt(g,col,row)) e.defeatedMotionRaw=2;
+                if(e.defeatedMotionRaw==2) {
+                    local oldX=e.x;e.state="falling";moveEnemyBody(g,e,dt);
+                    if(e.state=="walking") {
+                        e.x=oldX;e.defeatedMotionRaw=3;e.intervalTimer=0x10;
+                    }
+                    e.state="defeated";
+                    if(e.slot>=0) g.world21.slotXFractions[e.slot]=e.x-floor(e.x);
+                }
+                if(e.x<projectedCameraX-73) {e.alive=false;releaseEnemySlot(e);}
             }
             continue;
         }

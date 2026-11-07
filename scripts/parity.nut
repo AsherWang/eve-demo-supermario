@@ -136,7 +136,8 @@ function parityStateJson(g, frame) {
             ",\"id\":" + (e.kind == "goomba" ? 6 : 0) +
             ",\"x_speed_raw\":" + floor(e.vx / NES_FRAME_RATE * 16.0) +
             ",\"state_raw\":" + (e.state == "walking" ? 0 :
-                (e.kind == "goomba" && e.state == "defeated" ? 4 : 1)) +
+                (e.kind == "goomba" && e.state == "defeated" ?
+                    (("defeatedMotionRaw" in e)?e.defeatedMotionRaw:4) : 1)) +
             ",\"state\":\"" + e.state + "\"}";
     }
     local enemiesJson = "[";

@@ -744,7 +744,7 @@ function drawEnemy(g, e) {
     // offscreen region (EnemyOffscrBitsMasked bit 2).  Letting the host clip
     // the corrected 16px texture would leak a one-pixel sliver that the NES
     // OAM writer has already hidden.
-    if (e.x < g.cameraX && g.level!=3 && !(isWorld21(g) && e.kind=="goomba")) return;
+    if (e.x < g.cameraX && g.level!=3 && !isWorld21(g)) return;
     local visualState = e.displayState;
     local levelTexture=g.level==3?world13EnemyTexture(g,e,visualState):null;
     local texture = null;
@@ -772,12 +772,13 @@ function drawEnemy(g, e) {
     } else if (e.kind == "koopa") {
         local frame = floor(g.simTime * 7.0).tointeger() % 2;
         // TimerControl suppresses EnemyGfxHandler's alternate CHR frame.
-        if(isWorld21(g) && g.player.dead) frame=0;
-        texture = e.vx < 0.0 ? assets.enemies.koopaLeft[frame] :
+        if(isWorld21(g)) frame=g.player.dead?0:((((g.nesFrameCounter+254)&8)==0)?1:0);
+        local facing=isWorld21(g)?e.displayFacing:(e.vx<0?-1:1);
+        texture = facing < 0 ? assets.enemies.koopaLeft[frame] :
                                assets.enemies.koopaRight[frame];
         if(levelTexture!=null) texture=levelTexture;
         if(isWorld21(g) && "greenJump" in e && e.greenJump)
-            texture=e.vx<0?assets.world21.wingsLeft[frame]:assets.world21.wingsRight[frame];
+            texture=facing<0?assets.world21.wingsLeft[frame]:assets.world21.wingsRight[frame];
     } else {
         // EnemyGfxHandler sees the counter from the gameplay pass that built
         // the visible OAM buffer (two counts behind this render-side value).
@@ -786,7 +787,7 @@ function drawEnemy(g, e) {
         // Goombas animate by XOR-flipping their base left-facing attributes
         // when FrameCounter bit 3 is clear; the CHR image itself is unchanged.
         // The two extracted textures are those two horizontal orientations.
-        local frame = g.goombaVisualFrame;
+        local frame = isWorld21(g) && g.player.dead?(e.vx<0?1:0):g.goombaVisualFrame;
         if (!g.player.dead) {
             local counterBitSet = (gfxCounter & 0x08) != 0;
             local movingLeft = e.vx < 0.0;
@@ -824,7 +825,11 @@ function drawEnemy(g, e) {
         drawX=g.player.dead?e.x:e.displayX;drawY=e.displayY+1.0;
     }
     if(isWorld21(g) && e.kind=="goomba" &&
-        (visualState=="walking" || visualState=="falling")) drawX=e.displayX;
+        (visualState=="walking" || visualState=="falling" ||
+         (visualState=="defeated" && "defeatedMotionRaw" in e && e.defeatedMotionRaw!=4))) drawX=e.displayX;
+    if(isWorld21(g) && e.kind=="koopa" && (visualState=="shell" || visualState=="shellMoving")) {
+        drawX=e.displayX;drawY=e.displayY-10.0+3.0;
+    }
     if (g.level == 3) {
         if (e.kind == "koopa") {
             // RelativeEnemyPosition uses the pre-movement X and visible OAM
@@ -837,7 +842,7 @@ function drawEnemy(g, e) {
         }
         if(visualState=="walking" || visualState=="falling") drawX=e.displayX;
     }
-    if(g.level==3 || (isWorld21(g) && e.kind=="goomba"))
+    if(g.level==3 || isWorld21(g))
         screenOamTexture(texture,floor(drawX)-visualCameraX(g),floor(drawY),16.0,height,
             // Reconstruct the integer pre-movement coordinate from the
             // host's half-pixel walking phase before computing edge bits.
@@ -1059,7 +1064,10 @@ function drawIntermediateLives(g) {
 
     drawHudGlyphs([0x20, 0x18, 0x1B, 0x15, 0x0D, 0x24,
                   g.world, 0x28, g.level], 88.0, 80.0);
-    if (!(g.state == "nextStageLoad" && g.stageLoadFrames >= 148))
+    local spritesCleared=g.state == "nextStageLoad" && g.stageLoadFrames >= 148;
+    if(isWorld21(g) && g.state=="deathReload" && "lifeScreenEnd" in g.world21)
+        spritesCleared=g.deathReloadFrames>=g.world21.lifeScreenEnd+1;
+    if (!spritesCleared)
         screenTexture(assets.mario.standRight, 96.0, 89.0, 16.0, 32.0);
     screenTexture(assets.hudFont[0x29], 120.0, 112.0, 8.0, 8.0);
     screenTexture(assets.hudFont[g.lives], 144.0, 112.0, 8.0, 8.0);
@@ -1152,8 +1160,20 @@ function renderGame(g) {
         return;
     }
     if (g.state == "deathReload") {
-        if(isWorld21(g) && g.deathReloadFrames==0 && g.lives==1) {
+        if(isWorld21(g) && g.deathReloadFrames<=1) {
             g.state="playing";renderGame(g);g.state="deathReload";return;
+        }
+        if(isWorld21(g)) {
+            // ScreenRoutines and the NMI display/OAM handoff have separate
+            // latency: retain the old scene, blank to its palette, show the
+            // lives nametable, then restore the area's palette before sprites.
+            local frame=g.deathReloadFrames;
+            local end=("lifeScreenEnd" in g.world21)?g.world21.lifeScreenEnd:149;
+            if(frame>=10 && frame<=end+1) drawIntermediateLives(g);
+            else if(frame<=4 || frame>=end+15)
+                screenRect(0.0,0.0,LOGICAL_WIDTH,LOGICAL_HEIGHT,146.0/255.0,144.0/255.0,1.0);
+            else screenRect(0.0,0.0,LOGICAL_WIDTH,LOGICAL_HEIGHT,0.0,0.0,0.0);
+            return;
         }
         local areaRenderStart=isWorld21(g) && "lifeScreenEnd" in g.world21?
             g.world21.lifeScreenEnd+1:149;
@@ -1204,7 +1224,7 @@ function renderGame(g) {
         (g.level == 2 && g.state == "world12Pipe");
     if(isWorld21(g) && "displayBehindBackground" in g.player)
         playerBehindBackground=g.player.displayBehindBackground;
-    local playerHidden = g.state == "areaReload";
+    local playerHidden = g.state == "areaReload" || (isWorld21(g) && g.state=="deathEntrance");
     if (playerBehindBackground && !playerHidden) drawPlayer(g);
     renderOffsetY=g.displayBackgroundYOffset;
     drawTiles(g);

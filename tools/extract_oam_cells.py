@@ -14,6 +14,8 @@ def main():
     sources += [ROOT / 'assets/world21/cloud-platform.png']
     sources += [ROOT / 'assets/scenery/flagpole-flag.png']
     sources += sorted((ROOT / 'assets/enemies').glob('goomba*.png'))
+    sources += sorted((ROOT / 'assets/enemies').glob('green-koopa-*-*.png'))
+    sources += sorted((ROOT / 'assets/enemies').glob('green-shell-[0-9].png'))
     entries = []
     for path in sources:
         sprite = Image.open(path).convert('RGBA')
