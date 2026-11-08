@@ -767,6 +767,7 @@ function handlePlayerBackgroundSides(g, p) {
                 if(side==1 && tx==g.sidePipeX && p.grounded && g.input.right &&
                    ty>=g.world12SidePipeBottomRow-1 &&
                    ty<=g.world12SidePipeBottomRow) return;
+                if(world21AnimatedSpringTile(g,tx,ty)) continue;
                 if(isSolidAt(g,tx,ty)) {
                     impedePlayerMove(g,p,side==0?2:1);
                     return;
@@ -1021,7 +1022,9 @@ function nesHorizontalDelta(p) {
 }
 
 function beginNesJump(p) {
-    local speed = abs(p.nesXSpeed);
+    // PlayerPhysicsSub reads the previous movement pass's cached magnitude.
+    // A wall collision may have cleared X speed since that sample was taken.
+    local speed = p.nesXSpeedAbsolute;
     local index = 0;
     if (speed >= 0x09) index = 1;
     if (speed >= 0x10) index = 2;
@@ -1151,7 +1154,9 @@ function updatePlayer(g, dt) {
     if (g.input.left) direction -= 1;
     if (g.input.right) direction += 1;
     if (p.crouching) direction = 0;
-    if (g.input.jumpQueued && p.grounded && !p.crouching) {
+    local springActive=world21SpringAnimating(g);
+    local springReleased=("springReleasePending" in p) && p.springReleasePending;
+    if (g.input.jumpQueued && p.grounded && !p.crouching && !springActive && !springReleased) {
         beginNesJump(p);
         emitSound(g, "jump");
     }
@@ -1173,7 +1178,7 @@ function updatePlayer(g, dt) {
     // the original ground-animation state update in its correct ordering.
     updateNesHorizontalPhysics(g, p, direction);
 
-    local deltaX = nesHorizontalDelta(p);
+    local deltaX = springActive?0:nesHorizontalDelta(p);
     // PlayerCtrlRoutine stores Player_MovingDir from the post-friction speed
     // immediately after MovePlayerHorizontally, before ScrollHandler and
     // player/background collision can clear Player_X_Speed.  Capture the sign
@@ -1185,7 +1190,7 @@ function updatePlayer(g, dt) {
     // A horizontal moving platform writes Platform_X_Scroll after this
     // frame's ScrollHandler, so its pixel displacement is added to the next
     // frame's Player_X_Scroll.
-    p.nesXScroll = deltaX + pendingPlatformXScroll;
+    p.nesXScroll = (springActive?world21SpringControl(g):deltaX) + pendingPlatformXScroll;
     p.vx = deltaX / dt;
     movePlayerX(g, p, dt);
     if (p.vx == 0.0 && deltaX != 0) {
@@ -1198,7 +1203,9 @@ function updatePlayer(g, dt) {
     if (movementDirection != 0) p.movingDir = movementDirection;
     p.vx = p.nesXSpeed * 3.75;
 
-    if (p.grounded) {
+    if(springActive) {
+        p.vy=0;
+    } else if (p.grounded) {
         // OnGroundStateSub never integrates vertically.  Background collision
         // may change Player_State to falling at the end of the frame when both
         // ROM foot samples lose support; gravity begins on the next frame.
@@ -1239,6 +1246,7 @@ function updatePlayer(g, dt) {
         p.x = g.cameraX;
         if (p.vx < 0.0) p.vx = 0.0;
     }
+    if(springReleased) {p.grounded=false;p.entranceFalling=true;p.springReleasePending=false;}
     handlePlayerBackgroundSides(g, p);
 }
 
@@ -1344,6 +1352,28 @@ function bumpPowerUpAbove(g, item, tx, ty) {
     return true;
 }
 
+function moveWorld21Star(g,item,dt) {
+    local positionSum=item.nesYDummy+item.nesYMoveForce;
+    item.nesYDummy=positionSum&255;
+    item.romY+=item.nesYSpeed+floor(positionSum/256).tointeger();
+    local forceSum=item.nesYMoveForce+0x1c;
+    item.nesYMoveForce=forceSum&255;
+    item.nesYSpeed+=floor(forceSum/256).tointeger();
+    if(item.nesYSpeed>=3 && item.nesYMoveForce>=0x80) {
+        item.nesYSpeed=3;item.nesYMoveForce=0;
+    }
+    item.x+=item.vx*dt;
+    local col=floor((item.x+8)/16).tointeger();
+    local row=floor((item.romY+24)/16).tointeger();
+    if(((item.nesYSpeed+2)&255)>=3 && isSolidAt(g,col,row)) {
+        item.romY=((floor(item.romY).tointeger()&0xf0)|8).tofloat();
+        item.nesYSpeed=-3;item.nesYMoveForce=0;
+    }
+    local sideCol=floor((item.x+(item.vx>0?16:0))/16).tointeger();
+    if(isSolidAt(g,sideCol,floor((item.romY+20)/16).tointeger())) item.vx=-item.vx;
+    item.y=item.romY+POWERUP_DRAW_Y_OFFSET;
+}
+
 function moveWorld21Mushroom(g,item,dt) {
     // Power-ups move before background collision, unlike normal enemies.
     if ((item.motionRaw & 0x40) != 0) {
@@ -1398,6 +1428,10 @@ function movePowerUp(g, item, dt) {
 
     if(isWorld21(g) && (item.kind=="mushroom" || item.kind=="oneup")) {
         moveWorld21Mushroom(g,item,dt);
+        return;
+    }
+    if(isWorld21(g) && item.kind=="star") {
+        moveWorld21Star(g,item,dt);
         return;
     }
     // Fire flowers stay on their block after emerging. Mushrooms and one-ups
@@ -1464,6 +1498,7 @@ function updatePowerUps(g, dt) {
         item.displayVisible = item.visible;
         if (!item.active) continue;
         movePowerUp(g, item, dt);
+        if(isWorld21(g)) g.world21.slot5YDummy <- item.nesYDummy;
         if(isWorld21(g) && item.visible && item.x<g.cameraX-72) {
             item.active=false;
             continue;
@@ -2412,6 +2447,9 @@ function updateCamera(g) {
     local cameraBeforeScroll=g.cameraX;
     g.cameraX += scrollAmount;
     local maximum = g.areaWidth * TILE_SIZE - LOGICAL_WIDTH;
+    // Main-area scrolling ends through ScrollLock/castle collision, not the
+    // finite metatile extraction width; the castle walk can expose its tail.
+    if(isWorld21(g) && g.area=="main") maximum=g.areaWidth*TILE_SIZE;
     // Sky end command at column 84 is consumed by the parser 22 columns ahead.
     if(isWorld21(g) && g.area=="sky") maximum=62*TILE_SIZE;
     g.cameraX = clampValue(g.cameraX, 0.0, maximum.tofloat());
@@ -2455,6 +2493,13 @@ function updateVramAreaParserScheduler(g) {
         g.vramBufferAddrCtrl = 6;
 }
 
+function world21FlagStep(g) {
+    local dummy="slot5YDummy" in g.world21?g.world21.slot5YDummy:0;
+    local sum=dummy+0xff;
+    g.world21.slot5YDummy <- sum&255;
+    return 1+(sum>=256?1:0);
+}
+
 function beginFlagSequence(g) {
     local p = g.player;
     // HandleClimbing compares Player_Y_Position against FlagpoleYPosData.
@@ -2483,7 +2528,7 @@ function beginFlagSequence(g) {
         // The collision-frame FlagpoleRoutine performs the first fixed-point
         // flag step. Its floatey score moves two pixels in the opposite
         // direction and both values enter the ordinary OAM staging pipeline.
-        g.flagY += 1.0;
+        g.flagY += isWorld21(g)?world21FlagStep(g):1.0;
         g.flagScoreY -= 2.0;
     }
     if (lowGrab) {
@@ -2626,9 +2671,9 @@ function updateCourseClear(g, dt) {
         }
         local flagWasAtBottom = g.flagY >= 170.0;
         if (!flagWasAtBottom) {
-            // The flag object carries speed $18 (1.5 fixed-point pixels),
-            // producing the observed two-pixel integer cadence in this path.
-            g.flagY += 2.0;
+            // FlagpoleRoutine adds $ff to the slot's Y dummy, then one
+            // plus carry. Keep the established World 1 cadence unchanged.
+            g.flagY += isWorld21(g)?world21FlagStep(g):2.0;
             g.flagScoreY -= 2.0;
             if (g.flagY > 171.0) g.flagY = 171.0;
             if (g.flagScoreY < 52.0) g.flagScoreY = 52.0;

@@ -109,7 +109,8 @@ function startWorld21(g) {
         slotXFractions=[0.0,0.0,0.0,0.0,0.0]};
     if("world21" in g) g.world21=state; else g.world21 <- state;
     local mapping={};
-    foreach(pair in [[0x51,TILE_BRICK],[0x52,TILE_BRICK],[0x54,TILE_GROUND],
+    foreach(pair in [[0x24,TILE_EMPTY],[0x25,TILE_EMPTY],
+        [0x51,TILE_BRICK],[0x52,TILE_BRICK],[0x54,TILE_GROUND],
         [0x55,TILE_BRICK_POWERUP],[0x56,TILE_BRICK_VINE],[0x57,TILE_BRICK_STAR],
         [0x58,TILE_BRICK_COIN],[0x59,TILE_BRICK_ONEUP],[0x5f,TILE_HIDDEN_COIN],
         [0x60,TILE_HIDDEN_ONEUP],[0xc0,TILE_QUESTION],[0xc1,TILE_POWERUP_BLOCK],
@@ -284,9 +285,26 @@ function growWorld21Vine(g,tx,ty) {
     g.bump.active=true;g.bump.tx=tx;g.bump.ty=ty;g.bump.tile=TILE_BRICK_VINE;
     g.bump.time=0.0;g.bump.frame=0;g.bump.powerupPending=false;
     setTile(g,tx,ty,TILE_USED);
+    foreach(item in g.powerups) item.active=false; // Vine setup reuses power-up slot 5.
     g.world21.vines.append({x=tx*16.0,y=ty*16.0,height=0.0,maximum=96});
     emitSound(g,"bump");parityRecordEvent(g,"gameplay","block_hit");
     emitWorld21VineSound(g);
+}
+
+function world21SpringControl(g) {
+    if(!isWorld21(g)) return 0;
+    foreach(spring in g.world21.springs) if(spring.control>0) return spring.control;
+    return 0;
+}
+
+function world21SpringAnimating(g) {return world21SpringControl(g)>0;}
+
+function world21AnimatedSpringTile(g,tx,ty) {
+    if(!isWorld21(g)) return false;
+    foreach(spring in g.world21.springs)
+        if(spring.control>0 && tx==floor(spring.x/16).tointeger() &&
+           (ty==floor(spring.y/16).tointeger() || ty==floor(spring.y/16).tointeger()+1)) return true;
+    return false;
 }
 
 function updateWorld21Actors(g) {
@@ -312,25 +330,25 @@ function updateWorld21Actors(g) {
     updateWorld21CloudPlatform(g);
     local p=g.player;
     foreach(spring in g.world21.springs) {
-        if(spring.control==0) {
-            if(p.grounded && abs(p.y+p.height-spring.y)<1.0 &&
-                p.x+12>spring.x && p.x<spring.x+16) {
-                spring.control=1;spring.timer=3;spring.force=-7;
-            }
-        } else {
-            if(spring.control>=2 && g.input.jumpQueued) spring.force=-12;
-            spring.timer-=1;
-            if(spring.timer<=0) {spring.control+=1;spring.timer=4;}
-            if(spring.control>=5) {
-                spring.control=0;p.grounded=false;p.nesYSpeed=spring.force;
-                p.nesYMoveForce=0;p.nesYDummy=0;p.jumpGravityActive=false;p.fallForce=0x70;
-                p.vy=p.nesYSpeed*NES_FRAME_RATE;emitSound(g,"jump");
-            } else {
-                local offsets=[0,0,8,16,8];
-                p.y=spring.y-p.height+offsets[spring.control];
-                p.grounded=true;p.nesYSpeed=0;p.vy=0.0;
-            }
+        if(p.dead) continue; // TimerControl freezes spring mechanics during death.
+        local started=false;
+        if(spring.control==0 && p.grounded && p.nesYSpeed>=0 &&
+           abs(p.y+p.height-spring.y)<1.0 &&
+           p.x+12>spring.x && p.x<spring.x+16) {
+            spring.control=1;spring.timer=3;spring.force=-7;started=true;
+            p.jumpForce=0x70;
         }
+        if(spring.control==0) continue;
+        if(!started && spring.timer>0) spring.timer-=1;
+        // The ROM moves Mario two pixels on every animation pass, including
+        // the landing pass, before advancing the four-frame phase timer.
+        p.y+=spring.control<=2?2.0:-2.0;
+        if(spring.control>=2 && g.input.jumpQueued) spring.force=-12;
+        if(spring.control==4) {
+            spring.control=0;p.nesYSpeed=spring.force;
+            p.springReleasePending <- true;
+            p.jumpGravityActive=false;p.vy=p.nesYSpeed*NES_FRAME_RATE;
+        } else if(spring.timer==0) {spring.control+=1;spring.timer=4;}
     }
 }
 
@@ -600,6 +618,44 @@ function runWorld21SelfTest() {
     startLevel(reuse,2,1);
     requireSelfTest(reuse.world21.slotXFractions[0]==0.0,
         "area initialization must clear enemy slot movement accumulators");
+    local wallJump=createGame();startLevel(wallJump,2,1);
+    wallJump.player.nesXSpeed=0;wallJump.player.nesXSpeedAbsolute=40;
+    beginNesJump(wallJump.player);
+    requireSelfTest(wallJump.player.nesYSpeed==-5 && wallJump.player.jumpForce==0x28,
+        "a wall-stopped jump must use the preceding cached running magnitude");
+    wallJump.world21.slot5YDummy <- 64;
+    requireSelfTest(world21FlagStep(wallJump)==2 && wallJump.world21.slot5YDummy==63,
+        "flag motion must inherit the slot-5 fractional carry");
+    local starProbe=createGame();startLevel(starProbe,2,1);
+    foreach(i,tile in starProbe.tiles) starProbe.tiles[i]=TILE_EMPTY;
+    spawnPowerUp(starProbe,69,5,"star");local star=starProbe.powerups[0];
+    star.emerging=false;star.visible=true;star.romY=55;star.y=63;
+    movePowerUp(starProbe,star,FIXED_DT);
+    requireSelfTest(star.romY==55 && star.nesYMoveForce==0x1c,
+        "a newly emerged star must consume fractional gravity before changing Y");
+    growWorld21Vine(starProbe,83,5);
+    requireSelfTest(!star.active,"vine allocation must replace the slot-5 power-up");
+    local springProbe=createGame();startLevel(springProbe,2,1);
+    local springActor=springProbe.world21.springs[0],sp=springProbe.player;
+    sp.x=springActor.x;sp.y=springActor.y-sp.height;sp.grounded=true;
+    sp.nesYDummy=64;sp.nesXSpeed=40;
+    updateWorld21Actors(springProbe);
+    requireSelfTest(sp.y==springActor.y-sp.height+2 && springActor.timer==3,
+        "spring landing must move Mario two pixels on the initial pass");
+    sp.dead=true;local frozenSpringY=sp.y;updateWorld21Actors(springProbe);
+    requireSelfTest(sp.y==frozenSpringY && springActor.timer==3,
+        "death must freeze spring compression and its timer");
+    sp.dead=false;
+    local heldX=sp.x,heldFraction=sp.nesXMoveForce;
+    updatePlayer(springProbe,FIXED_DT);
+    requireSelfTest(sp.x==heldX && sp.nesXMoveForce==heldFraction && sp.nesXScroll==1,
+        "spring freeze must retain position/fraction while returning its phase to scroll");
+    for(local tick=0;tick<12;tick+=1) {
+        springProbe.input.jumpQueued=springActor.control==2;
+        updateWorld21Actors(springProbe);
+    }
+    requireSelfTest(sp.springReleasePending && sp.nesYSpeed==-12 && sp.nesYDummy==64,
+        "late A on a compressed spring must boost launch without clearing the Y dummy");
     local landing=createGame();startLevel(landing,2,1);landing.player.x=835;
     local landed=makeEnemyAt(826,12,"koopa");landed.state="falling";
     moveEnemyBody(landing,landed,FIXED_DT);
@@ -698,7 +754,7 @@ function runWorld21SelfTest() {
     local spring=g.world21.springs[0];
     g.player.x=spring.x;g.player.y=spring.y-g.player.height;g.player.grounded=true;
     for(local i=0;i<16;i+=1) updateWorld21Actors(g);
-    requireSelfTest(!g.player.grounded && g.player.nesYSpeed<0,"spring must launch Mario upwards");
+    requireSelfTest(g.player.springReleasePending && g.player.nesYSpeed<0,"spring must launch Mario upwards");
     g.score=12300;g.coins=19;g.lives=3;g.cameraX=1600;
     g.player.big=true;g.player.fire=true;finishPlayerDeath(g);
     for(local i=0;i<166;i+=1) simulateFixed(g,FIXED_DT);
