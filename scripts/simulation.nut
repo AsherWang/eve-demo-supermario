@@ -2409,6 +2409,8 @@ function updateEffects(g, dt) {
     if (g.bump.active) {
         g.bump.time += dt;
         g.bump.frame += 1;
+        // The first block pass queues the background erase in primary VRAM.
+        if(isWorld21(g) && g.bump.frame==1) g.bump.backgroundErasePending <- true;
         if (g.bump.frame > 15) g.bump.active = false;
     }
     updateCoinEffect(g, g.coinEffect, dt);
@@ -3160,6 +3162,8 @@ function simulateFixed(g, dt) {
     // NMI consumes exactly one selected VRAM buffer.  Preserve the selection
     // made by the preceding gameplay pass before preparing this pass's state.
     local secondaryBufferWasSelected = g.vramBufferAddrCtrl == 6;
+    if(isWorld21(g) && !secondaryBufferWasSelected && "backgroundErasePending" in g.bump)
+        g.bump.backgroundErasePending=false;
     g.displayBackgroundYOffset = 0.0;
     if(g.level==3 && !secondaryBufferWasSelected && g.vramPrimaryBytes>=64)
         g.displayBackgroundYOffset=1.0;

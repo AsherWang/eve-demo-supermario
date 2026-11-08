@@ -283,6 +283,7 @@ function beginWorld21Block(g) {
     if(!isWorld21(g)) return;
     local slot="nextBlockSlot" in g.world21?g.world21.nextBlockSlot:0;
     g.bump.slot <- slot;
+    g.bump.backgroundErasePending <- false;
     g.world21.nextBlockSlot <- slot^1;
 }
 
@@ -518,6 +519,21 @@ function runWorld21SelfTest() {
     updateEffects(coinTail,FIXED_DT);
     requireSelfTest(coinTail.archivedCoinEffects.len()==0,
         "an archived coin number must retire after its final OAM handoff");
+    local blockErase=createGame();startLevel(blockErase,2,1);
+    hitBlock(blockErase,69,5);updateEffects(blockErase,FIXED_DT);
+    requireSelfTest(blockErase.bump.frame==1 && blockErase.bump.backgroundErasePending,
+        "the first block pass must queue a primary-buffer background erase");
+    for(local pass=0;pass<2;pass+=1) {
+        blockErase.vramBufferAddrCtrl=6;simulateFixed(blockErase,FIXED_DT);
+        requireSelfTest(blockErase.bump.backgroundErasePending,
+            "secondary-buffer selection must retain a pending block background erase");
+    }
+    blockErase.vramBufferAddrCtrl=0;simulateFixed(blockErase,FIXED_DT);
+    requireSelfTest(!blockErase.bump.backgroundErasePending,
+        "consuming the primary buffer must remove the original block background");
+    blockErase.bump.backgroundErasePending=true;beginWorld21Block(blockErase);
+    requireSelfTest(!blockErase.bump.backgroundErasePending,
+        "a new block object must not inherit a preceding pending background erase");
     local descriptor=g.world21.descriptor,links=descriptor.areaLinks;
     requireSelfTest(links.len()==2 && links[0].column==63 &&
         links[0].destination==0x2b && links[0].entrancePage==0 &&

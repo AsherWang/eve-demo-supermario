@@ -563,6 +563,14 @@ function drawTiles(g) {
                 local offsetY=0.0;
                 if(g.bump.active && g.bump.tx==tx && g.bump.ty==ty)
                     offsetY=world21BlockBumpOffset(g);
+                // Moving block OAM and the underlying background have separate
+                // lifetimes when scrolling defers the primary VRAM erase.
+                if(!vineBump && g.bump.active && g.bump.tx==tx && g.bump.ty==ty &&
+                   g.bump.frame>1 && "backgroundErasePending" in g.bump &&
+                   g.bump.backgroundErasePending) {
+                    local original=world21TileTexture(g,tx,ty,g.bump.tile);
+                    if(original!=null) worldTexture(g,original,tx*16.0,ty*16.0,16,16);
+                }
                 if(texture!=null && !vineBump) worldTexture(g,texture,tx*16.0,ty*16.0+offsetY,16,16);
                 continue;
             }

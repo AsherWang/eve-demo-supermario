@@ -721,3 +721,21 @@ Win64 预览包 `dist/super-mario-world21-coin-tail-preview-20261109-win64/Super
 旧路线完整窗口复验：长按踩踏 1601 帧及主诊断 3116 帧的全状态、全帧图像、事件、APU、PCM、产物六项门禁均通过，报告分别为 `full/held-stomp` 与 `full/main-route`；状态/事件亦与修正前逐字节相同。
 
 顺带优化画面比较器：将 RGB 最大差、绝对误差及差异图着色的逐像素 Python 循环改为 PIL 的精确整数直方图/查找表处理。新增 4 项测试对照旧循环，覆盖各颜色通道、阈值边界、相同图像、固定随机整帧及差异图全部像素。对本轮正常路线重新比较全部 2398 帧，JSON 报告及按默认上限生成的 40 张差异 PNG 与旧算法产物逐字节相同，证据 `comparator-equivalence.json` 与 `comparator-final-recheck`，零容差和门禁语义不变。30 次 256×240 内存统计微基准约快 10.4 倍（旧统计 0.578 s，新比较含哈希 0.055 s）；此基准不含 PNG I/O 和窗口采集，不代表端到端提速，见 `comparator-benchmark.json`。
+
+
+## Block background erase and VRAM scheduling (2026-11-09)
+
+同一条正常入口成功路线保持原有 2398 帧固定按键与零容差，完整画面失败由 807 降至 806、零缺帧。第 553 帧的 7 像素归零，最早剩余差异推迟至第 574 帧（12 像素），逐帧差异像素数均未增加。报告 `full/normal-clear/reports`，前后逐帧证明 `full/normal-clear/image-change-proof.json`。本节证据路径均以 `local-parity/block-erase-fix-20261109` 为根。
+
+根因是弹起砖块的 OAM 图像与原位置的背景擦除被合并处理。原版 RAM 第 551 帧的主 VRAM 缓冲已有 `$214a/$216a` 两组空白图块写入，但地图列解析选择了第二缓冲（地址控制值 6），该背景擦除延后。现让块对象首步排入 `backgroundErasePending`，在 NMI 消费主缓冲时才清除；等待期间，原背景元图块在原位置绘制，移动精灵按原有位移单独绘制。新块对象会重置请求，藤蔓保留自己的显示路径。没有补固定坐标像素或改变原 PNG。
+
+自检覆盖首步排队、连续两次第二缓冲占用后仍保留请求、主缓冲恢复后擦除，以及新对象不继承旧请求。33 项 Python 测试、10 组模拟回归与原生混音 CTest 通过。`probe3` 在同输入 610 帧前缀中比较 227 张指定采样图像，第 553 帧修复且无新增退化；它不替代完整 2398 帧比较。初始 `probe1` 的 Vulkan `VK_INCOMPLETE` 启动失败及 `probe2` 的中间试验保留；早期扩展前缀在 569 帧后缺少延续输入，最终 `prefix610-fixed.json` 已从原始通关输入重新裁切，正式完整比较始终使用未修改的原始 movie。
+
+完整正常路线新旧 `state.jsonl`、`events.jsonl` 逐字节相同。选定状态仍匹配至第 2396 帧；末帧仍缺少 2-2 关卡/加载切换与静音事件，整关门禁保持失败。模型 APU/PCM/产物通过，在状态及事件逐字节一致的守卫下复用上一轮音频并重检，见 `audio-reuse-proof.json`，不是新设备录音。World 2-2 与跨关衔接仍未实现，正式逐关完成登记不变。
+
+后续从第 574 帧开始检查星星颜色轮换：宿主使用固定星星素材，参考 OAM 的调色板属性随帧计数变化；本轮仅记录该线索，没有把它计作已修复。
+
+
+旧路线实际窗口全帧复验：踩踏 1601 帧及主诊断 3116 帧的六项门禁全部通过，零画面差异、零缺帧；新旧状态/事件逐字节相同，模型音频仍按上述守卫复用。主诊断首次窗口启动因 Vulkan `VK_INCOMPLETE` 失败，日志保留在 `full/main-route/actual`；成功采集为 `actual-retry-1`，报告仍在 `full/main-route/reports`。
+
+最终 Win64 预览包：`dist/super-mario-world21-block-erase-preview-20261109-win64/SuperMario.exe`。原生构建/混音 CTest、首帧显示（1562 ms）、标题/图标及正常关闭通过，见 `package-startup.json`；包内脚本逐字节匹配工作区，回放默认禁用，无 ROM/存档。版本仍为 0.0.7，未发布新 release。
