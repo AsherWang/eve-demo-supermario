@@ -180,5 +180,8 @@ The 2026-11-08 source validation closes the known image differences in the
 1601-frame held-jump/stomp diagnostic and the 3116-frame death/title diagnostic:
 both pass every frame and all six gates. Underground/sky branch regressions and
 the sampled title-to-new-game replay also pass. These are diagnostic and branch
-routes; a successful normal-entrance whole-level route and World 2-2 remain
-pending. See the latest [World 2-1 evidence](docs/WORLD_2_1_PLAN.md).
+routes. A new 2398-frame fixed-input normal-entry movie independently clears
+2-1 in the ROM with three lives and reaches 2-2. Remake parity first diverges
+at frame 581 after correcting Koopa landing direction; whole-level acceptance and playable World 2-2 remain pending.
+The older 3210-frame death diagnostic now passes state/audio gates but retains
+242 failed images. See the latest [World 2-1 evidence](docs/WORLD_2_1_PLAN.md).

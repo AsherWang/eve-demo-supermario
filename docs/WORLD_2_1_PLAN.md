@@ -1,6 +1,6 @@
 # World 2-1 implementation plan
 
-Updated 2026-11-02. The main route, 1-4 to 2-1 transition, underground bonus
+Updated 2026-11-08. The main route, 1-4 to 2-1 transition, underground bonus
 and vine/sky bonus are implemented. Checkpoint-origin branch diagnostics cover
 natural entry, automatic entrance, platforms and return to the main route.
 Strict normal-entrance whole-level acceptance remains pending.
@@ -565,3 +565,42 @@ python tools/parity/run_case.py --rom $rom --movie $movie --artifacts local-pari
 最终共享回归：World 1 七条既有回放共 4260 帧状态及各自指定画面、事件、APU、PCM、产物契约全部通过。前五条报告位于 `local-parity/world1-final-20261108`，TAS 与高旗杆重试报告位于 `local-parity/world1-final-retry-20261108`；TAS 首轮 Vulkan 初始化失败保留。没有将这七条回放的采样画面称为全帧检查。
 
 本轮预览包为 `dist/super-mario-world21-parity-preview-20261108-win64/SuperMario.exe`；原生构建/混音 CTest、窗口首帧显示、标题、大小图标、正常关闭检查通过。启动证据为 `local-parity/accepted-parity-20261108/package-startup.json`。源码默认启动 1-1，F5 进入 2-1；这不是新的正式发布版本。
+
+## Normal-entry candidate state follow-up (2026-11-08)
+
+旧 `world-2-1-route-candidate` 本轮已通过全部 3210 帧选定状态字段；没有改输入、放宽容差或改状态解码来隐藏差异。参考状态使用当前解码器重新读取旧 RAM 轨迹，消除旧文件对生命 `$ff` 的历史下溢解释。快速报告：`local-parity/route-fix-20261108/candidate-final/reports`。
+
+- 第 637 帧敌人转向偏差来自逐槽执行顺序：较低槽已经完成移动，较高槽随后用本帧保存的碰撞盒将双方转向。2-1 改为在各对象自己的处理过程中碰撞，低槽保留本次运动；World 1 继续使用原路径。
+- 第 892 帧起新板栗的半像素偏差来自前任乌龟被踩时抹去了水平小数。2-1 保留槽位的独立运动余量，停止的整数坐标仍由导出和绘制取整；槽位复用后接续余量。
+- 蘑菇冒出按全局 `FrameCounter & 3`，不从生成瞬间另起四帧计数。普通蘑菇和 1UP 接入整数位置、重力小数、状态 d6、落地和移动后墙面检测；保留落地位置小数，并在屏幕左侧 72 像素边界外回收。撞砖弹起会初始化整数垂直速度并保留受击状态位。星星与花保留各自运动路径，未据此宣称全部道具严格验收。
+- 增加逐槽相撞、全局生成相位及撞砖蘑菇上升自检。10 组模拟回归与 29 项 Python 测试通过。报告：`local-parity/route-fix-20261108/simulation-bump`。
+
+该候选仍在 936 / 1884 / 2440 帧死亡，不能作为成功通关路线或整关完成证据。输入文件保持 Git 版本原字节；旧参考的 CRLF 哈希另行保留，不覆盖成当前 LF 哈希。
+
+实际窗口重采：按当前 LF 录像文件重新生成参考，连续录像证明全部 3210 帧 RAM 与 APU 写入一致；宿主选定状态、49 项语义事件、18255 次模型 APU 写入、模型 PCM 与产物契约通过。零容差逐帧画面中 242 / 3210 张失败、零缺帧，首帧为 570（29 像素）；大量后续差异位于死亡后的敌人图像，仍保留。报告：`local-parity/route-fix-20261108/runtime-final/route/reports`。首次产物检查缺少新参考的派生语义事件文件，补生成后通过，原检查保留为 `artifact-before-derived-events.json`。没有据状态通过宣称画面或整关通过。
+
+### Successful ROM route and next remake divergence
+
+新增 `tests/parity/movies/world-2-1-normal-clear.json`，2398 帧、67 段固定输入，正常小马里奥入口、无检查点。原版全程三条命，第 1753 帧触旗，第 2397 帧 StageNumber 变为 2；录像结束于这次切换的首帧，不声称覆盖完整 2-2 入场。路线通过空中减速落在长坑前、压缩弹簧后再次按跳跃取得高弹力；搜索只读取状态并输入按键，不改游戏 RAM。自适应搜索器不进入游戏运行时。
+
+固定输入随后由标准 `run_reference.py` 独立重放，连续录像的 2398 帧状态及 APU 写入一致；与搜索日志的 X、含高位页的 Y、生命、世界/关卡和子程序逐帧全部相同。证据：`local-parity/route-fix-20261108/normal-clear/fixed-input-proof.json` 及 `reference-lf/continuous-video/proof.json`。比较 Y 时直接从原始 RAM 计算 `Player_Y_Position + (Player_Y_HighPos - 1) * 256`，避免搜索日志有符号高度与已有语义解码低字节表示混用；未修改公共状态解码器。
+
+修正落地转向前，宿主在该固定输入的快速模拟中，首个玩家运动差异为第 404 帧垂直速度：原版 -4，宿主 +4；随后第 405 帧 Y 不同。该漏踩交互的修正见下段。宿主后续死亡，旗杆、结算和 2-2 转场均未验收。报告：`local-parity/route-fix-20261108/normal-clear/simulation/reports`。新录像是可复现的成功原版路线，不登记为宿主完成关卡。
+
+标准完整用例入口新增 `--actual-timeout`，默认仍为 120 秒；全帧窗口截图可显式设置 600 秒。旧候选首次实际采集在 120 秒截止时仅取得 2767 帧，失败保留于 `candidate-runtime-fresh/actual`，随后隔离重采完整 3210 帧；没有删减截图或提高差异阈值。
+
+```powershell
+python tools/parity/run_case.py --rom 'roms/Super Mario Bros. (World).nes' --movie tests/parity/movies/world-2-1-normal-clear.json --artifacts local-parity/normal-clear-recheck --actual-timeout 600
+```
+
+该命令预期保留当前宿主差异并返回失败，不能以原版路线成功推断宿主验收通过。World 2-2、跨关实现及正式逐关完成登记仍待推进；发布版本保持 0.0.7。
+
+后续定位及修正：普通乌龟从平台落地时，原版会在恢复行走前面向玩家；宿主保持旧方向，导致第 392 帧起该乌龟位置不同、第 404 帧漏踩。2-1 现补齐落地方向选择，保留浮点水平速度，跳跃敌人和 World 1 路径不变；增加落地后朝玩家移动的自检。新成功路线的选定状态首差推迟到第 581 帧：跳跃初速度原版 -5、宿主 -4，Y 原版 171、宿主 172。报告：`local-parity/route-fix-20261108/normal-clear/landing-final/reports`；原始 404 帧失败仍保留在 `normal-clear/simulation`。
+
+本轮实际窗口复验中，1601 帧踩踏诊断（`actual-regression/held-jump-stomp-all-frames`）、3116 帧主诊断（`actual-regression-retry/main-route`）、900 帧地下、2400 帧天空及 3116 帧/91 张采样画面的新游戏诊断（后三项位于 `runtime-final`）全部通过六项门禁。以上路径均以 `local-parity/route-fix-20261108` 为根。主诊断及地下诊断各有一次 Vulkan 初始化失败，分别保留在 `actual-regression/main-route`、`actual-regression-retry/underground-all-frames`；未覆盖失败日志。
+
+最终落地方向修正另做上述五条诊断和旧候选的模拟前后对照，范围是全部导出 JSON 字段，不是只看玩家 X/Y；结果见 `landing-preservation/summary.json`。这与实际窗口重采是两项独立证据，不能将模拟对照称为重新采集画面。
+
+最终落地修正前后六条诊断合计 14343 帧导出状态全部相同。最终 Win64 预览包：`dist/super-mario-world21-route-final-preview-20261108-win64/SuperMario.exe`；原生构建、混音 CTest、首帧可见性、标题/图标及正常关闭检查通过，报告 `local-parity/route-fix-20261108/package-startup.json`。最终 10 组模拟自检通过，含本轮新增落地方向、碰撞顺序、全局生成相位与撞砖上升场景。
+
+新增成功录像按 Git 规定统一为 LF 后，以最终提交字节哈希重新生成完整参考，位于 `normal-clear/reference-lf`。与首轮 CRLF 采集相比，2398 帧完整导出状态、APU 写入和全部 2398 张 PNG 逐字节相同；`fixed-input-proof.json` 核对输入文件与 Git 暂存字节一致，并记录最终哈希。两次原始 RAM 轨迹在栈页 `$0160-$01ec` 范围内的 141 个地址存在差异，没有将导出状态一致称为全部 RAM 字节一致；差异原样保留。首轮 CRLF 参考及证明保留在 `normal-clear/reference` 和 `fixed-input-proof-crlf.json`。宿主第 581 帧失败已按 LF 参考再次比较确认。

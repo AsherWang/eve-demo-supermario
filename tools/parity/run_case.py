@@ -24,6 +24,8 @@ def main() -> int:
     parser.add_argument("--movie", type=Path, required=True)
     parser.add_argument("--artifacts", type=Path, default=Path("local-parity"))
     parser.add_argument("--skip-runs", action="store_true", help="Reuse existing reference/actual captures")
+    parser.add_argument("--actual-timeout", type=float, default=120.0,
+                        help="Maximum seconds for the actual replay (increase for full-frame captures)")
     args = parser.parse_args()
 
     project = Path(__file__).resolve().parents[2]
@@ -42,7 +44,8 @@ def main() -> int:
         run([python, str(tools / "run_reference.py"), "--rom", str(args.rom.resolve()),
              "--movie", str(movie_path), "--output", str(reference)])
         run([python, str(tools / "run_actual.py"), "--movie", str(movie_path),
-             "--output", str(actual), "--project", str(project)])
+             "--output", str(actual), "--project", str(project),
+             "--timeout", str(args.actual_timeout)])
 
     run([python, str(tools / "extract_reference_state.py"),
          "--input", str(reference / "ram-trace.jsonl"), "--output", str(reference / "state.jsonl")])

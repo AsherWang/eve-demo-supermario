@@ -600,6 +600,36 @@ function runWorld21SelfTest() {
     startLevel(reuse,2,1);
     requireSelfTest(reuse.world21.slotXFractions[0]==0.0,
         "area initialization must clear enemy slot movement accumulators");
+    local landing=createGame();startLevel(landing,2,1);landing.player.x=835;
+    local landed=makeEnemyAt(826,12,"koopa");landed.state="falling";
+    moveEnemyBody(landing,landed,FIXED_DT);
+    requireSelfTest(landed.state=="walking" && landed.vx>0 && landed.x==826.5,
+        "a falling ordinary Koopa must face Mario when it lands");
+    local pair=createGame();startLevel(pair,2,1);
+    pair.goombas=[];pair.plants=[];pair.nesFrameCounter=151;
+    pair.player.x=0;pair.player.y=32;
+    local left=makeEnemyAt(100,12,"goomba"),right=makeEnemyAt(110,12,"goomba");
+    left.awake=true;left.slot=0;left.vx=NES_FRAME_RATE*0.5;
+    right.awake=true;right.slot=1;right.vx=-NES_FRAME_RATE*0.5;
+    pair.goombas=[left,right];updateGoombas(pair,FIXED_DT);
+    requireSelfTest(left.x==100.5 && right.x==110.5 && left.vx<0 && right.vx>0,
+        "a later-slot collision must turn the lower slot after its movement");
+    local growth=createGame();startLevel(growth,2,1);
+    growth.nesFrameCounter=31;spawnPowerUp(growth,16,9,"mushroom");
+    local mushroom=growth.powerups[0];movePowerUp(growth,mushroom,FIXED_DT);
+    requireSelfTest(mushroom.emergePixels==0,"growth must wait for global frame phase");
+    growth.nesFrameCounter=32;movePowerUp(growth,mushroom,FIXED_DT);
+    requireSelfTest(mushroom.emergePixels==1 && mushroom.romY==135,
+        "global frame phase must grow a newly spawned power-up immediately");
+    mushroom.emerging=false;mushroom.visible=true;mushroom.romY=120;
+    mushroom.y=120+POWERUP_DRAW_Y_OFFSET;
+    requireSelfTest(bumpPowerUpAbove(growth,mushroom,16,9) && mushroom.nesYSpeed==-3,
+        "block bumps must initialize the World 2-1 integer vertical speed");
+    foreach(i,tile in growth.tiles) growth.tiles[i]=TILE_EMPTY;
+    movePowerUp(growth,mushroom,FIXED_DT);
+    local bumpedY=mushroom.romY;movePowerUp(growth,mushroom,FIXED_DT);
+    requireSelfTest(mushroom.romY<bumpedY && (mushroom.motionRaw&2)!=0,
+        "a bumped mushroom must rise and retain its stunned-state bit");
     local parser=createGame();startLevel(parser,2,1);
     parser.goombas=[];parser.plants=[];
     parser.player.x=0;parser.player.y=32;

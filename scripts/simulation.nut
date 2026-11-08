@@ -392,6 +392,8 @@ function spawnPowerUp(g, tx, ty, kind) {
         emerging = true,
         visible = false,
         settleFrame = -1,
+        motionRaw = 0x80,
+        nesYSpeed = 0, nesYMoveForce = 0, nesYDummy = 0,
         displayX = tx * TILE_SIZE.tofloat(),
         displayRomY = blockY - 8.0,
         displayEmerging = true,
@@ -1335,14 +1337,48 @@ function bumpPowerUpAbove(g, item, tx, ty) {
     item.vy = -3.0 * NES_FRAME_RATE;
     item.vx = item.x < g.player.x ? -NES_FRAME_RATE : NES_FRAME_RATE;
     item.settleFrame = -1;
+    if(isWorld21(g)) {
+        item.motionRaw=(item.motionRaw&0xf0)|2;
+        item.nesYSpeed=-3;
+    }
     return true;
+}
+
+function moveWorld21Mushroom(g,item,dt) {
+    // Power-ups move before background collision, unlike normal enemies.
+    if ((item.motionRaw & 0x40) != 0) {
+        local positionSum=item.nesYDummy+item.nesYMoveForce;
+        item.nesYDummy=positionSum&255;
+        item.romY+=item.nesYSpeed+floor(positionSum/256).tointeger();
+        local forceSum=item.nesYMoveForce+0x3d;
+        item.nesYMoveForce=forceSum&255;
+        item.nesYSpeed+=floor(forceSum/256).tointeger();
+        if(item.nesYSpeed>=3 && item.nesYMoveForce>=0x80) {
+            item.nesYSpeed=3;item.nesYMoveForce=0;
+        }
+    }
+    item.x+=item.vx*dt;
+    local col=floor((item.x+8)/16).tointeger();
+    local row=floor((item.romY+24)/16).tointeger();
+    local nibble=floor(item.romY).tointeger()&15;
+    if(isSolidAt(g,col,row) && nibble>=8 && nibble<=12) {
+        if((item.motionRaw&0x40)!=0) {
+            item.romY=((floor(item.romY).tointeger()&0xf0)|8).tofloat();
+            item.nesYSpeed=0;item.nesYMoveForce=0;item.motionRaw=item.motionRaw&0xbf;
+        }
+    } else item.motionRaw=item.motionRaw|0x40;
+    local sideCol=floor((item.x+(item.vx>0?16:0))/16).tointeger();
+    local sideRow=floor((item.romY+20)/16).tointeger();
+    if(isSolidAt(g,sideCol,sideRow)) item.vx=-item.vx;
+    item.y=item.romY+POWERUP_DRAW_Y_OFFSET;
 }
 
 function movePowerUp(g, item, dt) {
     if (item.emerging) {
-        // GrowThePowerUp moves one pixel every four frames.
+        // GrowThePowerUp uses the global four-frame phase in World 2-1.
+        // Keep established World 1 timing until its other phases are verified.
         item.emergeFrame += 1;
-        if ((item.emergeFrame & 3) == 0) {
+        if (((isWorld21(g) ? g.nesFrameCounter : item.emergeFrame) & 3) == 0) {
             item.y -= 1.0;
             item.romY -= 1.0;
             item.emergePixels += 1;
@@ -1360,6 +1396,10 @@ function movePowerUp(g, item, dt) {
         return;
     }
 
+    if(isWorld21(g) && (item.kind=="mushroom" || item.kind=="oneup")) {
+        moveWorld21Mushroom(g,item,dt);
+        return;
+    }
     // Fire flowers stay on their block after emerging. Mushrooms and one-ups
     // walk, while the star uses the original jumping-power-up movement class.
     if (item.kind == "flower") return;
@@ -1424,6 +1464,10 @@ function updatePowerUps(g, dt) {
         item.displayVisible = item.visible;
         if (!item.active) continue;
         movePowerUp(g, item, dt);
+        if(isWorld21(g) && item.visible && item.x<g.cameraX-72) {
+            item.active=false;
+            continue;
+        }
         // The bumped metatile ($23 in the ROM) remains available until block
         // restoration, so a mushroom arriving just after the hit can react.
         // Consuming it once prevents repeated launches during one block bump.
@@ -1603,6 +1647,10 @@ function moveEnemyBody(g, e, dt) {
                     e.nesYSpeed = 0;
                     e.nesYMoveForce = 0;
                     e.vy = 0.0;
+                    // Landed ordinary Koopas face Mario before resuming their
+                    // normal movement. Goombas and jumping classes skip it.
+                    if(isWorld21(g) && e.kind=="koopa")
+                        e.vx=(e.vx<0?-e.vx:e.vx)*(e.x>=g.player.x?-1:1);
                 }
                 e.state = "walking";
                 e.grounded = true;
@@ -1958,19 +2006,21 @@ function releaseEnemySlot(enemy) {
     enemy.enemyCollisionMask = 0;
 }
 
-function updateNormalEnemyCollisions(g) {
+function updateNormalEnemyCollisions(g, actor = null) {
     // sub_enemies_collision runs only when FrameCounter bit 0 is set.
     if ((g.nesFrameCounter & 1) == 0) return;
     for (local firstIndex = 0; firstIndex < g.goombas.len(); firstIndex += 1) {
         local first = g.goombas[firstIndex];
+        if (actor != null && first != actor) continue;
         if (!first.awake || !first.alive || first.slot < 0 ||
             first.state == "flipped") continue;
         // GetEnemyBoundBox moves a fully offscreen actor's box to $ff, and
         // EnemiesCollision rejects any nonzero masked offscreen bits.
         if (first.x < g.cameraX ||
             first.x >= g.cameraX + LOGICAL_WIDTH) continue;
-        for (local secondIndex = 0; secondIndex < firstIndex; secondIndex += 1) {
+        for (local secondIndex = 0; secondIndex < (actor == null ? firstIndex : g.goombas.len()); secondIndex += 1) {
             local second = g.goombas[secondIndex];
+            if (actor != null && second.slot >= first.slot) continue;
             if (!second.awake || !second.alive || second.slot < 0 ||
                 second.state == "flipped") continue;
             if (second.x < g.cameraX ||
@@ -1988,8 +2038,8 @@ function updateNormalEnemyCollisions(g) {
                 local secondShell=secondKoopa && (second.state=="shell" || second.state=="shellMoving");
                 touching=overlaps(floor(first.x)+(firstKoopa?2:3),
                     floor(first.y)-(firstShell?10:0)+(firstKoopa?8:4),firstKoopa?13:11,firstKoopa?25:7,
-                    floor(second.x)+(secondKoopa?2:3),
-                    floor(second.y)-(secondShell?10:0)+(secondKoopa?8:4),secondKoopa?13:11,secondKoopa?25:7);
+                    floor(second.previousX)+(secondKoopa?2:3),
+                    floor(second.previousY)-(secondShell?10:0)+(secondKoopa?8:4),secondKoopa?13:11,secondKoopa?25:7);
             }
             if (!touching) {
                 first.enemyCollisionMask = first.enemyCollisionMask & ~firstBit;
@@ -2030,15 +2080,16 @@ function updateGoombas(g, dt) {
             projectedCameraX += scroll;
         }
     }
-    // RunNormalEnemies performs inter-enemy collision before dispatching
-    // movement, so its boxes represent the positions entering this frame.
+    // Enemy graphics and boxes sample the origins before movement. Higher
+    // slots can turn a lower slot after that lower slot has already moved.
     if(isWorld21(g)) foreach(e in g.goombas) if(e.alive) {
         // EnemyGfxHandler reads direction and animation before inter-enemy
         // collisions turn either object or a stomp starts its interval timer.
         e.previousFacing=e.vx<0?-1:(e.vx>0?1:e.shellDirection);
+        e.previousX=e.x;e.previousY=e.y;
     }
     if(isWorld21(g)) g.world21.gfxDeathSlot <- p.dead?-1:5;
-    updateNormalEnemyCollisions(g);
+    if(!isWorld21(g)) updateNormalEnemyCollisions(g);
     foreach (e in g.goombas) {
         if (!e.alive) continue;
         if(isWorld21(g)) {
@@ -2140,6 +2191,9 @@ function updateGoombas(g, dt) {
             e.previousX=e.x;e.previousY=e.y;
             if(isWorld21(g)) e.previousGraphicsVisible=true;
         }
+        // Lower slots have already moved; their saved bounding boxes still
+        // describe the origins sampled before movement on this game pass.
+        if(isWorld21(g)) updateNormalEnemyCollisions(g,e);
         if (e.kind == "koopa" && e.state == "shell") {
             e.shellFrames = e.intervalTimer * NES_INTERVAL_FRAMES;
             e.stateTimer = e.shellFrames * FIXED_DT;
@@ -2229,11 +2283,13 @@ function updateGoombas(g, dt) {
                 // HandleStompedShellE changes the state before
                 // EnemyMovementSubs is dispatched, so a stomped enemy does
                 // not receive its pending half-pixel movement. Keep the ROM's
-                // integer Enemy_X_Position as the stopped coordinate. The
+                // integer Enemy_X_Position as the stopped coordinate. World
+                // 2-1 retains the separate fractional register through a stomp
+                // so a later occupant inherits it when this slot is reused. The
                 // relative-X value already prepared for OAM can nevertheless
                 // carry the preceding half-pixel phase for one more image.
                 e.stompDisplayLead = e.x > floor(e.x) ? 1.0 : 0.0;
-                if(!demotedParatroopa) e.x = floor(e.x).tofloat();
+                if(!demotedParatroopa && !isWorld21(g)) e.x = floor(e.x).tofloat();
                 stompedThisFrame = true;
             } else if (e.kind == "koopa" || e.collisionCooldown <= 0.0) {
                 hurtPlayer(g, e);

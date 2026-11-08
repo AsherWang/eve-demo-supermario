@@ -161,7 +161,8 @@ function parityStateJson(g, frame) {
         local kindRaw = item.kind == "flower" ? 1 :
             (item.kind == "star" ? 2 : (item.kind == "oneup" ? 3 : 0));
         local stateRaw = item.emerging ? 1 + item.emergePixels :
-            (item.settleFrame >= 1 && item.settleFrame <= 4 ? 0xC0 : 0x80);
+            (isWorld21(g) ? item.motionRaw :
+                (item.settleFrame >= 1 && item.settleFrame <= 4 ? 0xC0 : 0x80));
         powerupJson = "{\"active\":true" +
             ",\"kind\":\"" + item.kind + "\"" +
             ",\"kind_raw\":" + kindRaw +
