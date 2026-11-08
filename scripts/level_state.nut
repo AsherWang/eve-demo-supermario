@@ -2,7 +2,7 @@
 // ownership moves out of map decoding. Each call owns new arrays.
 function createAreaState() {
     return {
-        tiles=array(LEVEL_WIDTH*LEVEL_HEIGHT,TILE_EMPTY),
+        tiles=array(TILE_STRIDE*LEVEL_HEIGHT,TILE_EMPTY),
         goombas=[], powerups=[], fireballs=[], brickDebris=[], levelCoins=[],
         brickCoinTimer=0.0, brickCoinStarted=false
     };

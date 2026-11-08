@@ -486,7 +486,7 @@ function updateWorld21GameOver(g) {
 function runWorld21SelfTest() {
     runOamScanlineSelfTest();
     local g=createGame();startLevel(g,2,1);
-    requireSelfTest(isWorld21(g) && g.areaWidth==212 && g.flagX==3200 &&
+    requireSelfTest(isWorld21(g) && g.areaWidth==214 && g.flagX==3200 &&
         getTile(g,83,5)==TILE_BRICK_VINE && getTile(g,28,5)==TILE_HIDDEN_ONEUP &&
         getTile(g,82,9)==TILE_QUESTION && g.world21.springs.len()==1,
         "2-1 must use the verified map, rewards and spring");
@@ -541,7 +541,7 @@ function runWorld21SelfTest() {
         for(local i=0;i<350 && !(branch.area=="main" && branch.state=="playing");i+=1)
             simulateFixed(branch,FIXED_DT);
         requireSelfTest(branch.area=="main" && branch.state=="playing" &&
-            branch.areaWidth==212 && getTile(branch,16,9)==TILE_EMPTY &&
+            branch.areaWidth==214 && getTile(branch,16,9)==TILE_EMPTY &&
             branch.player.x==7*256+56 && branch.player.big==(power>0) &&
             branch.player.fire==(power==2) && branch.score==12500 && branch.coins==9 &&
             !("world21Main" in branch),
@@ -618,6 +618,13 @@ function runWorld21SelfTest() {
     startLevel(reuse,2,1);
     requireSelfTest(reuse.world21.slotXFractions[0]==0.0,
         "area initialization must clear enemy slot movement accumulators");
+    local tailStorage=createGame();startLevel(tailStorage,2,1);
+    requireSelfTest(getTile(tailStorage,213,13)==TILE_GROUND,
+        "the verified castle continuation must include both extra ground columns");
+    setTile(tailStorage,212,4,TILE_USED);setTile(tailStorage,0,5,TILE_BRICK);
+    requireSelfTest(getTile(tailStorage,212,4)==TILE_USED &&
+        getTile(tailStorage,0,5)==TILE_BRICK,
+        "extra tail columns must not alias the following storage row");
     local wallJump=createGame();startLevel(wallJump,2,1);
     wallJump.player.nesXSpeed=0;wallJump.player.nesXSpeedAbsolute=40;
     beginNesJump(wallJump.player);

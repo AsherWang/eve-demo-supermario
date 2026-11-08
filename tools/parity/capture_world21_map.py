@@ -12,7 +12,7 @@ from world21_reference import build_world21_origin_lua
 
 
 ROOT = Path(__file__).resolve().parents[2]
-WIDTH = 212
+WIDTH = 214
 
 
 def main() -> None:

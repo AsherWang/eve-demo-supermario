@@ -177,7 +177,7 @@ function applyWorld12Map(g) {
     // Offline ROM parser output provides the canonical collision/graphics
     // map, including overlapping object slots and backloaded terrain changes.
     g.levelCoins=[];
-    g.world12Metatiles=array(LEVEL_WIDTH*LEVEL_HEIGHT,0);
+    g.world12Metatiles=array(TILE_STRIDE*LEVEL_HEIGHT,0);
     local mapping={};
     foreach(entry in [
         [0x54,TILE_GROUND],[0x51,TILE_BRICK],[0x52,TILE_BRICK],

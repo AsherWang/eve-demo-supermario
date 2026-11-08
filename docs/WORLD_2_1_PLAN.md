@@ -12,7 +12,8 @@ Strict normal-entrance whole-level acceptance remains pending.
 - `World2Areas[0]` selects area pointer `$28`.
 - `L_GroundArea9`: CPU `$a7cd`, 101 bytes including header and terminator.
 - `E_GroundArea9`: CPU `$9f51`, 43 bytes, including two three-byte area links.
-- Main map: 212 columns, 13 metatile/collision rows per column. Flag column 200.
+- Main map: 214 columns, 13 metatile/collision rows per column. Flag column 200.
+  The final two verified continuation columns cover the castle-walk viewport.
 - Item inventory includes the hidden 1-UP, star, multi-coin brick and a vine
   brick at column 83 / screen row 5. The two raw links are `$fe,$2b,$20` and
   `$fe,$42,$20`; destination and return behavior still require runtime review.
@@ -634,3 +635,20 @@ python tools/parity/run_case.py --rom 'roms/Super Mario Bros. (World).nes' --mov
 自检增加撞墙后保留跑速的起跳、星星首步小数重力、藤蔓覆盖道具槽、弹簧首帧位移/冻结/晚按 A/发射余量、旗帜槽位进位场景。29 项 Python 测试和 10 组模拟自检通过。World 1 七条既有 1-1 回放加 1-3 路线共 6100 帧导出模拟状态在修正前后完全相同，证据 `local-parity/jump-fix-20261108/world1-preservation`；这不是新采集的画面或音频验收。World 2-1 旧六条诊断的最终导出状态对照记录在 `preservation-final`。
 
 最终 Win64 预览包为 `dist/super-mario-world21-clear-preview-20261108-win64/SuperMario.exe`。原生构建、混音 CTest、首帧显示、标题/图标与正常关闭检查通过；启动证据：`local-parity/jump-fix-20261108/package-startup.json`。版本仍为 0.0.7，未发布新 release。
+
+
+## Brick-bump and castle-tail image follow-up (2026-11-08)
+
+本轮保持 `world-2-1-normal-clear` 的输入、2398 帧时长及零容差。完整实际重采的失败画面由 1208 / 2398 降为 834 / 2398、零缺帧，最早失败从 101 推迟到 441。状态和语义事件文件与上一轮实际采集逐字节相同；仍只有末帧的 2-2 关卡/加载切换和静音事件失败，整关门禁保持失败。完整报告：`local-parity/pixel-fix-20261108/full-stride/reports`。
+
+- 2-1 的专属元图块绘制分支原先绕过普通砖块弹起位移。现接入既有 14 帧、两种进位轨迹，保留藤蔓砖已有处理。130 帧正常入口短回放全部画面零差异，报告 `probe1/summary-prefix.json`；它只是同输入前缀检查，不另作整关验收。
+- 正常结算镜头会显示到地图第 213 列，而旧离线数据只保存 0..211。生成器宽度改为 214 后重新从已校验 ROM 的连续解析器补采，尾部仍要求 200..205 六列与前向解析一致。原有 212 列元图块和碰撞数据全部相同，只增加 212、213 两列；证据 `map214/manifest.json` 与 `map214/prefix-proof.json`。当前生成数据及素材清单均更新，早期章节中的 212 列记录保留为历史。
+- 宽度扩展暴露了原先用 World 1 逻辑宽度兼任数组行跨度的边界。增加 `TILE_STRIDE=214` 作为扁平地图存储跨度，World 1 的 `LEVEL_WIDTH=212` 保持不变；所有使用该跨度的区域/元图块数组一致扩容。新增跨行不别名和尾列地面自检。初次扩展时的 3180 索引越界由模拟回归捕获，失败记录保留在 `regressions`；当时未产出画面的窗口采集已停止并保留在 `full`，修正后在 `full-stride` 独立重采。
+
+本轮没有重新生成模型音频：先验证新旧完整 `state.jsonl`、`events.jsonl` 逐字节相同，再复用上轮 APU、PCM 和混音清单，并重新执行 APU/PCM/产物比较。三个门禁均通过；复用证据为 `full-stride/audio-reuse-proof.json`，不能将其称为新的设备录音。状态/事件的旧末帧失败没有被音频复用掩盖。
+
+29 项 Python 测试、10 组模拟自检通过。World 1 八条路线共 6100 帧、2-1 六条既有诊断共 14343 帧导出状态在本轮前后完全相同，分别见 `world1-preservation`、`world21-preservation`。共享存储改变后，额外重采 1-1 蘑菇用例，300 帧状态及该用例指定的采样画面通过原版对照，见 `world1-powerup-reports`；未把采样称为全帧画面。
+
+剩余首帧 441 涉及金币砖、金币/分数图像与 HUD 更新；后续继续从该帧定位。正常成功路线仍有 834 帧显示失败，World 2-2 尚未实现，正式逐关完成登记不变。以上路径均以 `local-parity/pixel-fix-20261108` 为根。
+
+最终预览包：`dist/super-mario-world21-pixel-preview-20261108-win64/SuperMario.exe`。原生构建/混音 CTest 与窗口首帧、标题/图标、正常关闭检查通过，启动报告 `local-parity/pixel-fix-20261108/package-startup.json`；包内脚本逐字节匹配工作区，回放默认禁用，不包含 ROM 或存档。上述 1-1 补验实际比较 93 张指定采样图像，均为零差异。

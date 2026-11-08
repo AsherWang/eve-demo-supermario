@@ -134,8 +134,8 @@ function world13TileFor(meta,block) {
 }
 
 function applyWorld13Map(g) {
-    g.world13Metatiles=array(LEVEL_WIDTH*LEVEL_HEIGHT,0);
-    g.world13Blocks=array(LEVEL_WIDTH*LEVEL_HEIGHT,0);
+    g.world13Metatiles=array(TILE_STRIDE*LEVEL_HEIGHT,0);
+    g.world13Blocks=array(TILE_STRIDE*LEVEL_HEIGHT,0);
     g.levelCoins=[];
     // The camera can expose four continuation columns beyond the nominal
     // 160-column course. Capture them from the ROM parser as well: the ground

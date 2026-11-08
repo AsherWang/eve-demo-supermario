@@ -73,7 +73,7 @@ function world14TileForMeta(meta) {
 }
 
 function world14BuildCollision(g) {
-    g.tiles = array(LEVEL_WIDTH * LEVEL_HEIGHT, TILE_EMPTY);
+    g.tiles = array(TILE_STRIDE * LEVEL_HEIGHT, TILE_EMPTY);
     for(local x = 0; x < ROM_WORLD_1_4_METATILES.len(); x += 1)
         for(local row = 0; row < 13; row += 1) {
             local meta = ROM_WORLD_1_4_METATILES[x][row];

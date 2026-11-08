@@ -183,8 +183,9 @@ the sampled title-to-new-game replay also pass. These are diagnostic and branch
 routes. A new 2398-frame fixed-input normal-entry movie independently clears
 2-1 in the ROM with three lives and reaches 2-2. The remake now also reaches
 settlement with three lives: selected state fields match through frame 2396.
-The final frame still lacks the 2-2 transition/silence event; 1208 images fail
-strict comparison. Model APU/audio and artifact gates pass. Whole-level
+The final frame still lacks the 2-2 transition/silence event. Brick-bump and
+verified map-tail fixes reduce failed images from 1208 to 834; strict image
+comparison remains pending. Model APU/audio and artifact gates pass. Whole-level
 acceptance and playable World 2-2 remain pending.
 The older 3210-frame death diagnostic now passes state/audio gates but retains
 242 failed images. See the latest [World 2-1 evidence](docs/WORLD_2_1_PLAN.md).

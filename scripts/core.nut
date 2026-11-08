@@ -3,6 +3,8 @@ LOGICAL_HEIGHT <- 240;
 PIXEL_SCALE <- 3;
 TILE_SIZE <- 16;
 LEVEL_WIDTH <- 212;
+// Storage stride is independent of World 1's logical course width.
+TILE_STRIDE <- 214;
 LEVEL_HEIGHT <- 15;
 GROUND_ROW <- 13;
 // SMB advances gameplay from the NTSC NMI, not a nominal 60.000 Hz clock.
@@ -68,7 +70,7 @@ function overlaps(ax, ay, aw, ah, bx, by, bw, bh) {
 }
 
 function tileIndex(tx, ty) {
-    return ty * LEVEL_WIDTH + tx;
+    return ty * TILE_STRIDE + tx;
 }
 
 function getTile(g, tx, ty) {

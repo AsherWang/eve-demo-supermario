@@ -550,7 +550,16 @@ function drawTiles(g) {
                 local texture=world21TileTexture(g,tx,ty,tile);
                 local vineBump=g.bump.active && g.bump.tile==TILE_BRICK_VINE &&
                     g.bump.tx==tx && g.bump.ty==ty && g.bump.frame>1;
-                if(texture!=null && !vineBump) worldTexture(g,texture,tx*16.0,ty*16.0,16,16);
+                local offsetY=0.0;
+                if(g.bump.active && g.bump.tx==tx && g.bump.ty==ty && g.bump.frame>1) {
+                    local offsets=g.bump.tile==TILE_POWERUP_BLOCK?
+                        [-1,-3,-4,-5,-6,-6,-6,-6,-6,-5,-4,-2,-1,1]:
+                        [-1,-3,-5,-6,-6,-7,-7,-7,-6,-5,-4,-3,-1,1];
+                    local index=g.bump.frame-2;
+                    if(index>=offsets.len()) index=offsets.len()-1;
+                    offsetY=offsets[index].tofloat();
+                }
+                if(texture!=null && !vineBump) worldTexture(g,texture,tx*16.0,ty*16.0+offsetY,16,16);
                 continue;
             }
             if(g.level>=3) {

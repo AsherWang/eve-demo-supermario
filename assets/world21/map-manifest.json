@@ -5,9 +5,9 @@
   "stage": 1,
   "area_pointer": 40,
   "area_data_address": "0xa7cf",
-  "width": 212,
+  "width": 214,
   "height": 13,
-  "columns": 212,
+  "columns": 214,
   "capture_mode": "continuous-forward-with-verified-tail",
   "tail_overlap_columns": [
     200,
@@ -20,10 +20,10 @@
   "fixture_player_above_terrain": true,
   "runtime_implemented": false,
   "output": "scripts/generated/world21_map.nut",
-  "output_sha256": "5d48f7e51e7ebe0256d7baafdbbce65196ed418d4ae4c27851fa3b7f8ba3cbb2",
-  "capture_script_sha256": "040be196490f6b06c7d3fb47812a054bb94be6dc37a189e22e4f7d714adc9e32",
+  "output_sha256": "97cf5078be57bb3d772e0d047834b7b7fd7b1936370e19fed4088e7d0dedb941",
+  "capture_script_sha256": "9e29817ab2ecdb0e8fe59fabedb9fd7e60ef4c9c8a1dfdba80988f64e26d1f70",
   "columns_sha256": "260ba0a3bb26725b393485b6d708ac78eed48e7ea7c6c4886226b878208963ef",
   "tail_columns_sha256": "63b0c87d05725f7959ec50835e07611a236f3ac253b6f9eb28b77ff94989da8e",
-  "tail_capture_script_sha256": "c64e1332ac569693092ca1414b61f1ea30f0a673d4eb03e416fb71073d395bfc",
-  "generator_sha256": "47e17bd25934f88f3ccdf1d029f0dd119b2d72dcfacdf8f73e0431df518b571a"
+  "tail_capture_script_sha256": "e9dc786673a664eb5f116ffa8870a7d611344e2740e760b3702900336d619d67",
+  "generator_sha256": "a19866a23b49a1c552e55822e21cde27ca68ae31f7ea2c631da53f4823398002"
 }
