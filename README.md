@@ -174,3 +174,11 @@ to its original-art single-player title; Enter starts a fresh World 1-1 game.
 The idle demo, two-player selection and A+Start continue are pending.
 World 2-2 is not implemented. These features are not
 in the published 0.0.7 package.
+
+
+The 2026-11-08 source validation closes the known image differences in the
+1601-frame held-jump/stomp diagnostic and the 3116-frame death/title diagnostic:
+both pass every frame and all six gates. Underground/sky branch regressions and
+the sampled title-to-new-game replay also pass. These are diagnostic and branch
+routes; a successful normal-entrance whole-level route and World 2-2 remain
+pending. See the latest [World 2-1 evidence](docs/WORLD_2_1_PLAN.md).

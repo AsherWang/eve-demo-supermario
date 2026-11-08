@@ -54,6 +54,7 @@ function updateTitleNewGameLoad(g) {
     } else if(frame==2) {
         local time=g.time,interval=g.intervalTimerControl;
         startLevel(g,1,1,true);g.state="newGameLoad";g.soundEvents.clear();
+        g.soundEvents.append("silence_music");parityRecordEvent(g,"music","silence");
         resetPlayerForArea(g,0,0);g.player.movingDir=0;
         g.time=time;g.displayTime=time;g.intervalTimerControl=interval;g.nesFrameCounter=0;
         g.colorRotateOffset=0;g.displayColorPhase=0;
@@ -113,6 +114,11 @@ function updateTitleFlow(g) {
             g.nesFrameCounter=0;g.goombas=[];
             g.colorRotateOffset=0;g.displayColorPhase=0;g.pendingColorPhase=0;
             g.colorPhasePending=false;
+        } else if(frame==3) {
+            // InitializeArea queues Silence even while title-mode SoundEngine
+            // only disables $4015 and leaves its queues unconsumed.
+            g.soundEvents.append("silence_music");
+            parityRecordEvent(g,"music","silence");
         } else if(frame==25) {
             // CopyTitleScreen uses RAM $0300..$0439 as a VRAM packet buffer.
             // Its tail aliases the inactive player's movement accumulators.

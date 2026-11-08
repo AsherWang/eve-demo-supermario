@@ -218,15 +218,24 @@ function restoreWorld21Main(g,page=7) {
         plant.active=false;plant.awake=false;plant.retired=false;plant.slot=-1;
         if("previousY" in plant) delete plant.previousY;
         if("displayY" in plant) delete plant.displayY;
+        if("preparedGfxFrame" in plant) delete plant.preparedGfxFrame;
+        if("displayGfxFrame" in plant) delete plant.displayGfxFrame;
     }
     g.world21.slotXFractions=[0.0,0.0,0.0,0.0,0.0];
     local checkpoint=g.checkpointPage;initializeWorld21Checkpoint(g,page,0);
     g.checkpointPage=checkpoint;
 }
 
+function resetWorld21SpriteShuffle(g) {
+    g.world21.oamPhase <- 0;
+    g.world21.preparedOamPhase <- 0;
+    g.world21.displayOamPhase <- 0;
+}
+
 function updateWorld21BonusReload(g) {
     g.areaReloadFrames+=1;local frame=g.areaReloadFrames;
     if(frame==1) {
+        resetWorld21SpriteShuffle(g);
         g.cameraX=0;g.displayCameraX=0;
         g.player.nesXForce=0;g.player.nesXMoveForce=0;g.player.nesXScroll=0;
         g.player.nesYMoveForce=0;g.player.nesYDummy=0;
@@ -242,6 +251,7 @@ function updateWorld21BonusReload(g) {
             g.world21.returnPage <- page;
         }
         g.world21.hudTimeHidden <- true;
+        resetWorld21SpriteShuffle(g);
         resetPlayerForArea(g,0,0);g.nesFrameCounter=0;
         parityRecordEvent(g,"music","silence");g.soundEvents.append("silence_music");
     } else if(frame==25) {
@@ -286,6 +296,13 @@ function updateWorld21Actors(g) {
     }
     // Shared piranha behavior; this course has no World 1-2 lift objects.
     updateWorld12Actors(g);
+    foreach(plant in g.plants) if(plant.active) {
+        local stopped=g.player.dead && (!("gfxDeathSlot" in g.world21) ||
+            plant.slot>g.world21.gfxDeathSlot);
+        plant.displayGfxFrame <- "preparedGfxFrame" in plant?plant.preparedGfxFrame:
+            ((((g.nesFrameCounter+255)&8)==0)?1:0);
+        plant.preparedGfxFrame <- stopped?0:(((g.nesFrameCounter&8)==0)?1:0);
+    }
     foreach(vine in g.world21.vines) {
         vine.displayHeight <- vine.height;
         local maximum="maximum" in vine?vine.maximum:96;
@@ -345,8 +362,10 @@ function drawWorld21Actors(g,behind) {
             worldTexture(g,assets.tiles.used,g.bump.tx*16.0,g.bump.ty*16.0+offset,16,16);
         }
         foreach(plant in g.plants) if(plant.active) {
+            oamBase=world21OamOffset(g,plant.slot);
             local counter=(g.nesFrameCounter+254)&255;
-            local frame=g.player.dead?0:((counter&8)==0?1:0);
+            local frame="displayGfxFrame" in plant?plant.displayGfxFrame:
+                (g.player.dead?0:((counter&8)==0?1:0));
             local y="displayY" in plant?plant.displayY:plant.y;
             screenOamTexture(assets.world21.plants[frame],plant.x-visualCameraX(g),y+1,16,24);
         }
@@ -397,6 +416,7 @@ function updateWorld21DeathReload(g) {
     } else if(frame==3) {
         local page=g.checkpointPage,time=g.time,control=g.gameTimerControl;
         g.player=createPlayer();startWorld21(g);
+        g.player.playerAnimTimerSet=0;
         g.checkpointPage=page;g.time=time;g.displayTime=time;g.gameTimerControl=control;
         // InitializeArea restores ScreenLeft from the halfway page before
         // the lives screen finishes, even though rendering stays disabled.
@@ -422,6 +442,9 @@ function updateWorld21DeathReload(g) {
         g.player=createPlayer();
         local page=g.checkpointPage;
         initializeWorld21Checkpoint(g,page);
+        // InitializeMemory clears PlayerAnimTimerSet; airborne entry does
+        // not run GetPlayerAnimSpeed until Mario lands.
+        g.player.playerAnimTimerSet=0;
         g.time=401;g.hurryActive=false;g.gameTimerControl=0;g.state="deathEntrance";
     } else if(frame==end+19) {
         g.state="playing";g.stateTimer=0;
@@ -443,6 +466,7 @@ function updateWorld21GameOver(g) {
 }
 
 function runWorld21SelfTest() {
+    runOamScanlineSelfTest();
     local g=createGame();startLevel(g,2,1);
     requireSelfTest(isWorld21(g) && g.areaWidth==212 && g.flagX==3200 &&
         getTile(g,83,5)==TILE_BRICK_VINE && getTile(g,28,5)==TILE_HIDDEN_ONEUP &&
@@ -703,7 +727,12 @@ function runWorld21SelfTest() {
     requireSelfTest(over.world21.gameOverTimer==0 && over.state=="titleLoad" &&
         over.highScore==12300 && over.soundEvents.len()==1 && over.soundEvents[0]=="silence_music",
         "Game Over expiry must silence music and begin title return, preserving the top score");
-    for(local frame=0;frame<30;frame+=1) simulateFixed(over,FIXED_DT);
+    over.soundEvents.clear();
+    for(local frame=0;frame<30;frame+=1) {
+        simulateFixed(over,FIXED_DT);
+        requireSelfTest(over.soundEvents.len()==(frame<2?0:1),
+            "title initialization must queue one additional silence on its third pass");
+    }
     requireSelfTest(over.state=="titleScreen" && over.world==1 && over.level==1,
         "the title loader must complete and await a new-game input");
     over.input.startQueued=true;

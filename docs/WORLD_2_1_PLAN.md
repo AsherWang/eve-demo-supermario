@@ -533,3 +533,35 @@ python tools/parity/run_case.py --rom $rom --movie $movie --artifacts local-pari
 ```
 
 `run_case.py` 会保留失败门禁；上述踩踏诊断存在已知画面差异，不能预期整体退出码为零。模型音频仍由宿主事件/状态生成寄存器值，PCM 使用原版周期时间表及 Mesen 2A03，不代表实际扬声器输出逐样本一致。
+
+
+### 2026-11-08：标题音频与 OAM 逐帧对照收敛
+
+本轮解决上一节保留的标题音频及两条正常入口诊断画面差异。以下均为诊断或奖励分支证据，不是成功通关整关验收。
+
+| 回放 | 起点与覆盖 | 状态帧数 | 零容差画面 | 六项门禁 |
+| --- | --- | ---: | ---: | --- |
+| `world-2-1-held-jump-stomp-probe-all-frames` | 正常入口、长按踩踏、两次死亡重生 | 1601 | 1601 / 1601 | 全部通过 |
+| `world-2-1-main-host-route` | 正常入口、三次死亡、Game Over、返回标题 | 3116 | 3116 / 3116 | 全部通过 |
+| `world-2-1-underground-checkpoint-route-all-frames` | 第 6 页检查点进入地下、领取金币、返回 | 900 | 900 / 900 | 全部通过 |
+| `world-2-1-sky-cloud-platform-route-all-frames` | 第 4 页检查点顶藤、爬入天空、乘云、返回 | 2400 | 2400 / 2400 | 全部通过 |
+| `world-2-1-title-new-game` | 正常入口至标题，再开始新游戏 | 3116 | 91 / 91（采样） | 全部通过 |
+
+前两条最终报告在 `local-parity/accepted-parity-20261108/{held-jump-stomp-all-frames,main-route}/reports`；后三条在 `local-parity/parity-final-20261108/{underground-all-frames,sky-cloud-all-frames,title-new-game}/reports`。合计 11133 帧选定状态、8108 张指定画面；不把最后一条的采样检查称为全帧画面验收。
+
+- 标题音频：按原版 `SoundEngine` 的 `OperMode` 分支，在标题模式只写 `$4015=0`，不消费声音队列或推进音乐；SoundEngine 观察本帧游戏逻辑执行前的模式。独立处理 `InitializeGame` 清零页/声音 RAM 及两次无 SoundEngine 的初始化阶段，不从后续参考 RAM 重新播种模型。新增标题初始化、新游戏区域初始化的静音请求，并从原版模式切换独立解码 `new_game` 事件。
+- 原版周期载体上的主线 APU 流 15118 次、新游戏 APU 流 16787 次完整匹配；PCM 与产物门禁通过，注入清单没有 `address_mismatch` 或 `missing_reference_write`。这消除了上一节“PCM 一样但注入失败”的假充分证据。音频验证边界仍是宿主模型寄存器值加原版周期时间表/Mesen 2A03，不是设备扬声器录音或独立实时周期调度验证。
+- 精灵缓冲：方向、动画、位置、死亡图像及新对象的图形可见性分别按 OAM 准备页交接。敌人槽刚分配时不提前画旧坐标；同组后续槽仍保留原版当帧处理规则。死亡会停止运动，但仍重建敌人图形页，并区分致死碰撞之前/之后处理的槽位。
+- `FloateyNumbersRoutine` 会复用被踩乌龟的头部 OAM 行；分数出现时隐藏被覆盖的旧行。实现 `$58/$48/$38` 三相精灵分配轮换，按实际 OAM 地址处理重叠优先级，换区及恢复主图时清零轮换相位；地下/天空共 3300 帧相位追踪与原版一致。
+- 新增 `scripts/oam.nut`：对主图已经分块的玩家、普通敌人及植物精灵逐扫描线按 OAM 地址选择前八个单元，透明图块也占名额。仅对真实溢出的像素行缓存 8×8 裁切纹理，视口外像素交给 GPU 裁切；使用官方 SDK 的 ImageData/Texture API，不修改引擎或添加切片文件。其他专属演员保留现有路径，不宣称完整 PPU 或溢出标志行为模拟。
+- 普通绿龟离开平台后改用既有 ROM 整数重力/位置累加器；保留跳跃绿龟独立路径，按各自 ROM 原点落地。2-1 重生时清除动画计时器设定，修复落地后两个走路图像。World 1-3 的 `world-1-3-route` 在本轮前后全部 1840 帧导出模拟状态逐字节相同，报告在 `local-parity/visual-fix/world13-preservation`；这不代表该路线画面或整关验收。
+- 29 项 Python 测试、10 组模拟回归通过；OAM 自检覆盖第九个精灵、局部扫描线遮挡及视口边界。新增六项标题/APU 测试无需 ROM，并纳入 Windows 发布工作流。
+
+保留失败证据：`parity-finish-20261107` 记录中间版本的主线 25 帧差异；`parity-final-20261108` 保留首次最终复验中的底部一行像素问题，以及从 2651 帧起重复旧 Game Over 图像的一次主线采集异常。补充原生渲染状态诊断和完整重录后通过，未修改输入、阈值或删去失败帧。Vulkan 初始化失败日志另保留；重试仅对进程禁用隐式层。
+
+旧 `world-2-1-route-candidate` 的 3210 帧快速模拟仍存在第 637 帧 `enemy0.x` 和第 1434 帧起道具状态/运动差异，证据在 `local-parity/accepted-parity-20261108/route-candidate/reports`。下一步先修这条正常入口候选，再建立存活至旗杆/结算和下一关的成功路线。World 2-2、跨关衔接和正式逐关验收仍未完成；版本保持 0.0.7，未发布新 release。
+
+
+最终共享回归：World 1 七条既有回放共 4260 帧状态及各自指定画面、事件、APU、PCM、产物契约全部通过。前五条报告位于 `local-parity/world1-final-20261108`，TAS 与高旗杆重试报告位于 `local-parity/world1-final-retry-20261108`；TAS 首轮 Vulkan 初始化失败保留。没有将这七条回放的采样画面称为全帧检查。
+
+本轮预览包为 `dist/super-mario-world21-parity-preview-20261108-win64/SuperMario.exe`；原生构建/混音 CTest、窗口首帧显示、标题、大小图标、正常关闭检查通过。启动证据为 `local-parity/accepted-parity-20261108/package-startup.json`。源码默认启动 1-1，F5 进入 2-1；这不是新的正式发布版本。

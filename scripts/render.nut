@@ -1,9 +1,11 @@
 dofile("scripts/generated/oam_cells.nut");
+dofile("scripts/oam.nut");
 if (!("oamTextureCells" in getroottable())) oamTextureCells <- {};
 if (!("renderOffsetY" in getroottable())) renderOffsetY <- 0.0;
 
 function loadTexture(path) {
     local texture = gfx.newTextureFromFile(path);
+    oamTexturePaths[texture] <- path;
     // NES CHR pixels are discrete samples.  EVEngine textures default to
     // linear filtering, which blends neighbouring texels and shifts edge
     // coverage as the camera moves.  Point sampling preserves the PPU image.
@@ -17,7 +19,7 @@ function loadTexture(path) {
     return texture;
 }
 
-function screenOamTexture(texture,x,y,width,height,clipX=null,lowerRowCarry=0) {
+function screenOamTexture(texture,x,y,width,height,clipX=null,lowerRowCarry=0,hiddenRows=0) {
     if (!(texture in oamTextureCells)) {
         screenTexture(texture,x,y,width,height);
         return;
@@ -25,6 +27,7 @@ function screenOamTexture(texture,x,y,width,height,clipX=null,lowerRowCarry=0) {
     local data=oamTextureCells[texture];
     if(clipX==null) clipX=x;
     for(local row=0;row<data.rows;row+=1) {
+        if(row<hiddenRows) continue;
         // Hide offscreen OAM rows before byte wrapping so they cannot
         // reappear at the opposite edge of the screen.
         local oamY=floor(y).tointeger()-1+row*8+(row>0?lowerRowCarry:0);
@@ -35,7 +38,11 @@ function screenOamTexture(texture,x,y,width,height,clipX=null,lowerRowCarry=0) {
             // GetXOffscreenBits includes the left edge in the hidden cell:
             // an edge/object difference of zero selects mask $80.
             if(maskX<=0 || maskX>=256) continue;
-            screenTexture(data.cells[row*data.columns+column],cellX,oamY+1,8,8);
+            local key=(oamBase+row*8+column*4)&255;
+            if(oamCollecting) {oamEntries[key] <- {y=oamY+1};continue;}
+            local cell=data.cells[row*data.columns+column];
+            if(oamMasking && key in oamLineMasks) cell=maskedOamCell(cell,oamLineMasks[key]);
+            if(cell!=null) screenTexture(cell,cellX,oamY+1,8,8);
         }
     }
 }
@@ -386,6 +393,7 @@ function loadAssets() {
 }
 
 function screenRect(x, y, width, height, r, g, b, a = 1.0) {
+    if(oamCollecting) return;
     y+=renderOffsetY;
     gfx.drawSolidRect(floor(x * PIXEL_SCALE).tofloat(), floor(y * PIXEL_SCALE).tofloat(),
                       floor(width * PIXEL_SCALE).tofloat(), floor(height * PIXEL_SCALE).tofloat(),
@@ -401,6 +409,7 @@ function worldRect(gm, x, y, width, height, r, green, b, a = 1.0) {
 }
 
 function screenTexture(texture, x, y, width, height) {
+    if(oamCollecting) return;
     y+=renderOffsetY;
     gfx.drawTexturedRect(texture,
         floor(x * PIXEL_SCALE).tofloat(), floor(y * PIXEL_SCALE).tofloat(),
@@ -409,6 +418,7 @@ function screenTexture(texture, x, y, width, height) {
 }
 
 function screenTextureTint(texture, x, y, width, height, r, g, b, a = 1.0) {
+    if(oamCollecting) return;
     y+=renderOffsetY;
     gfx.drawTexturedRect(texture,
         floor(x * PIXEL_SCALE).tofloat(), floor(y * PIXEL_SCALE).tofloat(),
@@ -423,6 +433,7 @@ function worldTexture(gm, texture, x, y, width, height) {
 }
 
 function worldTextureRotated(gm, texture, x, y, width, height, degrees) {
+    if(oamCollecting) return;
     local cameraX = visualCameraX(gm);
     if (x + width < cameraX - 16.0 || x > cameraX + LOGICAL_WIDTH + 16.0) return;
     gfx.drawTexturedRectRotated(texture,
@@ -645,7 +656,8 @@ function marioTextureFromSet(g, set) {
 
 function marioTexture(g) {
     local p = g.player;
-    if (p.dead) return p.facing > 0 ? assets.mario.deadRight : assets.mario.deadLeft;
+    if (isWorld21(g)?p.displayAnimationFrame==-7:p.dead)
+        return p.facing > 0 ? assets.mario.deadRight : assets.mario.deadLeft;
     local palettePhase = playerPalettePhase(g);
     if (palettePhase > 0) {
         local set = p.big ? assets.marioPalettes[palettePhase].big :
@@ -659,6 +671,7 @@ function marioTexture(g) {
 }
 
 function drawPlayer(g) {
+    oamBase=4;
     local p = g.player;
     if (g.state == "nextStageLoad" && g.stageLoadFrames == 165) return;
     if(isWorld21(g) && g.state=="areaEntrance" && g.areaEntranceFrames==0) return;
@@ -687,7 +700,7 @@ function drawPlayer(g) {
     // Player_Rel_XPos is prepared alongside Player_Rel_YPos before movement
     // and scrolling.  previousX combined with the buffered display camera is
     // the same relative coordinate, without frame-dependent inset guesses.
-    if (p.dead) {
+    if (p.dead && !isWorld21(g)) {
         worldTexture(g, texture, floor(p.previousX), floor(drawY) + 1.0,
                      16.0, 32.0);
     } else {
@@ -739,7 +752,9 @@ function drawFireballs(g) {
 }
 
 function drawEnemy(g, e) {
+    if(isWorld21(g)) oamBase=world21OamOffset(g,e.slot>=0?e.slot:e.erasedSlot);
     if (!e.alive && e.erasedDisplayFrames <= 0) return;
+    if(isWorld21(g) && !e.displayGraphicsVisible) return;
     // EnemyGfxHandler suppresses the object once its origin is in the left
     // offscreen region (EnemyOffscrBitsMasked bit 2).  Letting the host clip
     // the corrected 16px texture would leak a one-pixel sliver that the NES
@@ -772,7 +787,7 @@ function drawEnemy(g, e) {
     } else if (e.kind == "koopa") {
         local frame = floor(g.simTime * 7.0).tointeger() % 2;
         // TimerControl suppresses EnemyGfxHandler's alternate CHR frame.
-        if(isWorld21(g)) frame=g.player.dead?0:((((g.nesFrameCounter+254)&8)==0)?1:0);
+        if(isWorld21(g)) frame=e.displayGfxFrame;
         local facing=isWorld21(g)?e.displayFacing:(e.vx<0?-1:1);
         texture = facing < 0 ? assets.enemies.koopaLeft[frame] :
                                assets.enemies.koopaRight[frame];
@@ -787,8 +802,8 @@ function drawEnemy(g, e) {
         // Goombas animate by XOR-flipping their base left-facing attributes
         // when FrameCounter bit 3 is clear; the CHR image itself is unchanged.
         // The two extracted textures are those two horizontal orientations.
-        local frame = isWorld21(g) && g.player.dead?(e.vx<0?1:0):g.goombaVisualFrame;
-        if (!g.player.dead) {
+        local frame = isWorld21(g)?e.displayGfxFrame:g.goombaVisualFrame;
+        if (!g.player.dead && !isWorld21(g)) {
             local counterBitSet = (gfxCounter & 0x08) != 0;
             local movingLeft = e.vx < 0.0;
             frame = counterBitSet == movingLeft ? 1 : 0;
@@ -822,7 +837,7 @@ function drawEnemy(g, e) {
         // one pixel below the stored NES sprite Y coordinate.
         // A lethal collision stops movement before OAM is rebuilt on
         // subsequent frozen passes; the live origin then replaces old X.
-        drawX=g.player.dead?e.x:e.displayX;drawY=e.displayY+1.0;
+        drawX=e.displayX;drawY=e.displayY+1.0;
     }
     if(isWorld21(g) && e.kind=="goomba" &&
         (visualState=="walking" || visualState=="falling" ||
@@ -842,11 +857,16 @@ function drawEnemy(g, e) {
         }
         if(visualState=="walking" || visualState=="falling") drawX=e.displayX;
     }
+    local overwrittenHead=false;
+    if(isWorld21(g) && e.kind=="koopa" && visualState=="walking" &&
+        (e.state=="shell" || e.state=="shellMoving"))
+        foreach(score in g.floatingScores) if(score.owner==e && score.age>=1)
+            overwrittenHead=true;
     if(g.level==3 || isWorld21(g))
         screenOamTexture(texture,floor(drawX)-visualCameraX(g),floor(drawY),16.0,height,
             // Reconstruct the integer pre-movement coordinate from the
             // host's half-pixel walking phase before computing edge bits.
-            floor(e.previousX+(e.vx<0.0?0.5:0.0))-visualCameraX(g));
+            floor(e.previousX+(e.vx<0.0?0.5:0.0))-visualCameraX(g),0,overwrittenHead?1:0);
     else worldTexture(g, texture, floor(drawX), floor(drawY), 16.0, height);
 }
 
@@ -1099,7 +1119,25 @@ function areaTransitionOverlay(g) {
 }
 
 function renderGame(g) {
-    gfx.clear();
+    if(!oamCollecting && isWorld21(g) && g.area=="main" && g.state=="playing") {
+        try {
+            oamEntries={};oamEntries[0] <- {y=25}; // fixed HUD sprite zero
+            oamCollecting=true;
+            renderGameScene(g);
+            oamCollecting=false;
+            oamLineMasks=evaluateOamScanlines(oamEntries);
+            oamMasking=true;
+            renderGameScene(g);
+            oamMasking=false;
+        } catch(error) {
+            oamCollecting=false;oamMasking=false;
+            throw error;
+        }
+    } else renderGameScene(g);
+}
+
+function renderGameScene(g) {
+    if(!oamCollecting) gfx.clear();
     renderOffsetY=0.0;
     if(g.state=="titleLoad" || g.state=="titleScreen" || g.state=="newGameLoad") {drawTitleFlow(g);return;}
     if(isWorld21(g) && g.state=="areaReload" && g.areaReloadFrames==0) {
@@ -1244,7 +1282,17 @@ function renderGame(g) {
     }
     // Lower OAM indexes win sprite-over-sprite priority on the PPU.  Draw
     // higher enemy slots first so slot 0 is composited last by the host.
-    for (local slot = 5; slot >= 0; slot -= 1)
+    local enemyDrawOrder=[5,4,3,2,1,0];
+    if(isWorld21(g)) {
+        // SpriteShuffler rotates the enemy OAM allocation every three passes.
+        // Lower OAM addresses win overlap, independently of the enemy slot.
+        // ROM adds $58/$48/$38 with carry rebased to $28; the cumulative
+        // offsets are therefore $00/$58/$a0 before the cycle repeats.
+        local offsets=[];
+        for(local slot=0;slot<6;slot+=1) offsets.append(world21OamOffset(g,slot));
+        enemyDrawOrder.sort(function(a,b) {return offsets[b]-offsets[a];});
+    }
+    foreach(slot in enemyDrawOrder)
         foreach (e in g.goombas)
             if (e.slot == slot || (!e.alive &&
                 e.erasedDisplayFrames > 0 && e.erasedSlot == slot))

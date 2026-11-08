@@ -75,6 +75,14 @@ def load_ram_trace(path: Path | None) -> list[tuple[int, bytes]]:
     return frames
 
 
+def is_new_game_transition(previous: bytes | None, current: bytes) -> bool:
+    # StartGame switches title mode to game setup after selecting World 1-1.
+    # Do not infer new games from repeated setup passes or other-world continue.
+    return (previous is not None and previous[0x0770] == 0
+            and current[0x0770] == 1 and current[0x0772] == 0
+            and current[0x075F] == 0 and current[0x075C] == 0)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Decode SMBDIS sound queues into semantic reference events.")
     parser.add_argument("--queues", type=Path, required=True)
@@ -197,7 +205,16 @@ def main() -> int:
                 "source": "stomp queue after gameplay queue-clear phase",
             })
     previous_subroutine = None
+    previous_ram = None
     for frame, ram in ram_trace:
+        if is_new_game_transition(previous_ram, ram):
+            synthesized.append({
+                "frame": frame,
+                "sequence": -1,
+                "type": "gameplay",
+                "name": "new_game",
+                "source": "title-to-game setup transition at World 1-1",
+            })
         subroutine = ram[0x000E]
         if subroutine in (4, 5) and previous_subroutine not in (4, 5):
             synthesized.append({
@@ -208,6 +225,7 @@ def main() -> int:
                 "source": "GameEngineSubroutine transition into FlagpoleSlide/PlayerEndLevel",
             })
         previous_subroutine = subroutine
+        previous_ram = ram
     events.extend(synthesized)
     events.sort(key=lambda item: (item["frame"], item["sequence"], item["type"], item["name"]))
     args.output.parent.mkdir(parents=True, exist_ok=True)

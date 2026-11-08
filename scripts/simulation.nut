@@ -1578,11 +1578,12 @@ function moveEnemyBody(g, e, dt) {
         if(!isSolidAt(g,floor(footX/16).tointeger(),floor((e.y+e.height+1)/16).tointeger()))
             e.vx=-e.vx;
     }
-    local romGroundWalker = (g.level == 3 || (isWorld21(g) && e.kind=="goomba")) &&
+    local romGroundWalker = (g.level == 3 || isWorld21(g)) &&
         (e.kind == "goomba" ||
          (e.kind == "koopa" && e.state != "shell" &&
           e.state != "shellMoving" && e.state != "flipped" &&
-          !("paratroopa" in e && e.paratroopa)));
+          !("paratroopa" in e && e.paratroopa) &&
+          !("greenJump" in e && e.greenJump)));
     if (romGroundWalker) {
         local supportRow = floor((e.y + e.height) / TILE_SIZE).tointeger();
         local supportColumn = floor((collisionX + 8.0) / TILE_SIZE).tointeger();
@@ -1593,11 +1594,12 @@ function moveEnemyBody(g, e, dt) {
                 // snaps while the ROM origin's low nibble is $08-$0c. This
                 // leaves the transient overshoot visible for one falling
                 // pass and lands the enemy on the following pass.
-                local originY = floor(e.y).tointeger() - 10;
+                local originOffset=e.kind=="goomba"?10:0;
+                local originY = floor(e.y).tointeger() - originOffset;
                 local landingNibble = originY & 0x0f;
                 if (landingNibble >= 8 && landingNibble <= 12) {
                     local landedOrigin = (originY & 0xf0) | 8;
-                    e.y = (landedOrigin + 10).tofloat();
+                    e.y = (landedOrigin + originOffset).tofloat();
                     e.nesYSpeed = 0;
                     e.nesYMoveForce = 0;
                     e.vy = 0.0;
@@ -1606,7 +1608,7 @@ function moveEnemyBody(g, e, dt) {
                 e.grounded = true;
             }
         } else if (e.state == "walking" && e.kind=="koopa" &&
-                   e.red && !("paratroopa" in e)) {
+                   ("red" in e) && e.red && !("paratroopa" in e)) {
             // ChkForRedKoopa turns an ordinary red Koopa at its bottom-middle
             // probe instead of allowing the walking state to become falling.
             e.vx=-e.vx;
@@ -2030,12 +2032,28 @@ function updateGoombas(g, dt) {
     }
     // RunNormalEnemies performs inter-enemy collision before dispatching
     // movement, so its boxes represent the positions entering this frame.
+    if(isWorld21(g)) foreach(e in g.goombas) if(e.alive) {
+        // EnemyGfxHandler reads direction and animation before inter-enemy
+        // collisions turn either object or a stomp starts its interval timer.
+        e.previousFacing=e.vx<0?-1:(e.vx>0?1:e.shellDirection);
+    }
+    if(isWorld21(g)) g.world21.gfxDeathSlot <- p.dead?-1:5;
     updateNormalEnemyCollisions(g);
     foreach (e in g.goombas) {
         if (!e.alive) continue;
+        if(isWorld21(g)) {
+            e.previousGraphicsVisible=e.awake && e.slot>=0;
+            local counterBit=(g.nesFrameCounter&8)!=0;
+            e.previousGfxFrame=e.kind=="koopa"?
+                ((!p.dead && e.intervalTimer<5 && !counterBit)?1:0):
+                (p.dead?(e.previousFacing<0?1:0):(counterBit==(e.previousFacing<0)?1:0));
+            // TimerControl freezes movement, but EnemyGfxHandler still
+            // prepares the current origin for the next OAM page.
+            e.previousX=e.x;e.previousY=e.y;
+        }
         if (p.dead) continue;
         e.previousX=e.x;e.previousY=e.y;
-        e.previousFacing=e.vx<0?-1:(e.vx>0?1:
+        if(!isWorld21(g)) e.previousFacing=e.vx<0?-1:(e.vx>0?1:
             (("world13Facing" in e)?e.world13Facing:-1));
         e.previousParatroopa=("paratroopa" in e) && e.paratroopa;
         // Sample before player collision, then retain OAM presentation latency.
@@ -2120,6 +2138,7 @@ function updateGoombas(g, dt) {
             // reaches them; those members move on this same pass.
             if(!(isWorld21(g) && e.groupIndex>0)) continue;
             e.previousX=e.x;e.previousY=e.y;
+            if(isWorld21(g)) e.previousGraphicsVisible=true;
         }
         if (e.kind == "koopa" && e.state == "shell") {
             e.shellFrames = e.intervalTimer * NES_INTERVAL_FRAMES;
@@ -2226,7 +2245,10 @@ function updateGoombas(g, dt) {
         // RunNormalEnemies performs player collision before EnemyMovementSubs.
         // A lethal collision raises TimerControl, so that same frame must not
         // advance the enemy another half pixel.
-        if (!playerWasDead && p.dead) continue;
+        if (!playerWasDead && p.dead) {
+            if(isWorld21(g)) g.world21.gfxDeathSlot=e.slot;
+            continue;
+        }
         if (stompedThisFrame) continue;
         if(e.kind=="koopa" && e.state=="shell" && e.intervalTimer==0)
             reviveKoopa(e,g.nesFrameCounter);
@@ -2973,7 +2995,7 @@ function preparePlayerPresentation(g) {
     }
     g.player.displayAnimationFrame = g.player.preparedAnimationFrame;
     g.player.queuedAnimationFrame = g.player.preparedAnimationFrame;
-    g.player.preparedAnimationFrame = g.player.animationFrame;
+    g.player.preparedAnimationFrame = isWorld21(g) && g.player.dead?-7:g.player.animationFrame;
     // Facing is read while PlayerGfxHandler builds OAM, then traverses the
     // staging page and DMA page.  A direction flip is therefore visible two
     // rendered frames after the RAM-facing byte changes.
@@ -3207,6 +3229,10 @@ function simulateFixed(g, dt) {
         enemy.preparedX = enemy.previousX;
         enemy.displayFacing=enemy.preparedFacing;
         enemy.preparedFacing=enemy.previousFacing;
+        enemy.displayGfxFrame=enemy.preparedGfxFrame;
+        enemy.preparedGfxFrame=enemy.previousGfxFrame;
+        enemy.displayGraphicsVisible=enemy.preparedGraphicsVisible;
+        enemy.preparedGraphicsVisible=enemy.previousGraphicsVisible;
         enemy.displayParatroopa=enemy.preparedParatroopa;
         enemy.preparedParatroopa=enemy.previousParatroopa;
         enemy.displayShellFrame = enemy.preparedShellFrame;
@@ -3229,6 +3255,12 @@ function simulateFixed(g, dt) {
             (g.state == "areaEntrance" || g.state == "areaExitEntrance" || g.state == "skyEntrance")) ||
         (animationState == "deathReload" && g.state == "deathEntrance");
     if (ranGameEngine) updateVramAreaParserScheduler(g);
+    if(isWorld21(g) && ranGameEngine) {
+        local phase="oamPhase" in g.world21?g.world21.oamPhase:0;
+        g.world21.displayOamPhase <- "preparedOamPhase" in g.world21?g.world21.preparedOamPhase:0;
+        g.world21.oamPhase <- (phase+1)%3;
+        g.world21.preparedOamPhase <- g.world21.oamPhase;
+    }
     // Misc object processing consumes this pass's ScrollAmount.  Updating it
     // after ScrollHandler keeps jumping-coin world X and relative OAM X in
     // lockstep with the ROM instead of lagging alternating 2/3px scrolls.

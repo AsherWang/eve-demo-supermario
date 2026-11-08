@@ -543,8 +543,13 @@ class SmbApuModel:
             self.write(NOISE + 2, x)
             self.write(NOISE + 3, y)
 
-    def step(self) -> list[tuple[int, int]]:
+    def step(self, oper_mode: int = 1) -> list[tuple[int, int]]:
         self.writes = []
+        # SoundEngine returns before touching queues, counters or channel
+        # handlers in title mode. NMI still writes the master enable register.
+        if oper_mode == 0:
+            self.write(STATUS, 0)
+            return self.writes
         self.write(FRAME_COUNTER, 0xFF)
         self.write(STATUS, 0x0F)
         self.handle_square1_sfx()
@@ -562,6 +567,25 @@ class SmbApuModel:
             self.dec(0x07C0)
         self.write(DAC, old_dac)
         return self.writes
+
+    def advance_frame(self, previous_state: dict, state: dict) -> list[tuple[int, int]]:
+        rom_state = state.get("rom_state", {})
+        mode = rom_state.get("oper_mode", 1)
+        task = rom_state.get("oper_mode_task")
+        initialized = state.get("frame_counter") == 0
+        previous_mode = previous_state.get("rom_state", {}).get("oper_mode", 1)
+        if (initialized and mode == 0 and task == 0 and previous_mode == 0
+                and rom_state.get("game_engine_subroutine", 0) == 0):
+            # InitializeGame clears zero-page music state and SoundMemory.
+            # Its long initialization pass has no observable SoundEngine call.
+            self.ram[:0x100] = bytes(0x100)
+            self.ram[0x07B0:0x07D0] = bytes(0x20)
+            return []
+        if initialized and task == 1:
+            # InitializeArea occupies another pass without SoundEngine.
+            return []
+        # SoundEngine runs before OperModeExecutionTree changes the mode.
+        return self.step(previous_mode)
 
     def queue_event(self, event: dict, state: dict | None) -> None:
         if event.get("type") == "audio":
@@ -648,16 +672,7 @@ def main() -> int:
         previous = frame - 1
         for event in events_by_frame.get(previous, []):
             model.queue_event(event, states.get(previous))
-        state = states.get(frame, {})
-        rom_state = state.get("rom_state", {})
-        # Area initialization resets FrameCounter to zero in a pass that does
-        # not call SoundEngine.  The queued silence request survives and is
-        # consumed on the following frame.
-        skip_sound_engine = (
-            state.get("frame_counter") == 0
-            and rom_state.get("oper_mode_task") == 1
-        )
-        writes = [] if skip_sound_engine else model.step()
+        writes = model.advance_frame(states.get(previous, {}), states.get(frame, {}))
         for sequence, (address, value) in enumerate(writes):
             records.append({
                 "frame": frame,
