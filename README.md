@@ -184,7 +184,7 @@ routes. A new 2398-frame fixed-input normal-entry movie independently clears
 2-1 in the ROM with three lives and reaches 2-2. The remake now also reaches
 settlement with three lives: selected state fields match through frame 2396.
 The final frame still lacks the 2-2 transition/silence event. Block-bump,
-map-tail, HUD and sprite-priority fixes reduce failed images from 1208 to 808;
+map-tail, HUD and sprite-priority fixes reduce failed images from 1208 to 807;
 strict image comparison remains pending. Model APU/audio and artifact gates pass. Whole-level
 acceptance and playable World 2-2 remain pending.
 The older 3210-frame death diagnostic now passes state/audio gates but retains

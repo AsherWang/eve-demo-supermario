@@ -43,6 +43,7 @@ function resetRound(g) {
     g.areaReloadTarget = "underground";
     g.bump.active = false;
     g.coinEffect.active = false;
+    g.coinEffect.displayActive = false;
     g.coinEffect.spawnCarryYOffset = 0.0;
     g.archivedCoinEffects = [];
     g.displayTileOverrides = [];
@@ -421,6 +422,7 @@ function startJumpingCoin(g, tx, ty) {
     if (g.coinEffect.active) {
         g.archivedCoinEffects.append({
             active = g.coinEffect.active,
+            displayActive = g.coinEffect.displayActive,
             x = g.coinEffect.x,
             y = g.coinEffect.y,
             time = g.coinEffect.time,
@@ -433,6 +435,7 @@ function startJumpingCoin(g, tx, ty) {
         });
     }
     g.coinEffect.active = true;
+    g.coinEffect.displayActive = false;
     // CoinBlock uses block X + 5 and block Y - 16 for the 8x16 OAM object.
     g.coinEffect.x = tx * TILE_SIZE + 5.0;
     g.coinEffect.displayX = g.coinEffect.x;
@@ -2371,6 +2374,9 @@ function updateGoombas(g, dt) {
 }
 
 function updateCoinEffect(g, effect, dt) {
+    // ProcJumpCoin prepares the final number before clearing Misc_State.
+    // Keep that image for its OAM handoff without extending slot occupancy.
+    effect.displayActive = effect.active;
     if (!effect.active) return;
     // Misc-object OAM still displays the pre-update phase on the transition
     // from the ballistic coin to its floatey score number.
@@ -2410,7 +2416,8 @@ function updateEffects(g, dt) {
          effectIndex >= 0; effectIndex -= 1) {
         local effect = g.archivedCoinEffects[effectIndex];
         updateCoinEffect(g, effect, dt);
-        if (!effect.active) g.archivedCoinEffects.remove(effectIndex);
+        if (!effect.active && !(isWorld21(g) && effect.displayActive))
+            g.archivedCoinEffects.remove(effectIndex);
     }
     foreach (piece in g.brickDebris) {
         if (!piece.active) continue;

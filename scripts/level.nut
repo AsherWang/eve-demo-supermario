@@ -460,7 +460,7 @@ function createGame() {
         archivedCoinEffects = [],
         coinEffect = {
             active = false, x = 0.0, y = 0.0, time = 0.0,
-            displayX = 0.0,
+            displayActive = false, displayX = 0.0,
             phase = "coin", displayPhase = "coin", frame = 0, scoreFrame = 0,
             spawnCarryYOffset = 0.0
         },

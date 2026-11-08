@@ -980,7 +980,7 @@ function coinEffectDrawY(effect) {
 }
 
 function drawCoinEffect(g, effect) {
-    if (effect.active) {
+    if (effect.active || (isWorld21(g) && effect.displayActive)) {
         if (effect.displayPhase == "coin") {
             // The misc object is initialized in RAM before its two OAM sprites
             // reach the visible DMA page.

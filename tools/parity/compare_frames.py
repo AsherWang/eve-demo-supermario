@@ -41,15 +41,15 @@ def image_sha256(image: Image.Image) -> str:
 
 def compare(reference: Image.Image, actual: Image.Image, tolerance: int) -> dict:
     difference = ImageChops.difference(reference, actual)
-    mismatch_count = 0
-    absolute_error = 0
-    max_error = 0
-    for red, green, blue in difference.getdata():
-        pixel_max = max(red, green, blue)
-        if pixel_max > tolerance:
-            mismatch_count += 1
-        absolute_error += red + green + blue
-        max_error = max(max_error, pixel_max)
+    red, green, blue = difference.split()
+    # Keep exact integer statistics while moving the per-pixel work into PIL.
+    # A pixel fails when its largest channel difference exceeds tolerance.
+    maximum = ImageChops.lighter(ImageChops.lighter(red, green), blue)
+    mismatch_count = sum(count for value, count in enumerate(maximum.histogram())
+                         if value > tolerance)
+    absolute_error = sum(value * count for channel in (red, green, blue)
+                         for value, count in enumerate(channel.histogram()))
+    max_error = maximum.getextrema()[1]
     pixel_count = reference.width * reference.height
     return {
         "mismatched_pixels": mismatch_count,
@@ -63,12 +63,12 @@ def compare(reference: Image.Image, actual: Image.Image, tolerance: int) -> dict
 
 
 def save_difference(difference: Image.Image, destination: Path, tolerance: int) -> None:
-    pixels = []
-    for red, green, blue in difference.getdata():
-        amount = max(red, green, blue)
-        pixels.append((255, max(32, amount), 0) if amount > tolerance else (0, 0, 0))
-    visual = Image.new("RGB", difference.size)
-    visual.putdata(pixels)
+    red, green, blue = difference.split()
+    maximum = ImageChops.lighter(ImageChops.lighter(red, green), blue)
+    red = maximum.point([255 if value > tolerance else 0 for value in range(256)])
+    green = maximum.point([max(32, value) if value > tolerance else 0
+                           for value in range(256)])
+    visual = Image.merge("RGB", (red, green, Image.new("L", difference.size)))
     visual.resize((512, 480), Image.Resampling.NEAREST).save(destination)
 
 

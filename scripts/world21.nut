@@ -498,6 +498,26 @@ function runWorld21SelfTest() {
         getTile(g,83,5)==TILE_BRICK_VINE && getTile(g,28,5)==TILE_HIDDEN_ONEUP &&
         getTile(g,82,9)==TILE_QUESTION && g.world21.springs.len()==1,
         "2-1 must use the verified map, rewards and spring");
+    local coinTail=createGame();startLevel(coinTail,2,1);
+    startJumpingCoin(coinTail,16,9);
+    coinTail.coinEffect.phase="score";coinTail.coinEffect.scoreFrame=46;
+    updateCoinEffect(coinTail,coinTail.coinEffect,FIXED_DT);
+    requireSelfTest(!coinTail.coinEffect.active && coinTail.coinEffect.displayActive &&
+        coinTail.coinEffect.scoreFrame==47 && coinEffectDrawY(coinTail.coinEffect)==100,
+        "the final coin number must retain its prepared image after releasing the misc slot");
+    updateCoinEffect(coinTail,coinTail.coinEffect,FIXED_DT);
+    requireSelfTest(!coinTail.coinEffect.displayActive,
+        "an inactive coin number must clear its prepared image on the next pass");
+    startJumpingCoin(coinTail,16,9);
+    coinTail.coinEffect.phase="score";coinTail.coinEffect.scoreFrame=46;
+    startJumpingCoin(coinTail,18,9);
+    updateEffects(coinTail,FIXED_DT);
+    requireSelfTest(coinTail.archivedCoinEffects.len()==1 &&
+        !coinTail.archivedCoinEffects[0].active && coinTail.archivedCoinEffects[0].displayActive,
+        "an older coin number must retain its last prepared image alongside a newer coin");
+    updateEffects(coinTail,FIXED_DT);
+    requireSelfTest(coinTail.archivedCoinEffects.len()==0,
+        "an archived coin number must retire after its final OAM handoff");
     local descriptor=g.world21.descriptor,links=descriptor.areaLinks;
     requireSelfTest(links.len()==2 && links[0].column==63 &&
         links[0].destination==0x2b && links[0].entrancePage==0 &&
