@@ -279,7 +279,15 @@ function updateWorld21BonusReload(g) {
     else if(frame>=9 && frame<=20) g.vramBufferAddrCtrl=6;
 }
 
+function beginWorld21Block(g) {
+    if(!isWorld21(g)) return;
+    local slot="nextBlockSlot" in g.world21?g.world21.nextBlockSlot:0;
+    g.bump.slot <- slot;
+    g.world21.nextBlockSlot <- slot^1;
+}
+
 function growWorld21Vine(g,tx,ty) {
+    beginWorld21Block(g);
     retainOldTileForPpu(g,tx,ty,TILE_BRICK_VINE);
     bumpEnemiesAbove(g,tx,ty);
     g.bump.active=true;g.bump.tx=tx;g.bump.ty=ty;g.bump.tile=TILE_BRICK_VINE;
@@ -618,6 +626,25 @@ function runWorld21SelfTest() {
     startLevel(reuse,2,1);
     requireSelfTest(reuse.world21.slotXFractions[0]==0.0,
         "area initialization must clear enemy slot movement accumulators");
+    local blockProbe=createGame();startLevel(blockProbe,2,1);
+    beginWorld21Block(blockProbe);
+    requireSelfTest(blockProbe.bump.slot==0,"the first bump must allocate block slot zero");
+    beginWorld21Block(blockProbe);
+    requireSelfTest(blockProbe.bump.slot==1,"successive bumps must alternate block OAM regions");
+    local blockAddresses=[0xe8,0x68,0xb0],scoreAddresses=[0x48,0xa0,0xe8];
+    for(local phase=0;phase<3;phase+=1) {
+        blockProbe.world21.displayOamPhase <- phase;
+        requireSelfTest(world21ShuffledOamOffset(blockProbe,0xe8)==blockAddresses[phase] &&
+            world21OamOffset(blockProbe,1)==scoreAddresses[phase],
+            "block and floatey OAM priority must rotate with the shared shuffle");
+    }
+    blockProbe.score=100;blockProbe.coins=99;local priorLives=blockProbe.lives;
+    awardCoin(blockProbe,true);
+    requireSelfTest(blockProbe.queuedScore==300 && blockProbe.queuedCoins==0 &&
+        blockProbe.lives==priorLives+1,"block coins must queue updated HUD digits after the hundred-coin rollover");
+    retainOldTileForPpu(blockProbe,55,9,TILE_QUESTION);
+    requireSelfTest(blockProbe.displayTileOverrides[0].frames==1,
+        "World 2-1 question-block replacement must reach the next prepared image");
     local tailStorage=createGame();startLevel(tailStorage,2,1);
     requireSelfTest(getTile(tailStorage,213,13)==TILE_GROUND,
         "the verified castle continuation must include both extra ground columns");

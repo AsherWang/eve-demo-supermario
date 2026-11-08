@@ -531,6 +531,16 @@ function tileTexture(g, tile) {
     return null;
 }
 
+function world21BlockBumpOffset(g) {
+    if(!g.bump.active || g.bump.frame<=1) return 0.0;
+    local offsets=(g.bump.tile==TILE_POWERUP_BLOCK || g.bump.tile==TILE_BRICK_STAR)?
+        [-1,-3,-4,-5,-6,-6,-6,-6,-6,-5,-4,-2,-1,1]:
+        [-1,-3,-5,-6,-6,-7,-7,-7,-6,-5,-4,-3,-1,1];
+    local index=g.bump.frame-2;
+    if(index>=offsets.len()) index=offsets.len()-1;
+    return offsets[index].tofloat();
+}
+
 function drawTiles(g) {
     local first = floor(visualCameraX(g) / TILE_SIZE).tointeger() - 1;
     local last = first + 19;
@@ -551,14 +561,8 @@ function drawTiles(g) {
                 local vineBump=g.bump.active && g.bump.tile==TILE_BRICK_VINE &&
                     g.bump.tx==tx && g.bump.ty==ty && g.bump.frame>1;
                 local offsetY=0.0;
-                if(g.bump.active && g.bump.tx==tx && g.bump.ty==ty && g.bump.frame>1) {
-                    local offsets=g.bump.tile==TILE_POWERUP_BLOCK?
-                        [-1,-3,-4,-5,-6,-6,-6,-6,-6,-5,-4,-2,-1,1]:
-                        [-1,-3,-5,-6,-6,-7,-7,-7,-6,-5,-4,-3,-1,1];
-                    local index=g.bump.frame-2;
-                    if(index>=offsets.len()) index=offsets.len()-1;
-                    offsetY=offsets[index].tofloat();
-                }
+                if(g.bump.active && g.bump.tx==tx && g.bump.ty==ty)
+                    offsetY=world21BlockBumpOffset(g);
                 if(texture!=null && !vineBump) worldTexture(g,texture,tx*16.0,ty*16.0+offsetY,16,16);
                 continue;
             }
@@ -981,7 +985,7 @@ function drawCoinEffect(g, effect) {
         if (effect.displayPhase == "coin") {
             // The misc object is initialized in RAM before its two OAM sprites
             // reach the visible DMA page.
-            if (effect.frame <= 2) return;
+            if (effect.frame <= (isWorld21(g)?1:2)) return;
             // JCoinGfxHandler selects $60-$63 directly from
             // (FrameCounter >> 1) & 3.  The visible DMA page is three counter
             // values behind the render-side counter at this capture point.
@@ -1011,11 +1015,23 @@ function drawEffects(g) {
         local texture = score.control == 1 ? assets.items.score100 :
                         (score.control == 2 ? assets.items.score200 :
                          (score.control == 3 ? assets.items.flagScores[3] : null));
-        if (texture != null)
-            // FloateyNumbersRoutine stores the baseline coordinate, subtracts
-            // eight for OAM, and PPU sprite Y adds one visible scanline.
-            screenTexture(texture, score.x,
-                score.displayY-(score.displayY<24.0?8.0:7.0),16.0,8.0);
+        if (texture != null) {
+            // Floatey numbers reuse the owning enemy's first two OAM cells.
+            local y=score.displayY-(score.displayY<24.0?8.0:7.0);
+            if(isWorld21(g) && g.bump.active && g.bump.frame>1 && "slot" in g.bump) {
+                local slot=score.owner.slot>=0?score.owner.slot:score.owner.erasedSlot;
+                local blockBase=world21ShuffledOamOffset(g,0xd8+g.bump.slot*16);
+                if(slot>=0 && blockBase<world21OamOffset(g,slot)) {
+                    local bx=floor(g.bump.tx*16.0-visualCameraX(g)).tointeger();
+                    local by=floor(g.bump.ty*16.0+world21BlockBumpOffset(g)).tointeger();
+                    local cover=world21TileTexture(g,g.bump.tx,g.bump.ty,
+                        getTile(g,g.bump.tx,g.bump.ty));
+                    if(cover!=null) texture=occludedOamTexture(texture,cover,
+                        bx-floor(score.x).tointeger(),by-floor(y).tointeger());
+                }
+            }
+            screenTexture(texture,score.x,y,16.0,8.0);
+        }
     }
     // FlagpoleScore becomes visible after the same two-stage OAM handoff as
     // the other enemy-object sprites.  It is composed before Mario, whose

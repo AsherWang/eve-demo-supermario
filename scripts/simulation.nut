@@ -457,10 +457,11 @@ function retainOldTileForPpu(g, tx, ty, tile) {
     // The power-up setup path fills the VRAM update buffer one pass earlier
     // than the ordinary coin/brick paths in the captured World 1-1 trace.
     local frames = tile == TILE_POWERUP_BLOCK ? 1 : 2;
+    if(isWorld21(g) && (tile==TILE_QUESTION || tile==TILE_BRICK_STAR)) frames=1;
     g.displayTileOverrides.append({ tx = tx, ty = ty, tile = tile, frames = frames });
 }
 
-function awardCoin(g) {
+function awardCoin(g, fromBlock=false) {
     g.coins += 1;
     g.score += 200;
     parityRecordEvent(g, "gameplay", "coin_award");
@@ -469,6 +470,10 @@ function awardCoin(g) {
         g.coins -= 100;
         g.lives += 1;
         emitSound(g, "oneup");
+    }
+    if(isWorld21(g) && fromBlock) {
+        // CoinBlock queues coin/score digits in the same game pass.
+        g.queuedScore=g.score;g.queuedCoins=g.coins;
     }
 }
 
@@ -520,6 +525,7 @@ function hitBlock(g, tx, ty) {
     if(isWorld21(g) && tile==TILE_BRICK_VINE) {growWorld21Vine(g,tx,ty);return;}
     if (tile == TILE_BRICK_POWERUP || tile == TILE_BRICK_ONEUP || tile == TILE_BRICK_VINE ||
         tile == TILE_HIDDEN_COIN) {
+        beginWorld21Block(g);
         retainOldTileForPpu(g, tx, ty, tile);
         bumpEnemiesAbove(g, tx, ty);
         g.bump.active=true;g.bump.tx=tx;g.bump.ty=ty;g.bump.tile=tile;
@@ -528,7 +534,7 @@ function hitBlock(g, tx, ty) {
             ",\"tile_x\":"+tx+",\"tile_y\":"+ty+",\"tile\":"+tile);
         emitSound(g,"bump");
         setTile(g, tx, ty, TILE_USED);
-        if (tile == TILE_HIDDEN_COIN) { startJumpingCoin(g, tx, ty); awardCoin(g); }
+        if (tile == TILE_HIDDEN_COIN) { startJumpingCoin(g, tx, ty); awardCoin(g,true); }
         else {
             spawnPowerUp(g, tx, ty, tile == TILE_BRICK_ONEUP ? "oneup" :
                 (g.player.big ? "flower" : "mushroom"));
@@ -540,6 +546,7 @@ function hitBlock(g, tx, ty) {
         tile != TILE_POWERUP_BLOCK && tile != TILE_HIDDEN_ONEUP &&
         tile != TILE_BRICK_COIN && tile != TILE_BRICK_STAR) return;
 
+    beginWorld21Block(g);
     // The replacement metatile is queued after the current NMI.  The PPU
     // still shows the old block for this frame and the following capture.
     retainOldTileForPpu(g, tx, ty, tile);
@@ -574,7 +581,7 @@ function hitBlock(g, tx, ty) {
         emitSound(g, "powerup", "reveal");
     } else if (tile == TILE_BRICK_COIN) {
         startJumpingCoin(g, tx, ty);
-        awardCoin(g);
+        awardCoin(g,true);
         if (!g.brickCoinStarted) {
             g.brickCoinStarted = true;
             g.brickCoinTimer = BRICK_COIN_TIME;
@@ -588,7 +595,7 @@ function hitBlock(g, tx, ty) {
             emitSound(g, "powerup", "reveal");
         } else {
             startJumpingCoin(g, tx, ty);
-            awardCoin(g);
+            awardCoin(g,true);
         }
     }
 }

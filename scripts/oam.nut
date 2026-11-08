@@ -9,11 +9,37 @@ oamLineMasks <- {};
 if (!("oamTexturePaths" in getroottable())) oamTexturePaths <- {};
 if (!("oamMaskedTextures" in getroottable())) oamMaskedTextures <- {};
 
-function world21OamOffset(g,slot) {
+function world21ShuffledOamOffset(g,baseOffset) {
     local phase="displayOamPhase" in g.world21?g.world21.displayOamPhase:0;
     local amounts=[0,0x58,0xa0];
-    local offset=0x30+slot*24+amounts[phase];
+    local offset=baseOffset+amounts[phase];
     return offset>=256?(offset+0x28)&255:offset;
+}
+
+function world21OamOffset(g,slot) {
+    return world21ShuffledOamOffset(g,0x30+slot*24);
+}
+
+if (!("oamOcclusionCache" in getroottable())) oamOcclusionCache <- {};
+function occludedOamTexture(texture,cover,dx,dy) {
+    if(dx>=16 || dx<=-16 || dy>=8 || dy<=-16) return texture;
+    if(!(texture in oamOcclusionCache)) oamOcclusionCache[texture] <- {};
+    local cache=oamOcclusionCache[texture];
+    local key=oamTexturePaths[cover]+":"+dx+":"+dy;
+    if(key in cache) return cache[key];
+    // Image resources are cached; clone before changing a variant's alpha.
+    local pixels=eve.Image().newImageDataFromFile(oamTexturePaths[texture])["clone"]();
+    local mask=eve.Image().newImageDataFromFile(oamTexturePaths[cover]);
+    for(local y=0;y<pixels.getHeight();y+=1)
+        for(local x=0;x<pixels.getWidth();x+=1) {
+            local cx=x-dx,cy=y-dy;
+            if(cx>=0 && cy>=0 && cx<mask.getWidth() && cy<mask.getHeight() &&
+               mask.getPixelA(cx,cy)>0) pixels.setPixel(x,y,0.0,0.0,0.0,0.0);
+        }
+    local clipped=gfx.newTexture(pixels,false,false);
+    gfx.setTextureSampler(clipped,"nearest","none",1.0,0.0);
+    cache[key] <- clipped;
+    return clipped;
 }
 
 function evaluateOamScanlines(entries) {
@@ -43,7 +69,8 @@ function maskedOamCell(texture,mask) {
     if(mask in variants) return variants[mask];
     // The public SDK has no texture-region draw call. Create and cache only
     // the rare clipped 8x8 variants, preserving the checked-in source pixels.
-    local pixels=eve.Image().newImageDataFromFile(oamTexturePaths[texture]);
+    // Image resources are cached; clone before changing a variant's alpha.
+    local pixels=eve.Image().newImageDataFromFile(oamTexturePaths[texture])["clone"]();
     for(local row=0;row<8;row+=1) if((mask & (1<<row))==0)
         for(local x=0;x<8;x+=1) pixels.setPixel(x,row,0.0,0.0,0.0,0.0);
     local clipped=gfx.newTexture(pixels,false,false);
