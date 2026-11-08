@@ -21,20 +21,24 @@ function world21OamOffset(g,slot) {
 }
 
 if (!("oamOcclusionCache" in getroottable())) oamOcclusionCache <- {};
-function occludedOamTexture(texture,cover,dx,dy) {
-    if(dx>=16 || dx<=-16 || dy>=8 || dy<=-16) return texture;
+function occludedOamTexture(texture,cover,dx,dy,leftMask=255,rightMask=255) {
+    if(cover!=null && (dx>=16 || dx<=-16 || dy>=8 || dy<=-16)) cover=null;
+    if(cover==null && leftMask==255 && rightMask==255) return texture;
     if(!(texture in oamOcclusionCache)) oamOcclusionCache[texture] <- {};
     local cache=oamOcclusionCache[texture];
-    local key=oamTexturePaths[cover]+":"+dx+":"+dy;
+    local key=(cover==null?"none":oamTexturePaths[cover])+":"+dx+":"+dy+
+        ":"+leftMask+":"+rightMask;
     if(key in cache) return cache[key];
     // Image resources are cached; clone before changing a variant's alpha.
     local pixels=eve.Image().newImageDataFromFile(oamTexturePaths[texture])["clone"]();
-    local mask=eve.Image().newImageDataFromFile(oamTexturePaths[cover]);
+    local mask=cover==null?null:eve.Image().newImageDataFromFile(oamTexturePaths[cover]);
     for(local y=0;y<pixels.getHeight();y+=1)
         for(local x=0;x<pixels.getWidth();x+=1) {
             local cx=x-dx,cy=y-dy;
-            if(cx>=0 && cy>=0 && cx<mask.getWidth() && cy<mask.getHeight() &&
-               mask.getPixelA(cx,cy)>0) pixels.setPixel(x,y,0.0,0.0,0.0,0.0);
+            local hidden=((x<8?leftMask:rightMask)&(1<<y))==0;
+            if(mask!=null && cx>=0 && cy>=0 && cx<mask.getWidth() &&
+               cy<mask.getHeight() && mask.getPixelA(cx,cy)>0) hidden=true;
+            if(hidden) pixels.setPixel(x,y,0.0,0.0,0.0,0.0);
         }
     local clipped=gfx.newTexture(pixels,false,false);
     gfx.setTextureSampler(clipped,"nearest","none",1.0,0.0);

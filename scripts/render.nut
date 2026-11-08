@@ -871,8 +871,7 @@ function drawEnemy(g, e) {
         if(visualState=="walking" || visualState=="falling") drawX=e.displayX;
     }
     local overwrittenHead=false;
-    if(isWorld21(g) && e.kind=="koopa" && visualState=="walking" &&
-        (e.state=="shell" || e.state=="shellMoving"))
+    if(isWorld21(g))
         foreach(score in g.floatingScores) if(score.owner==e && score.age>=1)
             overwrittenHead=true;
     if(g.level==3 || isWorld21(g))
@@ -1016,18 +1015,28 @@ function drawEffects(g) {
                         (score.control == 2 ? assets.items.score200 :
                          (score.control == 3 ? assets.items.flagScores[3] : null));
         if (texture != null) {
-            // Floatey numbers reuse the owning enemy's first two OAM cells.
+            // The first enemy OAM row is replaced, not an additional pair.
             local y=score.displayY-(score.displayY<24.0?8.0:7.0);
-            if(isWorld21(g) && g.bump.active && g.bump.frame>1 && "slot" in g.bump) {
+            if(isWorld21(g)) {
                 local slot=score.owner.slot>=0?score.owner.slot:score.owner.erasedSlot;
-                local blockBase=world21ShuffledOamOffset(g,0xd8+g.bump.slot*16);
-                if(slot>=0 && blockBase<world21OamOffset(g,slot)) {
-                    local bx=floor(g.bump.tx*16.0-visualCameraX(g)).tointeger();
-                    local by=floor(g.bump.ty*16.0+world21BlockBumpOffset(g)).tointeger();
-                    local cover=world21TileTexture(g,g.bump.tx,g.bump.ty,
-                        getTile(g,g.bump.tx,g.bump.ty));
-                    if(cover!=null) texture=occludedOamTexture(texture,cover,
-                        bx-floor(score.x).tointeger(),by-floor(y).tointeger());
+                if(slot>=0) {
+                    local offset=world21OamOffset(g,slot);
+                    if(oamCollecting) {
+                        oamEntries[offset] <- {y=floor(y).tointeger()};
+                        oamEntries[offset+4] <- {y=floor(y).tointeger()};
+                        continue;
+                    }
+                    local leftMask=oamMasking && offset in oamLineMasks?oamLineMasks[offset]:255;
+                    local rightMask=oamMasking && (offset+4) in oamLineMasks?oamLineMasks[offset+4]:255;
+                    local cover=null,dx=0,dy=0;
+                    if(g.bump.active && g.bump.frame>1 && "slot" in g.bump &&
+                       world21ShuffledOamOffset(g,0xd8+g.bump.slot*16)<offset) {
+                        dx=floor(g.bump.tx*16.0-visualCameraX(g)-score.x).tointeger();
+                        dy=floor(g.bump.ty*16.0+world21BlockBumpOffset(g)-y).tointeger();
+                        cover=world21TileTexture(g,g.bump.tx,g.bump.ty,
+                            getTile(g,g.bump.tx,g.bump.ty));
+                    }
+                    texture=occludedOamTexture(texture,cover,dx,dy,leftMask,rightMask);
                 }
             }
             screenTexture(texture,score.x,y,16.0,8.0);
