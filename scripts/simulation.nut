@@ -400,6 +400,7 @@ function spawnPowerUp(g, tx, ty, kind) {
         displayEmerging = true,
         displayVisible = false,
         displayActive = true,
+        displayPalette = 2, preparedPalette = 2,
         active = true
     });
     parityRecordEvent(g, "gameplay", "powerup_spawn",
@@ -1506,6 +1507,11 @@ function updatePowerUps(g, dt) {
         item.displayRomY = item.romY;
         item.displayEmerging = item.emerging;
         item.displayVisible = item.visible;
+        if(isWorld21(g)) {
+            // Color attributes follow the same prepared-OAM handoff as position.
+            item.displayPalette=item.preparedPalette;
+            item.preparedPalette=(g.nesFrameCounter>>1)&3;
+        }
         if (!item.active) continue;
         movePowerUp(g, item, dt);
         if(isWorld21(g)) g.world21.slot5YDummy <- item.nesYDummy;

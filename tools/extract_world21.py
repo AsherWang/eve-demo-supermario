@@ -43,7 +43,7 @@ def main() -> None:
     dest=ROOT/'scripts/generated/world21_data.nut'
     dest.write_text('// Offline World 2-1 data from the verified ROM.\n'+
         '\n'.join('ROM_WORLD_2_1_'+key+' <- ['+','.join(map(str,value))+'];'
-            for key,value in data.items())+'\n',encoding='utf-8')
+            for key,value in data.items())+'\n',encoding='utf-8',newline='\n')
     manifest=dict(schema='smb-world21-data-v1',rom_sha256=EXPECTED,area_pointer=0x28,
         streams=records,flag_column=flag_column,items=decode_world_1_1_blocks(data['AREA']),
         area_links=links,runtime_status='main-route prototype; branch work tracked in docs')
@@ -60,7 +60,15 @@ def main() -> None:
         image=tile_image(raw[32784:40976],tile,palettes[1],0,True)
         image.save(out/f'{name}.png')
         if name=='vine-body': image.transpose(Image.Transpose.FLIP_LEFT_RIGHT).save(out/'vine-body-flipped.png')
-    (out/'manifest.json').write_text(json.dumps(manifest,indent=2)+'\n',encoding='utf-8')
+    # DrawPowerUp cycles all four sprite palettes for the uncollected star.
+    star_tiles=bytes.fromhex('8d8de4e4')
+    manifest['star_palettes']=[]
+    for phase,palette in enumerate(palettes):
+        image=compose_sprite(raw[32784:40976],star_tiles,palette,2,mirror_right=True)
+        target=out/f'star-palette-{phase}.png';image.save(target)
+        manifest['star_palettes'].append(dict(path=target.relative_to(ROOT).as_posix(),
+            palette=palette,tiles=list(star_tiles),sha256=hashlib.sha256(target.read_bytes()).hexdigest()))
+    (out/'manifest.json').write_text(json.dumps(manifest,indent=2)+'\n',encoding='utf-8',newline='\n')
     print(json.dumps(manifest))
 
 if __name__=='__main__': main()

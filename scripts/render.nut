@@ -731,14 +731,17 @@ function drawPlayer(g) {
     }
 }
 
-function drawPowerUps(g, behindTiles) {
+function drawPowerUps(g, behindTiles, afterHud=false) {
     foreach (item in g.powerups) {
         if (!item.displayActive || !item.displayVisible) continue;
         if (item.displayEmerging != behindTiles) continue;
+        local foregroundStar=isWorld21(g) && item.kind=="star" && !item.displayEmerging;
+        if(foregroundStar!=afterHud) continue;
         local texture = assets.items.mushroom;
         if (item.kind == "flower") texture = assets.items.flower;
         if (item.kind == "oneup") texture = assets.items.oneUp;
-        if (item.kind == "star") texture = assets.items.star;
+        if (item.kind == "star") texture = isWorld21(g)?
+            assets.world21.starPalettes[item.displayPalette]:assets.items.star;
         worldTexture(g, texture, floor(item.displayX),
                      floor(item.displayRomY + POWERUP_DRAW_Y_OFFSET), 16.0, 16.0);
     }
@@ -1322,6 +1325,8 @@ function renderGameScene(g) {
         drawHud(g);
         renderOffsetY=0.0;
     }
+    // Foreground star sprites cover the HUD background, like other OAM actors.
+    if(isWorld21(g)) drawPowerUps(g,false,true);
     // Lower OAM indexes win sprite-over-sprite priority on the PPU.  Draw
     // higher enemy slots first so slot 0 is composited last by the host.
     local enemyDrawOrder=[5,4,3,2,1,0];

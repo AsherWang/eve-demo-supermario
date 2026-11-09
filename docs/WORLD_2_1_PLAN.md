@@ -739,3 +739,25 @@ Win64 预览包 `dist/super-mario-world21-coin-tail-preview-20261109-win64/Super
 旧路线实际窗口全帧复验：踩踏 1601 帧及主诊断 3116 帧的六项门禁全部通过，零画面差异、零缺帧；新旧状态/事件逐字节相同，模型音频仍按上述守卫复用。主诊断首次窗口启动因 Vulkan `VK_INCOMPLETE` 失败，日志保留在 `full/main-route/actual`；成功采集为 `actual-retry-1`，报告仍在 `full/main-route/reports`。
 
 最终 Win64 预览包：`dist/super-mario-world21-block-erase-preview-20261109-win64/SuperMario.exe`。原生构建/混音 CTest、首帧显示（1562 ms）、标题/图标及正常关闭通过，见 `package-startup.json`；包内脚本逐字节匹配工作区，回放默认禁用，无 ROM/存档。版本仍为 0.0.7，未发布新 release。
+
+
+## Star palette handoff and HUD priority (2026-11-09)
+
+同一条 2398 帧正常入口成功路线保持原始按键、零容差与零缺帧。最终完整窗口采集的画面失败由 806 降至 708，修复 98 帧，逐帧差异像素数均未增加，最早剩余差异由 574 推迟至 693（146 像素）。最终报告 `full-priority/normal-clear/reports`，前后逐帧证明 `full-priority/normal-clear/image-change-proof.json`。本节所有证据路径以 `local-parity/star-palette-fix-20261109` 为根。
+
+原版 `DrawPowerUp` 对星星的上下两排精灵都使用 `(FrameCounter >> 1) & 3`，每两帧切换调色板；宿主此前固定使用 palette 2 的橙色 PNG。扩展已有离线提取器，从已校验 ROM 的同一组 CHR `$8d/$e4` 导出四种星星颜色，清单记录图块、调色板字节与各 PNG 哈希。四种透明轮廓完全相同，palette 2 与原 `assets/items/star.png` 全部像素相同；25 个提取文件重跑后哈希稳定，见 `asset-proof.json`。
+
+颜色属性需要与精灵图像一起交接。新增道具的 prepared/display 调色板状态，避免直接使用本次更新后的计数器造成提前一帧。自检覆盖完整两帧颜色周期，以及 255→0 回绕时上一张准备图像仍使用旧颜色的交接。World 1 的星星继续使用原绘制路径。
+
+星星跳到屏幕顶部时，原绘制顺序又使后画的 HUD 背景盖住已露出的星星；第 647 帧首先只损失 1 个像素。现将 2-1 已完成露出的星星放到 HUD 之后、其它精灵之前绘制，露出过程中仍走砖块背后的原路径。只改颜色的中间完整结果为 731 张失败，加入此顺序修正后为 708，两个阶段证据分别保存在 `full` 与 `full-priority`。
+
+前缀诊断比较 213 张指定采样图像：`probe1` 暴露颜色提前一帧，`probe2` 加入显示缓冲后修复 75 张，`probe4` 加入 HUD 优先级后修复 98 张且无新增退化；`probe3` 的 Vulkan `VK_INCOMPLETE` 启动失败保留。最终采集仍比较原始 movie 的全部 2398 帧，采样不代替整关门禁。
+
+最终正常路线的完整状态与事件文件和修正前逐字节相同，选定状态仍匹配至第 2396 帧；末帧缺少 2-2 关卡/加载切换及静音事件，完整门禁仍失败。APU/PCM/产物通过，音频仅在状态/事件逐字节相同的守卫下复用并重检，见 `audio-reuse-proof.json`，不是新设备录音。World 2-2 和跨关衔接尚未实现，正式逐关完成登记不变。下一步从第 693 帧剩余显示差异继续定位。
+
+33 项 Python 测试、10 组模拟回归与原生混音 CTest 通过；最终模拟结果见 `regressions-final`。
+
+
+最终源码的旧路线实际窗口全帧复验：长按踩踏 1601 帧及主诊断 3116 帧全部通过状态、画面、事件、APU、PCM、产物六项门禁，零图像差异、零缺帧。最终报告在 `full-priority/held-stomp` 与 `full-priority/main-route`，新旧状态/事件逐字节相同。中间只改颜色的 `full` 采集中，两条旧路线各一次 Vulkan 初始化失败后在 `actual-retry-1` 成功；最终 `full-priority` 均直接成功。
+
+最终 Win64 预览包：`dist/super-mario-world21-star-preview-20261109-win64/SuperMario.exe`。原生构建/混音 CTest、首帧显示（1516 ms）、窗口可见（1625 ms）、标题/图标及正常关闭检查通过，见 `package-startup.json`。脚本和四种星星 PNG 与工作区逐字节相同，回放默认禁用，包内不含 ROM/存档；版本仍为 0.0.7，未发布新 release。

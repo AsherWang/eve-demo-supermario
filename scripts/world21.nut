@@ -85,6 +85,9 @@ function loadWorld21Assets() {
     foreach(column in ROM_WORLD_2_1_SKY_METATILES) foreach(meta in column)
         if(meta!=0 && !(meta in metatiles)) metatiles[meta] <- loadTexture("assets/world13/metatile-"+meta+".png");
     assets.world21 <- {metatiles=metatiles,
+        starPalettes=[loadTexture("assets/world21/star-palette-0.png"),
+            loadTexture("assets/world21/star-palette-1.png"),loadTexture("assets/world21/star-palette-2.png"),
+            loadTexture("assets/world21/star-palette-3.png")],
         cloud=loadTexture("assets/world21/cloud-platform.png"),
         spriteZeroMasks=[loadTexture("assets/world21/hud-sprite0-0.png"),
             loadTexture("assets/world21/hud-sprite0-1.png"),loadTexture("assets/world21/hud-sprite0-2.png"),
@@ -534,6 +537,23 @@ function runWorld21SelfTest() {
     blockErase.bump.backgroundErasePending=true;beginWorld21Block(blockErase);
     requireSelfTest(!blockErase.bump.backgroundErasePending,
         "a new block object must not inherit a preceding pending background erase");
+    local starColors=createGame();startLevel(starColors,2,1);
+    spawnPowerUp(starColors,69,5,"star");starColors.nesFrameCounter=84;
+    foreach(expected in [2,2,2,3,3,0,0,1]) {
+        simulateFixed(starColors,FIXED_DT);
+        requireSelfTest(starColors.powerups[0].displayPalette==expected,
+            "star palettes must follow DrawPowerUp's two-frame phase through the OAM handoff");
+    }
+    starColors.nesFrameCounter=254;simulateFixed(starColors,FIXED_DT);
+    simulateFixed(starColors,FIXED_DT);
+    requireSelfTest(starColors.nesFrameCounter==0 && starColors.powerups[0].displayPalette==3,
+        "star palette presentation must retain the prepared phase across frame-counter wrap");
+    simulateFixed(starColors,FIXED_DT);
+    requireSelfTest(starColors.powerups[0].displayPalette==3,
+        "the last pre-wrap star palette must survive the OAM handoff");
+    simulateFixed(starColors,FIXED_DT);
+    requireSelfTest(starColors.powerups[0].displayPalette==0,
+        "star palette cycling must resume at zero after the frame counter wraps");
     local descriptor=g.world21.descriptor,links=descriptor.areaLinks;
     requireSelfTest(links.len()==2 && links[0].column==63 &&
         links[0].destination==0x2b && links[0].entrancePage==0 &&

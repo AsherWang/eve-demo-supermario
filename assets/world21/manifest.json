@@ -162,5 +162,71 @@
       ]
     }
   ],
-  "runtime_status": "main-route prototype; branch work tracked in docs"
+  "runtime_status": "main-route prototype; branch work tracked in docs",
+  "star_palettes": [
+    {
+      "path": "assets/world21/star-palette-0.png",
+      "palette": [
+        15,
+        22,
+        39,
+        24
+      ],
+      "tiles": [
+        141,
+        141,
+        228,
+        228
+      ],
+      "sha256": "ff14306786f4b0e11d37303c258c0ab0531016e5d77d784dded5addd3cb8444e"
+    },
+    {
+      "path": "assets/world21/star-palette-1.png",
+      "palette": [
+        15,
+        26,
+        48,
+        39
+      ],
+      "tiles": [
+        141,
+        141,
+        228,
+        228
+      ],
+      "sha256": "ded34ff1c3c1028b9ab95bb86878a0c7279b138748745e539d687c6669f4c513"
+    },
+    {
+      "path": "assets/world21/star-palette-2.png",
+      "palette": [
+        15,
+        22,
+        48,
+        39
+      ],
+      "tiles": [
+        141,
+        141,
+        228,
+        228
+      ],
+      "sha256": "f5494b6ff26c0aba7a077d340fdf74697114f4fd7a3c1d2addbf68b0d30cec9b"
+    },
+    {
+      "path": "assets/world21/star-palette-3.png",
+      "palette": [
+        15,
+        15,
+        54,
+        23
+      ],
+      "tiles": [
+        141,
+        141,
+        228,
+        228
+      ],
+      "sha256": "f3a7f5f1e3b622875336a1ed63aac2319b6c1420434ad756464ce09df762abda"
+    }
+  ]
 }
