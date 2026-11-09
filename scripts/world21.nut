@@ -366,6 +366,13 @@ function world21AnimatedSpringTile(g,tx,ty) {
     return false;
 }
 
+function rememberWorld21EnemyMotion(g,enemy) {
+    if(!isWorld21(g) || enemy.slot<0) return;
+    if(!("slotYRegisters" in g.world21)) g.world21.slotYRegisters <- array(5,null);
+    g.world21.slotYRegisters[enemy.slot]={speed=enemy.nesYSpeed,
+        force=enemy.nesYMoveForce,dummy=enemy.nesYDummy};
+}
+
 function world21PlantLeftBound(cameraX) {
     // CPY #Piranha sets carry; ADC #$38 feeds its carry into SBC #$48.
     local camera=floor(cameraX).tointeger();
@@ -378,6 +385,12 @@ function retireWorld21Plants(g) {
     local leftBound=world21PlantLeftBound(g.cameraX);
     foreach(plant in g.plants) if(plant.awake &&
         (!plant.active || floor(plant.x)<leftBound)) {
+        if(plant.slot>=0) {
+            if(!("slotYRegisters" in g.world21)) g.world21.slotYRegisters <- array(5,null);
+            // These plant fields alias the enemy's speed, force and YMF bytes.
+            g.world21.slotYRegisters[plant.slot]={speed=plant.moving?1:0,
+                force=plant.baseY.tointeger()&255,dummy=(plant.baseY.tointeger()-24)&255};
+        }
         plant.active=false;plant.slot=-1;plant.retired=true;
     }
 }
@@ -701,6 +714,25 @@ function runWorld21SelfTest() {
     reclaim.cameraX=1730;parseWorld21PlantColumn(reclaim,7);
     requireSelfTest(newPlant.active && newPlant.slot==0,
         "the later pipe must reuse the plant slot released before column parsing");
+    newPlant.moving=true;reclaim.cameraX=2105;retireWorld21Plants(reclaim);
+    local inheritedJump=makeEnemyAt(2416,12,"koopa");inheritedJump.greenJump <- true;
+    requireSelfTest(allocateEnemySlot(reclaim,inheritedJump) && inheritedJump.slot==0 &&
+        inheritedJump.nesYSpeed==1 && inheritedJump.nesYMoveForce==128 && inheritedJump.nesYDummy==104,
+        "jumping green paratroopas must inherit the retired plant's aliased vertical registers");
+    moveEnemyBody(reclaim,inheritedJump,FIXED_DT);
+    requireSelfTest(inheritedJump.y==181 && inheritedJump.nesYSpeed==-3 &&
+        inheritedJump.nesYMoveForce==28 && inheritedJump.nesYDummy==104,
+        "a descending paratroopa must land and relaunch before applying its first gravity step");
+    releaseEnemySlot(inheritedJump,reclaim);
+    local ordinary=makeEnemyAt(2416,12,"goomba");allocateEnemySlot(reclaim,ordinary);
+    requireSelfTest(ordinary.nesYDummy==104 && ordinary.nesYSpeed==0 && ordinary.nesYMoveForce==0,
+        "ordinary enemy initialization must retain position fraction while clearing speed and force");
+    local driftingJump=makeEnemyAt(2704,12,"koopa");driftingJump.greenJump <- true;
+    driftingJump.y=185;driftingJump.nesYSpeed=0;driftingJump.nesYMoveForce=200;
+    driftingJump.nesYDummy=180;setTile(reclaim,169,12,TILE_EMPTY);setTile(reclaim,169,13,TILE_GROUND);
+    moveEnemyBody(reclaim,driftingJump,FIXED_DT);
+    requireSelfTest(driftingJump.y==186 && driftingJump.vx<0,
+        "a paratroopa's floor row must not be mistaken for its horizontal wall probe");
     local descriptor=g.world21.descriptor,links=descriptor.areaLinks;
     requireSelfTest(links.len()==2 && links[0].column==63 &&
         links[0].destination==0x2b && links[0].entrancePage==0 &&

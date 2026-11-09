@@ -1723,7 +1723,14 @@ function moveEnemyBody(g, e, dt) {
     }
     local greenJump=("greenJump" in e) && e.greenJump && e.state=="walking";
     if(greenJump) {
-        if(e.grounded) {e.nesYSpeed=-3;e.nesYMoveForce=0;e.grounded=false;}
+        if(isWorld21(g)) {
+            local origin=floor(e.y).tointeger();
+            if(((origin+0x3e)&255)>=0x44 && ((e.nesYSpeed+2)&255)>=3 &&
+               isSolidAt(g,floor((e.x+8)/16).tointeger(),floor((e.y+24)/16).tointeger())) {
+                e.y=((origin&~15)|8).tofloat();
+                e.nesYSpeed=-3;e.nesYMoveForce=0;e.grounded=false;
+            }
+        } else if(e.grounded) {e.nesYSpeed=-3;e.nesYMoveForce=0;e.grounded=false;}
         local positionSum=e.nesYDummy+e.nesYMoveForce;
         e.nesYDummy=positionSum&255;
         e.vy=(e.nesYSpeed+floor(positionSum/256).tointeger())/dt;
@@ -1744,6 +1751,11 @@ function moveEnemyBody(g, e, dt) {
     local tx = floor(probeX / TILE_SIZE).tointeger();
     local top = floor((e.y + 1.0) / TILE_SIZE).tointeger();
     local bottom = floor((e.y + e.height - 1.0) / TILE_SIZE).tointeger();
+    if(isWorld21(g) && greenJump) {
+        // EnemyJump checks one side probe at Y+$14, not the feet/ground row.
+        top=floor((e.y+20)/TILE_SIZE).tointeger();bottom=top;
+        if(e.y<32) bottom=top-1;
+    }
     local hitWall = false;
     local wallRow = top;
     for (local ty = top; ty <= bottom; ty += 1)
@@ -1787,7 +1799,7 @@ function moveEnemyBody(g, e, dt) {
         nextY = e.y + delta;
         e.vy = e.nesYSpeed * NES_FRAME_RATE;
     }
-    if (nextY >= e.y && !romGroundWalker) {
+    if (nextY >= e.y && !romGroundWalker && !(isWorld21(g) && greenJump)) {
         local floorTy = floor((nextY + e.height) / TILE_SIZE).tointeger();
         // BlockBufferChk_Enemy checks the bottom-middle probe (X+8, Y+18),
         // not both edges. A trailing edge touching an adjacent column must not
@@ -2044,6 +2056,16 @@ function allocateEnemySlot(g, enemy) {
             if(isWorld21(g)) {
                 // InitEnemyObject leaves Enemy_X_MoveForce intact on reuse.
                 enemy.x += g.world21.slotXFractions[slot];
+                if("nesYDummy" in enemy && "slotYRegisters" in g.world21 &&
+                   g.world21.slotYRegisters[slot]!=null) {
+                    local registers=g.world21.slotYRegisters[slot];
+                    enemy.nesYDummy=registers.dummy;
+                    // Jumping green paratroopa initialization leaves all three
+                    // vertical registers intact; ordinary walkers clear speed/force.
+                    if("greenJump" in enemy && enemy.greenJump) {
+                        enemy.nesYSpeed=registers.speed;enemy.nesYMoveForce=registers.force;
+                    }
+                }
             }
             enemy.slot = slot;
             enemy.enemyCollisionMask = 0;
@@ -2053,7 +2075,8 @@ function allocateEnemySlot(g, enemy) {
     return false;
 }
 
-function releaseEnemySlot(enemy) {
+function releaseEnemySlot(enemy,g=null) {
+    if(g!=null) rememberWorld21EnemyMotion(g,enemy);
     enemy.slot = -1;
     enemy.enemyCollisionMask = 0;
 }
@@ -2179,7 +2202,7 @@ function updateGoombas(g, dt) {
                     e.erasedDisplayFrames = 2;
                     e.erasedSlot = e.slot;
                     e.alive = false;
-                    releaseEnemySlot(e);
+                    releaseEnemySlot(e,g);
                 }
             }
             if(isWorld21(g) && e.alive) {
@@ -2197,7 +2220,7 @@ function updateGoombas(g, dt) {
                     e.state="defeated";
                     if(e.slot>=0) g.world21.slotXFractions[e.slot]=e.x-floor(e.x);
                 }
-                if(e.x<projectedCameraX-73) {e.alive=false;releaseEnemySlot(e);}
+                if(e.x<projectedCameraX-73) {e.alive=false;releaseEnemySlot(e,g);}
             }
             continue;
         }
@@ -2363,17 +2386,19 @@ function updateGoombas(g, dt) {
         moveEnemyBody(g, e, dt);
         if(isWorld21(g) && e.slot>=0) {
             g.world21.slotXFractions[e.slot]=e.x-floor(e.x);
+            rememberWorld21EnemyMotion(g,e);
         }
         // OffscreenBoundsCheck reaches `SBC #$48` with carry clear for a
         // normal Goomba: the preceding `CPY #con_piranha_plant` fails with
         // Y=$06.  The effective bound is therefore screen-left-$49 (73 px),
         // despite the source comment describing a 72-pixel extension.
-        if (e.x < projectedCameraX - 73.0) {
+        local leftMargin=isWorld21(g) && "greenJump" in e && e.greenJump?72.0:73.0;
+        if (e.x < projectedCameraX - leftMargin) {
             e.alive = false;
             // The ROM dispatches slots in order. Erasing a slot at the end
             // of its pass cannot re-run that slot's parser in the same pass.
             if(isWorld21(g) && e.slot>=0) g.world21.releasedSlots[e.slot]=true;
-            releaseEnemySlot(e);
+            releaseEnemySlot(e,g);
             continue;
         }
     }

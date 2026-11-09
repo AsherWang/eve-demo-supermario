@@ -890,9 +890,10 @@ function drawEnemy(g, e) {
             overwrittenHead=true;
     if(g.level==3 || isWorld21(g))
         screenOamTexture(texture,floor(drawX)-visualCameraX(g),floor(drawY),16.0,height,
-            // Reconstruct the integer pre-movement coordinate from the
-            // host's half-pixel walking phase before computing edge bits.
-            floor(e.previousX+(e.vx<0.0?0.5:0.0))-visualCameraX(g),0,overwrittenHead?1:0);
+            // World 2-1 edge bits belong to the same prepared OAM image.
+            // Other paths retain their integer pre-movement reconstruction.
+            (isWorld21(g)?floor(drawX):floor(e.previousX+(e.vx<0.0?0.5:0.0)))-
+                visualCameraX(g),0,overwrittenHead?1:0);
     else worldTexture(g, texture, floor(drawX), floor(drawY), 16.0, height);
 }
 

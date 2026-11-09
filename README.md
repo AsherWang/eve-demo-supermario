@@ -176,7 +176,7 @@ World 2-2 is not implemented. These features are not
 in the published 0.0.7 package.
 
 
-The 2026-11-08 source validation closes the known image differences in the
+Source validation through 2026-11-10 closes the known image differences in the
 1601-frame held-jump/stomp diagnostic and the 3116-frame death/title diagnostic:
 both pass every frame and all six gates. Underground/sky branch regressions and
 the sampled title-to-new-game replay also pass. These are diagnostic and branch
@@ -184,7 +184,7 @@ routes. A new 2398-frame fixed-input normal-entry movie independently clears
 2-1 in the ROM with three lives and reaches 2-2. The remake now also reaches
 settlement with three lives: selected state fields match through frame 2396.
 The final frame still lacks the 2-2 transition/silence event. Block-bump,
-map-tail, HUD, sprite-priority and star-palette fixes reduce failed images from 1208 to 553;
+map-tail, HUD, sprite-priority and star-palette fixes reduce failed images from 1208 to 336;
 strict image comparison remains pending. Model APU/audio and artifact gates pass. Whole-level
 acceptance and playable World 2-2 remain pending.
 The older 3210-frame death diagnostic now passes state/audio gates but retains

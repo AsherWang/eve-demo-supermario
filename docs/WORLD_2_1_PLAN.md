@@ -839,3 +839,23 @@ Win64 预览包 `dist/super-mario-world21-coin-tail-preview-20261109-win64/Super
 最终旧路线实际窗口全帧复验：踩踏 1601 帧与主诊断 3116 帧的状态、画面、事件、APU、PCM、产物六项门禁全部通过，零图像差异、零缺帧。两条旧路线也从本轮实际状态/事件重新生成 APU 写入（8804 / 15118 次），核对与旧写入逐字节相同后复用 PCM，报告在 `full/held-stomp` 与 `full/main-route`。
 
 最终 Win64 预览包：`dist/super-mario-world21-plant-slots-preview-20261109-win64/SuperMario.exe`。原生构建/混音 CTest、首帧显示（1719 ms）、标题/图标和正常关闭检查通过，见 `package-startup.json`；包内脚本逐字节匹配工作区，回放默认禁用，无 ROM/存档。版本仍为 0.0.7，未发布新 release。
+
+
+## Buffered enemy edges and green-paratroopa slot registers (2026-11-10)
+
+原始正常入口成功路线仍保持 2398 帧固定输入、零像素容差与零缺帧。完整窗口采集的失败画面由 553 降至 336，修复 217 帧，逐帧差异像素数均未增加；最早剩余差异由 1099 推迟至 1362（103 像素）。报告 `full/normal-clear/reports`，逐帧前后证明 `full/normal-clear/image-change-proof.json`。本节证据均以 `local-parity/frame1099-fix-20261110` 为根。
+
+第 1099 帧原先多显示了板栗仔最左侧 8×8 单元。2-1 绘制使用缓冲后的 OAM 坐标，越界判断却仍用较新的 previousX，使相对 X=0 时应隐藏的单元多保留一帧。现让 2-1 敌人的裁切与绘制使用同一张准备图像的坐标；World 1-3 的既有坐标重建路径保持原样。
+
+1282 帧起还有绿色跳跃飞龟的高度偏差。它在原版复用食人花槽位时，`$0417/$0434/$00a0` 分别从食人花的上界、下界、移动标志重新解释为位置小数、速度小数、纵向速度；初始化绿色跳跃飞龟只设置水平运动和碰撞框，未清除这三项。现保存各槽的纵向寄存器：普通敌人初始化仅继承位置小数，绿色跳跃飞龟继承三项。比如槽 0 前任食人花的 baseY=128、移动标志=1，会留下 dummy=104、force=128、speed=1。
+
+飞龟的 EnemyJump 在重力之前做脚底检测、落地归位后设速度 -3，保留位置小数；不再用通用移动后的地面夹紧替代它。其侧碰撞只检查 Y+$14，避免下降小数进位时把地面那一行误当侧墙。编号 $0e 在左界计算中保留的进位还使退场余量为 72，而不是普通板栗仔的 73。独立对照整个 2398 帧、其中飞龟活跃的 290 帧，slot/X/Y/speed/force/dummy 六字段全部零差异，见 `green-jump-state-proof-final.json`。
+
+新增自检覆盖食人花别名寄存器继承、落地当次先起跳再重力、普通敌人仅保留位置小数，以及下降过程不把脚底地面误判侧墙。33 项 Python 测试、10 组模拟回归与原生混音 CTest 通过，模拟报告 `regressions-final`。同输入前缀中，`probe1` 确认 1099 修复，`probe2` 比较 322 张指定采样画面，对齐 191 张原有失败且无新增退化；中间的飞龟状态诊断失败保留在 `green-jump-state-proof.json` 和 `green-jump-state-proof-collision.json`，最终为上述六字段零差异。采样与模拟不代替完整窗口验收。
+
+本轮敌人轨迹按原版修正，因此不再要求新旧敌人字段字节相同；完整核对确认其它状态字段和事件均保持一致。重新用本轮实际状态/事件生成 15625 次模型 APU 写入，与上一轮逐字节相同后复用 PCM，并重新执行 APU/PCM/产物门禁，三者通过，见 `audio-reuse-proof.json`。不是新设备录音。既有选定状态仍匹配至第 2396 帧，末帧仍缺少 2-2 关卡/加载切换与静音事件，完整门禁保持失败；World 2-2、跨关衔接及正式逐关完成登记仍待完成。下一步从第 1362 帧的剩余显示差异继续定位。
+
+
+最终飞龟逐帧轨迹与原版投影分别保存在 `green-jump-state-final.jsonl`、`green-jump-state-reference.jsonl`，逐帧六字段一致。旧路线完整窗口复验：踩踏 1601 帧与主诊断 3116 帧的状态、图像、事件、APU、PCM、产物六项门禁全部通过，零画面差异、零缺帧；8804 / 15118 次 APU 写入均用本轮状态/事件重新生成后核对一致，再复用 PCM。踩踏首次启动的 Vulkan `VK_INCOMPLETE` 日志保留在 `full/held-stomp/actual`，成功采集为 `actual-retry-1`；主诊断直接在 `full/main-route/actual` 成功。
+
+最终 Win64 预览包：`dist/super-mario-world21-green-jump-preview-20261110-win64/SuperMario.exe`。原生构建/混音 CTest、首帧显示（1672 ms）、标题/图标和正常关闭通过，见 `package-startup.json`；脚本与工作区逐字节相同，回放默认禁用，无 ROM/存档。版本仍为 0.0.7，未发布新 release。
