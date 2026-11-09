@@ -3382,6 +3382,9 @@ function simulateFixed(g, dt) {
         (animationState == "areaReload" &&
             (g.state == "areaEntrance" || g.state == "areaExitEntrance" || g.state == "skyEntrance")) ||
         (animationState == "deathReload" && g.state == "deathEntrance");
+    // Pipe parsing runs after scrolling and can reuse a plant slot retired
+    // at this pass's newly exposed left bound.
+    if(isWorld21(g) && ranGameEngine) retireWorld21Plants(g);
     if (ranGameEngine) updateVramAreaParserScheduler(g);
     if(isWorld21(g) && ranGameEngine) {
         local phase="oamPhase" in g.world21?g.world21.oamPhase:0;

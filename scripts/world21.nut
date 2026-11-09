@@ -366,11 +366,24 @@ function world21AnimatedSpringTile(g,tx,ty) {
     return false;
 }
 
-function updateWorld21Actors(g) {
+function world21PlantLeftBound(cameraX) {
+    // CPY #Piranha sets carry; ADC #$38 feeds its carry into SBC #$48.
+    local camera=floor(cameraX).tointeger();
+    local sum=(camera&255)+0x39;
+    local low=(sum&255)-0x48-(sum>=256?0:1);
+    return (camera&0xff00)+(low<0?-256:0)+(low&255);
+}
+
+function retireWorld21Plants(g) {
+    local leftBound=world21PlantLeftBound(g.cameraX);
     foreach(plant in g.plants) if(plant.awake &&
-        (!plant.active || plant.x<g.cameraX-73.0)) {
+        (!plant.active || floor(plant.x)<leftBound)) {
         plant.active=false;plant.slot=-1;plant.retired=true;
     }
+}
+
+function updateWorld21Actors(g) {
+    retireWorld21Plants(g);
     // Shared piranha behavior; this course has no World 1-2 lift objects.
     updateWorld12Actors(g);
     foreach(plant in g.plants) if(plant.active) {
@@ -665,6 +678,29 @@ function runWorld21SelfTest() {
     updateWorld21Actors(vineEdge);
     requireSelfTest(!vineEdge.world21.vines[0].displayActive,
         "a retired vine must not wrap back onto the display on later passes");
+    foreach(sample in [[0,-16],[198,182],[199,-72],[255,-16],[256,240],[1675,1659]])
+        requireSelfTest(world21PlantLeftBound(sample[0])==sample[1],
+            "piranha left bounds must preserve ADC/SBC carry at low-byte boundaries");
+    local reclaim=createGame();startLevel(reclaim,2,1);reclaim.goombas=[];
+    local oldPlant=null,newPlant=null;
+    foreach(plant in reclaim.plants) {
+        if(plant.x==1656) {oldPlant=plant;plant.awake=true;plant.active=true;plant.slot=0;}
+        if(plant.x==1848) {plant.awake=true;plant.active=true;plant.slot=1;}
+        if(plant.x==1960) {plant.awake=true;plant.active=true;plant.slot=3;}
+        if(plant.x==2088) newPlant=plant;
+    }
+    foreach(slot in [2,4]) {
+        local enemy=makeEnemyAt(1800+slot*16,12,"goomba");
+        enemy.awake=true;enemy.slot=slot;reclaim.goombas.append(enemy);
+    }
+    reclaim.cameraX=1672;retireWorld21Plants(reclaim);
+    requireSelfTest(oldPlant.active,"a plant exactly at the left bound must retain its slot");
+    reclaim.cameraX=1675;retireWorld21Plants(reclaim);
+    requireSelfTest(!oldPlant.active && oldPlant.retired && oldPlant.slot==-1,
+        "a far-left piranha must release its slot at the plant-specific bound");
+    reclaim.cameraX=1730;parseWorld21PlantColumn(reclaim,7);
+    requireSelfTest(newPlant.active && newPlant.slot==0,
+        "the later pipe must reuse the plant slot released before column parsing");
     local descriptor=g.world21.descriptor,links=descriptor.areaLinks;
     requireSelfTest(links.len()==2 && links[0].column==63 &&
         links[0].destination==0x2b && links[0].entrancePage==0 &&
