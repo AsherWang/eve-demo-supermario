@@ -552,6 +552,8 @@ function drawTiles(g) {
                 }
             }
             if(isWorld21(g)) {
+                if(world21BlockRestorationPending(g,tx,ty) &&
+                   !(g.bump.active && g.bump.tx==tx && g.bump.ty==ty)) continue;
                 local texture=world21TileTexture(g,tx,ty,tile);
                 local vineBump=g.bump.active && g.bump.tile==TILE_BRICK_VINE &&
                     g.bump.tx==tx && g.bump.ty==ty && g.bump.frame>1;
@@ -737,7 +739,11 @@ function drawPowerUps(g, behindTiles, afterHud=false) {
         if (item.kind == "oneup") texture = assets.items.oneUp;
         if (item.kind == "star") texture = isWorld21(g)?
             assets.world21.starPalettes[item.displayPalette]:assets.items.star;
-        worldTexture(g, texture, floor(item.displayX),
+        if(isWorld21(g) && item.kind=="star") {
+            oamBase=world21OamOffset(g,5);
+            screenOamTexture(texture,floor(item.displayX-visualCameraX(g)),
+                floor(item.displayRomY+POWERUP_DRAW_Y_OFFSET),16,16);
+        } else worldTexture(g, texture, floor(item.displayX),
                      floor(item.displayRomY + POWERUP_DRAW_Y_OFFSET), 16.0, 16.0);
     }
 }

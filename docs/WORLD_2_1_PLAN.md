@@ -781,3 +781,23 @@ Win64 预览包 `dist/super-mario-world21-coin-tail-preview-20261109-win64/Super
 原版位置/速度小数的关键帧样本保存在 `reference-fractions.json`，直接读取既有完整 RAM 轨迹，不是另造输入。旧路线实际窗口全帧复验：踩踏 1601 帧及主诊断 3116 帧的状态、画面、事件、APU、PCM、产物六项门禁均通过，零图像差异、零缺帧，新旧状态/事件逐字节相同。踩踏首次窗口因 Vulkan `VK_INCOMPLETE` 失败，日志保留在 `full/held-stomp/actual`；成功采集为 `actual-retry-1`。主诊断直接在 `full/main-route/actual` 成功。
 
 最终 Win64 预览包：`dist/super-mario-world21-block-motion-preview-20261109-win64/SuperMario.exe`。原生构建/混音 CTest、首帧显示（1703 ms）、标题/图标与正常关闭通过，见 `package-startup.json`；包内脚本与工作区逐字节相同，回放默认禁用，没有 ROM/存档。版本仍为 0.0.7，未发布新 release。
+
+
+## Queued block restoration and star-cell clipping (2026-11-09)
+
+正常入口成功路线保持原有 2398 帧输入、零像素容差与零缺帧。完整窗口复采画面失败从 690 降至 677，修复 13 帧，逐帧差异像素数均未增加；最早剩余差异从 705 推迟至 775（76 像素）。报告 `full/normal-clear/reports`，前后逐帧证明 `full/normal-clear/image-change-proof.json`。本节证据以 `local-parity/block-restore-fix-20261109` 为根。
+
+原版 `BlockObjMT_Updater` 检查主 VRAM 缓冲是否空闲，按槽 1→槽 0 排入恢复元图块；写入后还要等待选中主缓冲的 NMI。宿主原先在弹起动画结束后直接画静止元图块，提前恢复了 705 及 729..731 的背景。现将恢复请求保存在独立队列中，按既有调色板/HUD 排队状态判断占用，每次仅排入一个块恢复包；第二缓冲被选中时保留已排入请求，直到主缓冲被消费才显示静止图块。请求保存区域和坐标，新移动砖块不覆盖旧恢复请求。
+
+第 706 帧起还包含星星退出左边界的差异：PPU 会隐藏整个越界 8×8 单元，宿主原先只对完整 16×16 PNG 做窗口裁切。将四种星星素材接入既有 OAM 单元生成器并按道具槽 5 绘制，同时参与扫描线评估；新增的 16 个小图重新拼回后与四种原图逐像素一致，见 `asset-proof.json`。藤蔓复用槽 5 时，星星最后准备好的 OAM 图像仍应显示一次，现保留该次交接而不延长其 active 状态，修正第 714 帧。
+
+新增自检覆盖调色板/HUD 占用阻塞、槽 1 优先、每次一个包、第二缓冲推迟消费、新砖块不覆盖旧请求，以及藤蔓替换星星后只保留最后一次显示。33 项 Python 测试、10 组模拟回归与原生混音 CTest 通过，模拟报告 `regressions-star`。
+
+同输入 900 帧前缀采集 388 张指定采样图像，`probe2` 仅改背景恢复时对齐 4 帧；`probe3` 加入星星裁切与最后图像后对齐 13 帧，两次均无新增退化。`probe1` 的 Vulkan `VK_INCOMPLETE` 启动失败保留。正式采集继续使用未修改的原始 movie，比较全部 2398 帧，未用采样代替整关验收。
+
+完整正常路线新旧状态/事件文件逐字节一致，选定状态仍匹配至第 2396 帧；末帧缺少 2-2 关卡/加载切换及静音事件，完整门禁仍失败。APU/PCM/产物通过；音频仅在状态与事件逐字节相同的守卫下复用并重检，见 `audio-reuse-proof.json`，不是本轮新设备录音。World 2-2 和跨关衔接尚未实现，正式逐关完成登记不变。下一步从第 775 帧的剩余显示差异继续定位。
+
+
+原版恢复标志、主缓冲长度/内容及缓冲选择的关键帧样本在 `reference-queue.json`，来自既有完整 RAM 轨迹。最终旧路线完整窗口复验：踩踏 1601 帧与主诊断 3116 帧的六项门禁全部通过，零图像差异、零缺帧，新旧状态/事件逐字节一致；报告分别在 `full/held-stomp` 与 `full/main-route`。
+
+最终 Win64 预览包：`dist/super-mario-world21-restoration-preview-20261109-win64/SuperMario.exe`。原生构建/混音 CTest、首帧显示（1735 ms）、标题/图标与正常关闭通过，见 `package-startup.json`；脚本逐字节匹配工作区，回放默认禁用，无 ROM/存档。版本仍为 0.0.7，未发布新 release。

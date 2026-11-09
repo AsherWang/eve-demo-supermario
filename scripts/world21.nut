@@ -287,6 +287,7 @@ function beginWorld21Block(g) {
     local slot="nextBlockSlot" in g.world21?g.world21.nextBlockSlot:0;
     g.bump.slot <- slot;
     g.bump.backgroundErasePending <- false;
+    if(!("restorations" in g.bump)) g.bump.restorations <- [];
     if(!("slotYDummies" in g.bump)) g.bump.slotYDummies <- [0,0];
     g.bump.yDummy <- g.bump.slotYDummies[slot];
     g.bump.yForce <- 0;g.bump.ySpeed <- -2;g.bump.yOffset <- 0;
@@ -305,6 +306,31 @@ function advanceWorld21Block(g) {
     g.bump.yForce=force&255;g.bump.ySpeed+=force>>8;
     g.bump.preparedOffset=g.bump.yOffset+1;
     g.bump.slotYDummies[g.bump.slot]=g.bump.yDummy;
+    if(g.bump.frame==14) g.bump.restorations.append({
+        tx=g.bump.tx,ty=g.bump.ty,slot=g.bump.slot,area=g.area,queued=false});
+}
+
+function consumeWorld21BlockRestorations(g,secondaryBufferSelected) {
+    if(secondaryBufferSelected || !("restorations" in g.bump)) return;
+    for(local i=g.bump.restorations.len()-1;i>=0;i-=1)
+        if(g.bump.restorations[i].queued) g.bump.restorations.remove(i);
+}
+
+function queueWorld21BlockRestoration(g) {
+    if(!("restorations" in g.bump) || g.colorPhasePending ||
+       g.queuedScore!=g.displayScore || g.queuedCoins!=g.displayCoins) return;
+    local selected=null;
+    foreach(entry in g.bump.restorations) {
+        if(entry.queued) return; // VRAM buffer 1 already contains a block packet.
+        if(selected==null || entry.slot>selected.slot) selected=entry;
+    }
+    if(selected!=null) selected.queued=true;
+}
+
+function world21BlockRestorationPending(g,tx,ty) {
+    if("restorations" in g.bump) foreach(entry in g.bump.restorations)
+        if(entry.area==g.area && entry.tx==tx && entry.ty==ty) return true;
+    return false;
 }
 
 function growWorld21Vine(g,tx,ty) {
@@ -314,7 +340,11 @@ function growWorld21Vine(g,tx,ty) {
     g.bump.active=true;g.bump.tx=tx;g.bump.ty=ty;g.bump.tile=TILE_BRICK_VINE;
     g.bump.time=0.0;g.bump.frame=0;g.bump.powerupPending=false;
     setTile(g,tx,ty,TILE_USED);
-    foreach(item in g.powerups) item.active=false; // Vine setup reuses power-up slot 5.
+    // Vine setup reuses slot 5, but its preceding star OAM image still transfers.
+    foreach(item in g.powerups) {
+        if(item.active) item.visualErasePending <- true;
+        item.active=false;
+    }
     g.world21.vines.append({x=tx*16.0,y=ty*16.0,height=0.0,maximum=96});
     emitSound(g,"bump");parityRecordEvent(g,"gameplay","block_hit");
     emitWorld21VineSound(g);
@@ -568,6 +598,31 @@ function runWorld21SelfTest() {
     requireSelfTest(blockMotion.bump.slotYDummies[0]==224 &&
         blockMotion.bump.slotYDummies[1]==112,
         "block slots must keep independent position fractions after their full bounce");
+    local restore=createGame();startLevel(restore,2,1);beginWorld21Block(restore);
+    restore.bump.restorations.append({tx=10,ty=5,slot=0,area="main",queued=false});
+    restore.bump.restorations.append({tx=11,ty=5,slot=1,area="main",queued=false});
+    restore.colorPhasePending=true;queueWorld21BlockRestoration(restore);
+    requireSelfTest(!restore.bump.restorations[1].queued,
+        "a pending palette packet must prevent background restoration from being queued");
+    restore.colorPhasePending=false;restore.queuedScore=200;
+    queueWorld21BlockRestoration(restore);
+    requireSelfTest(!restore.bump.restorations[1].queued,
+        "a pending HUD packet must also retain the block restoration request");
+    restore.displayScore=200;queueWorld21BlockRestoration(restore);
+    requireSelfTest(restore.bump.restorations[1].queued && !restore.bump.restorations[0].queued,
+        "block replacement must select slot one first and queue only one primary packet");
+    beginWorld21Block(restore);consumeWorld21BlockRestorations(restore,true);
+    queueWorld21BlockRestoration(restore);
+    requireSelfTest(world21BlockRestorationPending(restore,11,5) &&
+        !restore.bump.restorations[0].queued,
+        "secondary-buffer selection and a new moving block must preserve a queued background packet");
+    consumeWorld21BlockRestorations(restore,false);
+    requireSelfTest(!world21BlockRestorationPending(restore,11,5) &&
+        world21BlockRestorationPending(restore,10,5),
+        "primary NMI must expose only the already queued block, retaining the other request");
+    queueWorld21BlockRestoration(restore);consumeWorld21BlockRestorations(restore,false);
+    requireSelfTest(restore.bump.restorations.len()==0,
+        "the next primary pass must complete the remaining block restoration");
     local starColors=createGame();startLevel(starColors,2,1);
     spawnPowerUp(starColors,69,5,"star");starColors.nesFrameCounter=84;
     foreach(expected in [2,2,2,3,3,0,0,1]) {
@@ -585,6 +640,16 @@ function runWorld21SelfTest() {
     simulateFixed(starColors,FIXED_DT);
     requireSelfTest(starColors.powerups[0].displayPalette==0,
         "star palette cycling must resume at zero after the frame counter wraps");
+    local vineReplacement=createGame();startLevel(vineReplacement,2,1);
+    spawnPowerUp(vineReplacement,69,5,"star");
+    local oldStar=vineReplacement.powerups[0];oldStar.visible=true;
+    growWorld21Vine(vineReplacement,83,5);
+    updatePowerUps(vineReplacement,FIXED_DT);
+    requireSelfTest(!oldStar.active && oldStar.displayActive && oldStar.displayVisible,
+        "vine slot replacement must retain the star's last prepared image without extending gameplay");
+    updatePowerUps(vineReplacement,FIXED_DT);
+    requireSelfTest(!oldStar.displayActive,
+        "the replaced star must disappear after its final OAM handoff");
     local descriptor=g.world21.descriptor,links=descriptor.areaLinks;
     requireSelfTest(links.len()==2 && links[0].column==63 &&
         links[0].destination==0x2b && links[0].entrancePage==0 &&

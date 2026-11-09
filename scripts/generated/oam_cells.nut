@@ -440,6 +440,50 @@ OAM_TEXTURE_CELLS <- [
     ]
   ],
   [
+    "assets/world21/star-palette-0.png",
+    2,
+    2,
+    [
+      "assets/oam-cells/world21/star-palette-0/0-0.png",
+      "assets/oam-cells/world21/star-palette-0/0-1.png",
+      "assets/oam-cells/world21/star-palette-0/1-0.png",
+      "assets/oam-cells/world21/star-palette-0/1-1.png"
+    ]
+  ],
+  [
+    "assets/world21/star-palette-1.png",
+    2,
+    2,
+    [
+      "assets/oam-cells/world21/star-palette-1/0-0.png",
+      "assets/oam-cells/world21/star-palette-1/0-1.png",
+      "assets/oam-cells/world21/star-palette-1/1-0.png",
+      "assets/oam-cells/world21/star-palette-1/1-1.png"
+    ]
+  ],
+  [
+    "assets/world21/star-palette-2.png",
+    2,
+    2,
+    [
+      "assets/oam-cells/world21/star-palette-2/0-0.png",
+      "assets/oam-cells/world21/star-palette-2/0-1.png",
+      "assets/oam-cells/world21/star-palette-2/1-0.png",
+      "assets/oam-cells/world21/star-palette-2/1-1.png"
+    ]
+  ],
+  [
+    "assets/world21/star-palette-3.png",
+    2,
+    2,
+    [
+      "assets/oam-cells/world21/star-palette-3/0-0.png",
+      "assets/oam-cells/world21/star-palette-3/0-1.png",
+      "assets/oam-cells/world21/star-palette-3/1-0.png",
+      "assets/oam-cells/world21/star-palette-3/1-1.png"
+    ]
+  ],
+  [
     "assets/world21/cloud-platform.png",
     6,
     1,

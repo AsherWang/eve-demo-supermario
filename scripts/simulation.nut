@@ -1502,7 +1502,8 @@ function updatePowerUps(g, dt) {
     foreach (item in g.powerups) {
         // Enemy OAM built during the preceding game pass is the image copied
         // by the current DMA.  Stage every visual field before mutating RAM.
-        item.displayActive = item.active;
+        item.displayActive = item.active || ("visualErasePending" in item && item.visualErasePending);
+        if("visualErasePending" in item) item.visualErasePending=false;
         item.displayX = item.x;
         item.displayRomY = item.romY;
         item.displayEmerging = item.emerging;
@@ -3169,6 +3170,7 @@ function simulateFixed(g, dt) {
     // NMI consumes exactly one selected VRAM buffer.  Preserve the selection
     // made by the preceding gameplay pass before preparing this pass's state.
     local secondaryBufferWasSelected = g.vramBufferAddrCtrl == 6;
+    if(isWorld21(g)) consumeWorld21BlockRestorations(g,secondaryBufferWasSelected);
     if(isWorld21(g) && !secondaryBufferWasSelected && "backgroundErasePending" in g.bump)
         g.bump.backgroundErasePending=false;
     g.displayBackgroundYOffset = 0.0;
@@ -3387,6 +3389,7 @@ function simulateFixed(g, dt) {
         g.world21.oamPhase <- (phase+1)%3;
         g.world21.preparedOamPhase <- g.world21.oamPhase;
     }
+    if(isWorld21(g) && ranGameEngine) queueWorld21BlockRestoration(g);
     // Misc object processing consumes this pass's ScrollAmount.  Updating it
     // after ScrollHandler keeps jumping-coin world X and relative OAM X in
     // lockstep with the ROM instead of lagging alternating 2/3px scrolls.
