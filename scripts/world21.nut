@@ -287,7 +287,24 @@ function beginWorld21Block(g) {
     local slot="nextBlockSlot" in g.world21?g.world21.nextBlockSlot:0;
     g.bump.slot <- slot;
     g.bump.backgroundErasePending <- false;
+    if(!("slotYDummies" in g.bump)) g.bump.slotYDummies <- [0,0];
+    g.bump.yDummy <- g.bump.slotYDummies[slot];
+    g.bump.yForce <- 0;g.bump.ySpeed <- -2;g.bump.yOffset <- 0;
+    g.bump.preparedOffset <- 0;g.bump.displayOffset <- 0;
     g.world21.nextBlockSlot <- slot^1;
+}
+
+function advanceWorld21Block(g) {
+    g.bump.displayOffset=g.bump.preparedOffset;
+    if(g.bump.frame>14) return;
+    // BumpBlock clears speed fraction, but retains each slot's YMF_Dummy.
+    local position=g.bump.yDummy+g.bump.yForce;
+    g.bump.yDummy=position&255;
+    g.bump.yOffset+=g.bump.ySpeed+(position>>8);
+    local force=g.bump.yForce+0x50;
+    g.bump.yForce=force&255;g.bump.ySpeed+=force>>8;
+    g.bump.preparedOffset=g.bump.yOffset+1;
+    g.bump.slotYDummies[g.bump.slot]=g.bump.yDummy;
 }
 
 function growWorld21Vine(g,tx,ty) {
@@ -387,8 +404,7 @@ function drawWorld21Actors(g,behind) {
         // A bouncing block is OAM over a blank nametable cell. Vine sprites
         // win its sprite priority until the replacement metatile is written.
         if(g.bump.active && g.bump.tile==TILE_BRICK_VINE && g.bump.frame>1) {
-            local offsets=[-1,-3,-5,-6,-6,-7,-7,-7,-6,-5,-4,-3,-1,1];
-            local offset=offsets[clampValue(g.bump.frame-2,0,offsets.len()-1).tointeger()];
+            local offset=world21BlockBumpOffset(g);
             worldTexture(g,assets.tiles.used,g.bump.tx*16.0,g.bump.ty*16.0+offset,16,16);
         }
         foreach(plant in g.plants) if(plant.active) {
@@ -537,6 +553,21 @@ function runWorld21SelfTest() {
     blockErase.bump.backgroundErasePending=true;beginWorld21Block(blockErase);
     requireSelfTest(!blockErase.bump.backgroundErasePending,
         "a new block object must not inherit a preceding pending background erase");
+    local blockMotion=createGame();startLevel(blockMotion,2,1);
+    foreach(expected in [
+        [-1,-3,-5,-6,-6,-7,-7,-7,-6,-5,-4,-3,-1,1],
+        [-1,-3,-5,-6,-6,-7,-7,-7,-6,-5,-4,-3,-1,1],
+        [-1,-3,-4,-5,-6,-6,-6,-6,-6,-5,-4,-2,-1,1]]) {
+        beginWorld21Block(blockMotion);
+        for(local step=1;step<=15;step+=1) {
+            blockMotion.bump.frame=step;advanceWorld21Block(blockMotion);
+            if(step>=2) requireSelfTest(blockMotion.bump.displayOffset==expected[step-2],
+                "block OAM trajectories must inherit the owning slot's retained Y fraction");
+        }
+    }
+    requireSelfTest(blockMotion.bump.slotYDummies[0]==224 &&
+        blockMotion.bump.slotYDummies[1]==112,
+        "block slots must keep independent position fractions after their full bounce");
     local starColors=createGame();startLevel(starColors,2,1);
     spawnPowerUp(starColors,69,5,"star");starColors.nesFrameCounter=84;
     foreach(expected in [2,2,2,3,3,0,0,1]) {

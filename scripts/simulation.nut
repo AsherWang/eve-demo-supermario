@@ -2415,6 +2415,7 @@ function updateEffects(g, dt) {
     if (g.bump.active) {
         g.bump.time += dt;
         g.bump.frame += 1;
+        if(isWorld21(g)) advanceWorld21Block(g);
         // The first block pass queues the background erase in primary VRAM.
         if(isWorld21(g) && g.bump.frame==1) g.bump.backgroundErasePending <- true;
         if (g.bump.frame > 15) g.bump.active = false;

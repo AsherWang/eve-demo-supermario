@@ -533,12 +533,7 @@ function tileTexture(g, tile) {
 
 function world21BlockBumpOffset(g) {
     if(!g.bump.active || g.bump.frame<=1) return 0.0;
-    local offsets=(g.bump.tile==TILE_POWERUP_BLOCK || g.bump.tile==TILE_BRICK_STAR)?
-        [-1,-3,-4,-5,-6,-6,-6,-6,-6,-5,-4,-2,-1,1]:
-        [-1,-3,-5,-6,-6,-7,-7,-7,-6,-5,-4,-3,-1,1];
-    local index=g.bump.frame-2;
-    if(index>=offsets.len()) index=offsets.len()-1;
-    return offsets[index].tofloat();
+    return g.bump.displayOffset.tofloat();
 }
 
 function drawTiles(g) {

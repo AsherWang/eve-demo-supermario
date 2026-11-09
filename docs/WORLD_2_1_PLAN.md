@@ -761,3 +761,23 @@ Win64 预览包 `dist/super-mario-world21-coin-tail-preview-20261109-win64/Super
 最终源码的旧路线实际窗口全帧复验：长按踩踏 1601 帧及主诊断 3116 帧全部通过状态、画面、事件、APU、PCM、产物六项门禁，零图像差异、零缺帧。最终报告在 `full-priority/held-stomp` 与 `full-priority/main-route`，新旧状态/事件逐字节相同。中间只改颜色的 `full` 采集中，两条旧路线各一次 Vulkan 初始化失败后在 `actual-retry-1` 成功；最终 `full-priority` 均直接成功。
 
 最终 Win64 预览包：`dist/super-mario-world21-star-preview-20261109-win64/SuperMario.exe`。原生构建/混音 CTest、首帧显示（1516 ms）、窗口可见（1625 ms）、标题/图标及正常关闭检查通过，见 `package-startup.json`。脚本和四种星星 PNG 与工作区逐字节相同，回放默认禁用，包内不含 ROM/存档；版本仍为 0.0.7，未发布新 release。
+
+
+## Block-slot vertical fractions (2026-11-09)
+
+原始正常入口成功 movie 保持 2398 帧固定输入、零容差与零缺帧。完整窗口重采的画面失败由 708 降至 690，修复 18 帧，逐帧差异像素数均未增加；最早剩余差异由 693 推迟至 705（256 像素）。报告 `full/normal-clear/reports`，逐帧前后证明 `full/normal-clear/image-change-proof.json`。本节证据以 `local-parity/slot-fix-20261109` 为根。
+
+第 693 帧的偏差属于被撞砖块，并非新的敌人。原版 `BumpBlock` 重置速度为 -2、速度小数为 0，但保留两个块对象各自的 `YMF_Dummy`（RAM `$041f/$0420`）。普通砖和强化砖的两条旧固定轨迹，其实分别对应初始位置小数 0 和 112；按砖块类型选择只是之前场景中的巧合。现按原版整数算法逐步累加位置小数及 `$50` 重力，14 次物理更新与显示交接分别保留，槽位复用继承自己的位置小数。藤蔓砖的移动图像也使用同一计算，保留其独立的精灵遮挡路径。
+
+新增回归验证两个槽位初次使用各自从零开始、槽 0 再利用时继承 112 的完整显示轨迹，以及两槽完成后的独立余量 224/112。33 项 Python 测试、10 组模拟回归与原生混音 CTest 通过，最终模拟报告 `regressions-verified`。早期将余量放在会随奖励区域重建的 world21 状态中，`regressions-initial` 捕获了缺失索引；现将其归属到块对象自身。相应的 `probe1` 启动未完成、未产出画面，已停止并保留日志，不作成功证据。
+
+同输入 900 帧前缀比较 388 张指定采样画面：修正归属后的 `probe2` 对齐 6 帧，藤蔓砖也接入后 `probe3` 对齐 18 帧，两次均无新增退化。它们仅用于定位，正式比较仍覆盖全部 2398 帧。
+
+完整正常路线的新旧状态/事件文件逐字节相同，选定状态仍匹配至第 2396 帧；末帧缺少 2-2 关卡/加载切换和静音事件，整关门禁仍失败。模型 APU/PCM/产物通过；音频在新旧状态和事件逐字节一致的守卫下复用并重检，见 `audio-reuse-proof.json`，不是本轮新设备录音。World 2-2 与跨关衔接仍未实现，逐关完成登记不变。
+
+下一步从第 705 帧的背景恢复排队时序继续定位；该帧宿主已显示静止砖块，原版该位置仍为空白。后续还有星星离开屏幕左侧的裁切差异，均未在本轮计作已修复。
+
+
+原版位置/速度小数的关键帧样本保存在 `reference-fractions.json`，直接读取既有完整 RAM 轨迹，不是另造输入。旧路线实际窗口全帧复验：踩踏 1601 帧及主诊断 3116 帧的状态、画面、事件、APU、PCM、产物六项门禁均通过，零图像差异、零缺帧，新旧状态/事件逐字节相同。踩踏首次窗口因 Vulkan `VK_INCOMPLETE` 失败，日志保留在 `full/held-stomp/actual`；成功采集为 `actual-retry-1`。主诊断直接在 `full/main-route/actual` 成功。
+
+最终 Win64 预览包：`dist/super-mario-world21-block-motion-preview-20261109-win64/SuperMario.exe`。原生构建/混音 CTest、首帧显示（1703 ms）、标题/图标与正常关闭通过，见 `package-startup.json`；包内脚本与工作区逐字节相同，回放默认禁用，没有 ROM/存档。版本仍为 0.0.7，未发布新 release。
