@@ -382,8 +382,12 @@ function updateWorld21Actors(g) {
     }
     foreach(vine in g.world21.vines) {
         vine.displayHeight <- vine.height;
+        vine.displayActive <- !("oamRetired" in vine && vine.oamRetired);
         local maximum="maximum" in vine?vine.maximum:96;
         if(vine.height<maximum && (g.nesFrameCounter&2)!=0) vine.height+=1;
+        // VineObject draws before OffscreenBits retires it. The last prepared
+        // X is still an OAM byte, including the -1 -> 255 boundary crossing.
+        if(vine.height>=8 && vine.x<g.cameraX) vine.oamRetired <- true;
     }
     if(g.state=="playing") attachWorld21Vine(g);
     updateWorld21CloudPlatform(g);
@@ -445,7 +449,8 @@ function drawWorld21Actors(g,behind) {
             local y="displayY" in plant?plant.displayY:plant.y;
             screenOamTexture(assets.world21.plants[frame],plant.x-visualCameraX(g),y+1,16,24);
         }
-        foreach(vine in g.world21.vines) if(("displayHeight" in vine?vine.displayHeight:vine.height)>=8 && vine.x-visualCameraX(g)>=0)
+        foreach(vine in g.world21.vines) if(("displayHeight" in vine?vine.displayHeight:vine.height)>=8 &&
+            (!("displayActive" in vine) || vine.displayActive))
             for(local i=0;i<12;i+=1) {
                 local height="displayHeight" in vine?vine.displayHeight:vine.height;
                 local y=vine.y-height+i*8;
@@ -453,8 +458,8 @@ function drawWorld21Actors(g,behind) {
                 local flipped=(i&1)!=0;
                 local texture=i==0?assets.world21.vineTop:
                     (flipped?assets.world21.vineBodyFlipped:assets.world21.vineBody);
-                local x=vine.x+(flipped?6:0)-visualCameraX(g);
-                if(x>=0 && x<256) screenTexture(texture,x,y+1,8,8);
+                local x=(floor(vine.x-visualCameraX(g)).tointeger()+(flipped?6:0))&255;
+                screenTexture(texture,x,y+1,8,8);
             }
     } else {
         if(g.area=="sky" && g.world21.cloudPlatform.active) {
@@ -650,6 +655,16 @@ function runWorld21SelfTest() {
     updatePowerUps(vineReplacement,FIXED_DT);
     requireSelfTest(!oldStar.displayActive,
         "the replaced star must disappear after its final OAM handoff");
+    local vineEdge=createGame();startLevel(vineEdge,2,1);
+    vineEdge.world21.vines.append({x=128.0,y=80.0,height=32.0});
+    vineEdge.cameraX=129;vineEdge.player.dead=true;
+    updateWorld21Actors(vineEdge);
+    requireSelfTest(vineEdge.world21.vines[0].displayActive &&
+        vineEdge.world21.vines[0].oamRetired,
+        "a vine must submit its last OAM image before retiring beyond the left edge");
+    updateWorld21Actors(vineEdge);
+    requireSelfTest(!vineEdge.world21.vines[0].displayActive,
+        "a retired vine must not wrap back onto the display on later passes");
     local descriptor=g.world21.descriptor,links=descriptor.areaLinks;
     requireSelfTest(links.len()==2 && links[0].column==63 &&
         links[0].destination==0x2b && links[0].entrancePage==0 &&

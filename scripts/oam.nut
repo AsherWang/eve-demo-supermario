@@ -83,6 +83,48 @@ function maskedOamCell(texture,mask) {
     return clipped;
 }
 
+if (!("oamPriorityTextures" in getroottable())) oamPriorityTextures <- {};
+// PPU sprite selection precedes background priority. An opaque lower-index
+// sprite blocks later sprites even when that first sprite is behind a pipe.
+function priorityMaskedOamCell(texture,key,x,y) {
+    local mask=key in oamLineMasks?oamLineMasks[key]:255;
+    if(mask==0) return null;
+    local keys=[];
+    foreach(other,entry in oamEntries)
+        if(other<key && "texture" in entry && entry.x<x+8 && entry.x+8>x &&
+           entry.y<y+8 && entry.y+8>y) keys.append(other);
+    if(keys.len()==0) return maskedOamCell(texture,mask);
+    keys.sort();
+    local covers=[],variant=""+mask;
+    foreach(other in keys) {
+        local entry=oamEntries[other];
+        local rows=other in oamLineMasks?oamLineMasks[other]:255;
+        if(rows==0) continue;
+        local dx=entry.x-x,dy=entry.y-y;
+        covers.append({pixels=eve.Image().newImageDataFromFile(oamTexturePaths[entry.texture]),
+            dx=dx,dy=dy,rows=rows});
+        variant+=":"+oamTexturePaths[entry.texture]+":"+dx+":"+dy+":"+rows;
+    }
+    if(covers.len()==0) return maskedOamCell(texture,mask);
+    if(!(texture in oamPriorityTextures)) oamPriorityTextures[texture] <- {};
+    local cache=oamPriorityTextures[texture];
+    if(variant in cache) return cache[variant];
+    local pixels=eve.Image().newImageDataFromFile(oamTexturePaths[texture])["clone"]();
+    for(local row=0;row<8;row+=1) for(local column=0;column<8;column+=1) {
+        local hidden=(mask&(1<<row))==0;
+        foreach(cover in covers) {
+            local cx=column-cover.dx,cy=row-cover.dy;
+            if(cx>=0 && cx<8 && cy>=0 && cy<8 && (cover.rows&(1<<cy))!=0 &&
+               cover.pixels.getPixelA(cx,cy)>0) {hidden=true;break;}
+        }
+        if(hidden) pixels.setPixel(column,row,0.0,0.0,0.0,0.0);
+    }
+    local clipped=gfx.newTexture(pixels,false,false);
+    gfx.setTextureSampler(clipped,"nearest","none",1.0,0.0);
+    cache[variant] <- clipped;
+    return clipped;
+}
+
 function runOamScanlineSelfTest() {
     local entries={};
     for(local i=0;i<9;i+=1) entries[i*4] <- {y=10};

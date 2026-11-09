@@ -39,9 +39,11 @@ function screenOamTexture(texture,x,y,width,height,clipX=null,lowerRowCarry=0,hi
             // an edge/object difference of zero selects mask $80.
             if(maskX<=0 || maskX>=256) continue;
             local key=(oamBase+row*8+column*4)&255;
-            if(oamCollecting) {oamEntries[key] <- {y=oamY+1};continue;}
             local cell=data.cells[row*data.columns+column];
-            if(oamMasking && key in oamLineMasks) cell=maskedOamCell(cell,oamLineMasks[key]);
+            if(oamCollecting) {
+                oamEntries[key] <- {x=cellX,y=oamY+1,texture=cell};continue;
+            }
+            if(oamMasking) cell=priorityMaskedOamCell(cell,key,cellX,oamY+1);
             if(cell!=null) screenTexture(cell,cellX,oamY+1,8,8);
         }
     }
