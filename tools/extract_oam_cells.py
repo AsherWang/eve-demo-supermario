@@ -11,6 +11,8 @@ def main():
     sources += sorted((ROOT / 'assets/world13').glob('red-*.png'))
     sources += [ROOT / 'assets/world13/platform.png']
     sources += sorted((ROOT / 'assets/world21').glob('plant-*.png'))
+    sources += sorted((ROOT / 'assets/world21').glob('paratroopa-*.png'))
+    sources += sorted((ROOT / 'assets/world21').glob('spring-*.png'))
     sources += sorted((ROOT / 'assets/world21').glob('star-palette-*.png'))
     sources += [ROOT / 'assets/world21/cloud-platform.png']
     sources += [ROOT / 'assets/scenery/flagpole-flag.png']

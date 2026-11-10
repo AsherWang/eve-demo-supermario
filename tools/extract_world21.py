@@ -54,6 +54,12 @@ def main() -> None:
     for name,indices,mirror in [('paratroopa',(4,5),False),('plant',(32,33),True),('spring',(40,41,42),True)]:
         for frame,index in enumerate(indices):
             image=compose_sprite(raw[32784:40976],prg[graphics_at+index*6:graphics_at+(index+1)*6],palettes[ENEMY_PALETTES[index]],3,mirror_right=mirror)
+            if name=='spring':
+                # EnemyGraphics vertically mirrors the second and third rows
+                # for every jumpspring frame, in addition to right-column H flip.
+                for row in (1,2):
+                    strip=image.crop((0,row*8,16,row*8+8))
+                    image.paste(strip.transpose(Image.Transpose.FLIP_TOP_BOTTOM),(0,row*8))
             image.save(out/f'{name}-{frame}.png')
             if name=='paratroopa': image.transpose(Image.Transpose.FLIP_LEFT_RIGHT).save(out/f'{name}-{frame}-left.png')
     for name,tile in [('vine-top',0xe0),('vine-body',0xe1)]:

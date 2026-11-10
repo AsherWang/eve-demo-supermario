@@ -859,3 +859,20 @@ Win64 预览包 `dist/super-mario-world21-coin-tail-preview-20261109-win64/Super
 最终飞龟逐帧轨迹与原版投影分别保存在 `green-jump-state-final.jsonl`、`green-jump-state-reference.jsonl`，逐帧六字段一致。旧路线完整窗口复验：踩踏 1601 帧与主诊断 3116 帧的状态、图像、事件、APU、PCM、产物六项门禁全部通过，零画面差异、零缺帧；8804 / 15118 次 APU 写入均用本轮状态/事件重新生成后核对一致，再复用 PCM。踩踏首次启动的 Vulkan `VK_INCOMPLETE` 日志保留在 `full/held-stomp/actual`，成功采集为 `actual-retry-1`；主诊断直接在 `full/main-route/actual` 成功。
 
 最终 Win64 预览包：`dist/super-mario-world21-green-jump-preview-20261110-win64/SuperMario.exe`。原生构建/混音 CTest、首帧显示（1672 ms）、标题/图标和正常关闭通过，见 `package-startup.json`；脚本与工作区逐字节相同，回放默认禁用，无 ROM/存档。版本仍为 0.0.7，未发布新 release。
+
+
+## Native paratroopa cells and buffered jumpspring graphics (2026-11-10)
+
+本轮证据根目录为 `local-parity/frame1362-fix-20261110`。绿色飞龟四种素材未登记到原生 8×8 单元表，之前使用整张 PNG 的回退绘制，跳过列裁切、扫描线预算与逐像素 OAM 优先级。现补齐飞龟及三种弹簧画面的单元，共 7 张画布、42 个单元；`asset-proof-final.json` 验证逐像素可重组原图。弹簧原画的中、下两行按 EnemyGraphics 设置垂直翻转，修正底部横梁位置；此规则保留在离线提取脚本中。
+
+静止弹簧现在也参与绘制。地形解析器在对应列从五个普通敌人槽分配弹簧，普通敌人不得覆盖其槽位；退出左界后释放。静止对象不积分槽位遗留的水平小数。动画使用 [0,1,2,1,0]、Y 偏移 [0,8,16,8,0]，先准备图像后推进计时阶段，再由下一次 OAM 缓冲显示；原有玩家弹簧力学不变。独立检查整个 2398 帧，弹簧活跃的 351 帧在 active/slot/prepared-Y/control 上全部一致，见 `spring-state-proof.json` 与 `spring-trace.log`。
+
+新增模拟检查覆盖解析分配、静态 X 保持、槽位互斥和离屏释放，33 项 Python 测试、10 组模拟回归及原生混音 CTest 通过。首次完整采集暴露新增对象缺少共享分配器的 enemyCollisionMask 字段，修正后重新采集；失败日志保留在 `full/normal-clear-before-symmetry/actual-incomplete-spring`，不计入成功证据。第一轮无运行错误但素材翻转未修正的结果也保留在该目录；最终比较使用重新采集的完整正常路线。
+
+最终正常路线 `full/normal-clear` 完整 2398 帧窗口复验，零容差、零缺帧：失败画面从 336 降至 167，169 帧完全对齐、182 帧差异像素减少，所有帧均无退化；最早剩余差异为第 1661 帧的 3 像素，下一段从 2244 帧起。逐帧前后证据 `image-change-proof.json`，六项报告位于 `reports`。固定输入文件 SHA-256 仍为 `5907822157b3a31045e4147ed4196806b2f1fe82a0118eb392dc712ac9daf8c6`，没有截短路线或放宽阈值。
+
+完整状态/事件与上一轮逐字节一致，模型 APU 从本轮实际状态/事件重新生成 15625 次写入，核对相同后复用 PCM，并通过 APU/PCM/产物门禁；见 `audio-reuse-proof.json`。这是模型音频，不是新设备录音。选定状态仍一致至第 2396 帧，末帧缺少 2-2 关卡/加载切换与静音事件，正常路线完整门禁保持失败。World 2-2、跨关衔接及正式逐关登记仍待完成。
+
+旧踩踏 1601 帧与死亡/标题 3116 帧完整窗口复验六项门禁全部通过，零画面差异、零缺帧，分别在 `full/held-stomp`、`full/main-route`。两条路线重新生成 8804 / 15118 次 APU 写入，核对一致后复用 PCM。旧路线采集发生在最终弹簧素材翻转前，但最大 cameraX 分别只有 505 / 975，尚未解析 x=3008 的弹簧，最终素材修正不会改变它们的绘制；该适用范围核对保留在 `final-validation-proof.json`。
+
+最终 Win64 预览包 `dist/super-mario-world21-spring-oam-preview-20261110-win64/SuperMario.exe`，首帧显示 1734 ms，标题/图标和正常关闭检查通过，见 `package-startup.json`。包内脚本及素材逐字节匹配工作区，回放默认禁用，无 ROM/存档。版本仍为 0.0.7，未发布。下一步定位第 1661 帧的剩余显示差异。

@@ -2027,6 +2027,8 @@ function allocateEnemySlot(g, enemy) {
         }
         if(isWorld21(g)) foreach(plant in g.plants)
             if(plant.active && plant.awake && plant.slot==slot) occupied=true;
+        if(isWorld21(g)) foreach(spring in g.world21.springs)
+            if(spring.active && spring.slot==slot) occupied=true;
         if(isWorld21(g) && "groupIndex" in enemy &&
             "releasedSlots" in g.world21 && g.world21.releasedSlots[slot]) occupied=true;
         if (g.level == 3 && "platforms" in g) {
@@ -3409,7 +3411,9 @@ function simulateFixed(g, dt) {
         (animationState == "deathReload" && g.state == "deathEntrance");
     // Pipe parsing runs after scrolling and can reuse a plant slot retired
     // at this pass's newly exposed left bound.
-    if(isWorld21(g) && ranGameEngine) retireWorld21Plants(g);
+    if(isWorld21(g) && ranGameEngine) {
+        retireWorld21Plants(g);retireWorld21Springs(g);
+    }
     if (ranGameEngine) updateVramAreaParserScheduler(g);
     if(isWorld21(g) && ranGameEngine) {
         local phase="oamPhase" in g.world21?g.world21.oamPhase:0;

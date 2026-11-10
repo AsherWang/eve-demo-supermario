@@ -128,7 +128,8 @@ function startWorld21(g) {
             g.plants.append({x=x*16.0+8.0,y=(row+2)*16.0,baseY=(row+2)*16.0,
                 direction=1,moving=false,timer=0,active=false,awake=false,
                 retired=false,slot=-1,enemyCollisionMask=0});
-        if(meta==0x67) state.springs.append({x=x*16.0,y=(row+2)*16.0,control=0,timer=0,force=-7});
+        if(meta==0x67) state.springs.append({x=x*16.0,y=(row+2)*16.0,control=0,timer=0,force=-7,
+            awake=false,active=false,retired=false,slot=-1,enemyCollisionMask=0});
     }
     state.baseTiles=clone g.tiles;
     decodeWorld11Enemies(g,descriptor.enemies);
@@ -158,8 +159,6 @@ function world21TileTexture(g,tx,ty,tile) {
     if(meta==0 || meta==0x24 || meta==0x25 || meta==0x5f || meta==0x60) {
         return tile==TILE_USED?assets.tiles.used:null;
     }
-    if((meta==0x67 || meta==0x68) && g.world21.springs.len()>0 &&
-        g.world21.springs[0].control>0) return null;
     if(tile!=g.world21.baseTiles[tileIndex(tx,ty)]) return tileTexture(g,tile);
     if(meta==0xc0 || meta==0xc1) return assets.tiles.questions[g.displayColorPhase];
     return meta in assets.world21.metatiles?assets.world21.metatiles[meta]:null;
@@ -395,8 +394,16 @@ function retireWorld21Plants(g) {
     }
 }
 
+function retireWorld21Springs(g) {
+    foreach(spring in g.world21.springs) if(spring.active &&
+        spring.x<g.cameraX-72) {
+        spring.active=false;spring.slot=-1;spring.retired=true;
+    }
+}
+
 function updateWorld21Actors(g) {
     retireWorld21Plants(g);
+    retireWorld21Springs(g);
     // Shared piranha behavior; this course has no World 1-2 lift objects.
     updateWorld12Actors(g);
     foreach(plant in g.plants) if(plant.active) {
@@ -419,6 +426,8 @@ function updateWorld21Actors(g) {
     updateWorld21CloudPlatform(g);
     local p=g.player;
     foreach(spring in g.world21.springs) {
+        spring.displayFrame <- "preparedFrame" in spring?spring.preparedFrame:0;
+        spring.displayOffset <- "preparedOffset" in spring?spring.preparedOffset:0;
         if(p.dead) continue; // TimerControl freezes spring mechanics during death.
         local started=false;
         if(spring.control==0 && p.grounded && p.nesYSpeed>=0 &&
@@ -427,6 +436,11 @@ function updateWorld21Actors(g) {
             spring.control=1;spring.timer=3;spring.force=-7;started=true;
             p.jumpForce=0x70;
         }
+        // EnemyGraphics runs before the phase timer advances; the next
+        // displayed OAM packet uses this prepared frame and position.
+        local frames=[0,1,2,1,0],offsets=[0,8,16,8,0];
+        spring.preparedFrame <- frames[spring.control];
+        spring.preparedOffset <- offsets[spring.control];
         if(spring.control==0) continue;
         if(!started && spring.timer>0) spring.timer-=1;
         // The ROM moves Mario two pixels on every animation pass, including
@@ -456,6 +470,15 @@ function parseWorld21PlantColumn(g,task) {
         if(allocateEnemySlot(g,plant)) {
             plant.awake=true;plant.active=true;plant.retired=false;
         }
+    }
+    foreach(spring in g.world21.springs) if(!spring.awake && !spring.retired &&
+        floor(spring.x/16).tointeger()==column) {
+        spring.retired=true;
+        local fixedX=spring.x;
+        if(allocateEnemySlot(g,spring)) {
+            spring.awake=true;spring.active=true;spring.retired=false;
+        }
+        spring.x=fixedX; // The static object does not integrate the slot fraction.
     }
 }
 
@@ -492,10 +515,12 @@ function drawWorld21Actors(g,behind) {
             local cloud=g.world21.cloudPlatform;
             screenOamTexture(assets.world21.cloud,cloud.displayX-visualCameraX(g),cloud.y+1,48,8);
         }
-        foreach(spring in g.world21.springs) if(spring.control>0) {
-        local frames=[0,0,1,2,1];local offsets=[0,0,8,16,8];
-        worldTexture(g,assets.world21.springs[frames[spring.control]],spring.x,
-            spring.y+offsets[spring.control]+1,16,24);
+        foreach(spring in g.world21.springs) if(spring.active) {
+            oamBase=world21OamOffset(g,spring.slot);
+            local frame="displayFrame" in spring?spring.displayFrame:0;
+            local offset="displayOffset" in spring?spring.displayOffset:0;
+            screenOamTexture(assets.world21.springs[frame],spring.x-visualCameraX(g),
+                spring.y+offset+1,16,24);
         }
     }
 }
@@ -852,6 +877,20 @@ function runWorld21SelfTest() {
     local probe=makeEnemyAt(100,12,"goomba");
     requireSelfTest(allocateEnemySlot(slots,probe) && probe.slot==1,
         "walkers must not reuse a slot occupied by a piranha");
+    local springSlots=createGame();startLevel(springSlots,2,1);
+    springSlots.goombas=[];springSlots.plants=[];
+    local parsedSpring=springSlots.world21.springs[0];
+    springSlots.cameraX=parsedSpring.x-352;
+    springSlots.world21.slotXFractions[0]=0.75;
+    parseWorld21PlantColumn(springSlots,7);
+    requireSelfTest(parsedSpring.active && parsedSpring.slot==0 && parsedSpring.x==3008,
+        "the spring parser must reserve a normal slot without moving its fixed X");
+    local springWalker=makeEnemyAt(100,12,"goomba");
+    requireSelfTest(allocateEnemySlot(springSlots,springWalker) && springWalker.slot==1,
+        "walkers must not reuse the spring's occupied enemy slot");
+    springSlots.cameraX=3081;retireWorld21Springs(springSlots);
+    requireSelfTest(!parsedSpring.active && parsedSpring.slot==-1 && parsedSpring.retired,
+        "an offscreen spring must release its shared slot");
     local reuse=createGame();startLevel(reuse,2,1);
     reuse.goombas=[];reuse.plants=[];
     reuse.world21.slotXFractions[0]=0.5;
