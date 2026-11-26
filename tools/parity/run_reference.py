@@ -11,6 +11,7 @@ from pathlib import Path
 
 from common import load_movie, mesen_section_input_arguments, sha256_file, tool_path, require_supported_stage
 from world21_reference import build_world21_origin_lua
+from world22_reference import build_world22_origin_lua
 
 
 EXPECTED_ROM_SHA256 = "f61548fdf1670cffefcc4f0b7bdcdd9eaba0c226e3b74f8666071496988248de"
@@ -205,6 +206,18 @@ def run_command(command: list[str], stdout_path: Path, stderr_path: Path) -> tup
     return completed, summaries
 
 
+def build_movie_origin_lua(movie: dict) -> str:
+    # Reference support may precede runtime support; run_actual keeps its
+    # own strict stage gate and must never silently replay 2-2 as 2-1.
+    if (type(movie.get("world")) is int and type(movie.get("level")) is int
+            and (movie["world"], movie["level"]) == (2, 2)):
+        return build_world22_origin_lua(movie.get("checkpoint_page", 0))
+    require_supported_stage(movie)
+    if movie.get("world", 1) == 2:
+        return build_world21_origin_lua(movie.get("checkpoint_page", 0))
+    return build_origin_lua(movie.get("level", 1))
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Run the ROM in the headless Mesen reference core.")
     parser.add_argument("--rom", type=Path, required=True)
@@ -227,7 +240,7 @@ def main() -> int:
         parser.error(f"mesen-agent not found: {args.mesen_agent}")
 
     movie = load_movie(movie_path)
-    require_supported_stage(movie)
+    origin_source = build_movie_origin_lua(movie)
     rom_hash = sha256_file(rom)
     if rom_hash != EXPECTED_ROM_SHA256 and not args.allow_other_rom:
         parser.error(
@@ -244,7 +257,7 @@ def main() -> int:
     bootstrap = movie.get("reference_bootstrap", {})
     bootstrap_frames = bootstrap.get("frames", 0)
     origin_lua = output / "find-origin.lua"
-    origin_lua.write_text(build_world21_origin_lua(movie.get("checkpoint_page",0)) if movie.get("world",1)==2 else build_origin_lua(movie.get("level", 1)), encoding="utf-8", newline="\n")
+    origin_lua.write_text(origin_source, encoding="utf-8", newline="\n")
     origin_state = output / "origin.mss"
     scan_command = [
         str(args.mesen_agent.resolve()),

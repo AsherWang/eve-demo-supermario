@@ -8,8 +8,7 @@ import shutil
 
 from common import load_movie, mesen_section_input_arguments, sha256_file
 from extract_reference_state import decode_line
-from run_reference import build_capture_lua, build_origin_lua, run_command
-from world21_reference import build_world21_origin_lua
+from run_reference import build_capture_lua, build_movie_origin_lua, run_command
 
 
 def main() -> int:
@@ -26,7 +25,7 @@ def main() -> int:
     (output / 'frames').mkdir(parents=True, exist_ok=True)
     warmup = args.origin_frame + 1
     script = output / 'capture.lua'
-    origin_lua=build_world21_origin_lua(movie.get('checkpoint_page',0)) if movie.get('world',1)==2 else build_origin_lua(movie.get('level',1))
+    origin_lua=build_movie_origin_lua(movie)
     script.write_text(origin_lua + '\n' +
                       build_capture_lua(output, movie, warmup), encoding='utf-8')
     command = [str(args.mesen_agent.resolve()), str(args.rom.resolve()),

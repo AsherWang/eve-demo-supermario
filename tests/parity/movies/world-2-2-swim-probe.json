@@ -1,0 +1,151 @@
+{
+  "schema": "smb-parity-movie-v1",
+  "name": "world-2-2-swim-probe",
+  "level_id": "2-2",
+  "world": 2,
+  "level": 2,
+  "description": "Reference-only water-origin swimming input probe; not normal entrance or whole-level acceptance. Runtime stage remains unsupported.",
+  "frames": 360,
+  "reference_bootstrap": {
+    "frames": 180,
+    "inputs": [
+      {
+        "port": 0,
+        "start": 40,
+        "end": 46,
+        "buttons": [
+          "start"
+        ]
+      }
+    ]
+  },
+  "inputs": [
+    {
+      "port": 0,
+      "start": 1,
+      "end": 300,
+      "buttons": [
+        "right"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 8,
+      "end": 15,
+      "buttons": [
+        "a"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 32,
+      "end": 39,
+      "buttons": [
+        "a"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 56,
+      "end": 63,
+      "buttons": [
+        "a"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 80,
+      "end": 87,
+      "buttons": [
+        "a"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 104,
+      "end": 111,
+      "buttons": [
+        "a"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 128,
+      "end": 135,
+      "buttons": [
+        "a"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 152,
+      "end": 159,
+      "buttons": [
+        "a"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 176,
+      "end": 183,
+      "buttons": [
+        "a"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 200,
+      "end": 207,
+      "buttons": [
+        "a"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 224,
+      "end": 231,
+      "buttons": [
+        "a"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 248,
+      "end": 255,
+      "buttons": [
+        "a"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 272,
+      "end": 279,
+      "buttons": [
+        "a"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 296,
+      "end": 303,
+      "buttons": [
+        "a"
+      ]
+    }
+  ],
+  "capture_frames": [
+    0,
+    30,
+    60,
+    90,
+    120,
+    150,
+    180,
+    210,
+    240,
+    270,
+    300,
+    330,
+    359
+  ]
+}

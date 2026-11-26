@@ -1,0 +1,77 @@
+{
+  "schema": "smb-world22-reference-foundation-v1",
+  "scope": "reference-only swimming diagnostic; no host comparison or whole-level acceptance",
+  "movie": "tests/parity/movies/world-2-2-swim-probe.json",
+  "movie_sha256": "745a9818c0cb358bcc51e16e87d9fae3bade76016f6003b412bfd9c9c7e60d00",
+  "state_frames": 360,
+  "continuous_video": {
+    "schema": "smb-continuous-video-proof-v1",
+    "state_frames": 360,
+    "states_equal": true,
+    "apu_writes_equal": true,
+    "pre_origin_write_count": 9,
+    "capture_frames_complete": true,
+    "bootstrap_frames": 101,
+    "movie_sha256": "745a9818c0cb358bcc51e16e87d9fae3bade76016f6003b412bfd9c9c7e60d00",
+    "passed": true
+  },
+  "reference_files": {
+    "ram-trace.jsonl": "28bf0a8f6a89f1b3e8169a8ad71fbb01627de59ac742f759512e9ad831cca910",
+    "apu-writes.jsonl": "9693eece7269d10d1f85abc8c9bcda4451714903d2f43000fa6043a1861852d9",
+    "state.jsonl": "067072e2b9bd57d9aa89ec0e6752f03db9be01b78da146a050e9702f6e981888"
+  },
+  "sampled_frames": [
+    {
+      "path": "frame-000000.png",
+      "sha256": "a9c4d56832b1e56d251905e9f38e9afa5cce7edb993719b221d015712c6dd8c7"
+    },
+    {
+      "path": "frame-000030.png",
+      "sha256": "ab018201f9eb5cf362667a467063578ddf478f8405491d99595d9670552a8808"
+    },
+    {
+      "path": "frame-000060.png",
+      "sha256": "829155e2f8200cc96e9a6de1fa33352f75cfe682405e38bb6b62aea5f0a0758b"
+    },
+    {
+      "path": "frame-000090.png",
+      "sha256": "f7468a936535c843632634219108b062d30892ef1d4eafdba6168e2089bcee68"
+    },
+    {
+      "path": "frame-000120.png",
+      "sha256": "2ee5c7d82f9c0a81a7a7d8958dee55da32042b234b800c8e8eadac14bc2e180c"
+    },
+    {
+      "path": "frame-000150.png",
+      "sha256": "445a9f1d16fa5b8cabedd1d0185c51d65b6e2df6b86024a89176af3464acd95e"
+    },
+    {
+      "path": "frame-000180.png",
+      "sha256": "b94458cdf32271e3ef3e60284e46a4fb03fcb535616c7cfb61ea5b855a838c40"
+    },
+    {
+      "path": "frame-000210.png",
+      "sha256": "69a767afa51844a2e32592b2e467a716af290b0013f4833374f2792c7da07138"
+    },
+    {
+      "path": "frame-000240.png",
+      "sha256": "6451bd118f517ca76962c841a38ced38ffd134ee384e87c422384dfe91fc8595"
+    },
+    {
+      "path": "frame-000270.png",
+      "sha256": "67d7f6f2b3050942824c0070945a28168d89519d1d22d69cef4106c36e9807c1"
+    },
+    {
+      "path": "frame-000300.png",
+      "sha256": "3ecf3da01e82bf6b2cb90abc71a7c3ff653c6116ad29a5838e0a3d1a2594084d"
+    },
+    {
+      "path": "frame-000330.png",
+      "sha256": "3aa0ecdd57c9c561970ad0801ec7a8a3956f56327dbd76867dbda2f8b28034ae"
+    },
+    {
+      "path": "frame-000359.png",
+      "sha256": "19d61562ee5d804544738b803a03368e822a8ade3a86b2d5e36d0adc426d6a85"
+    }
+  ]
+}

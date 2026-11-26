@@ -1,0 +1,1549 @@
+{
+  "schema": "smb-world22-data-v1",
+  "rom_sha256": "f61548fdf1670cffefcc4f0b7bdcdd9eaba0c226e3b74f8666071496988248de",
+  "world_area_order": [
+    40,
+    41,
+    1,
+    39,
+    98
+  ],
+  "areas": {
+    "intro": {
+      "area_pointer": 41,
+      "area_type": 1,
+      "streams": {
+        "AREA": {
+          "cpu_address": 43058,
+          "length": 9,
+          "sha256": "c054d62d829fcdecd8322e1f9c0e8c04cbc460c06b6ef26ca2fb21571c24272f"
+        },
+        "ENEMIES": {
+          "cpu_address": 40827,
+          "length": 1,
+          "sha256": "a8100ae6aa1940d0b663bb31cd466142ebbdbd5187131b92d93818987832eb89"
+        }
+      },
+      "object_commands": [
+        {
+          "offset": 2,
+          "column": 0,
+          "row": 15,
+          "value": 38
+        },
+        {
+          "offset": 4,
+          "column": 10,
+          "row": 13,
+          "value": 64
+        },
+        {
+          "offset": 6,
+          "column": 19,
+          "row": 13,
+          "value": 71
+        }
+      ],
+      "header": {
+        "entrance_control": 7,
+        "timer_setting": 0,
+        "terrain_control": 1,
+        "background_scenery": 1,
+        "area_style": 0
+      },
+      "enemy_commands": []
+    },
+    "water": {
+      "area_pointer": 1,
+      "area_type": 0,
+      "streams": {
+        "AREA": {
+          "cpu_address": 44613,
+          "length": 123,
+          "sha256": "28d9f89cc1a0f3ab5b09c00b1b76c53e92a6fbc80cbbac928137e198fb1e32ad"
+        },
+        "ENEMIES": {
+          "cpu_address": 41329,
+          "length": 42,
+          "sha256": "a6af6126b0a5fb2255882a352cdb629c28e5139beb65a71ac0a031857c837248"
+        }
+      },
+      "object_commands": [
+        {
+          "offset": 2,
+          "column": 11,
+          "row": 8,
+          "value": 82
+        },
+        {
+          "offset": 4,
+          "column": 14,
+          "row": 10,
+          "value": 65
+        },
+        {
+          "offset": 6,
+          "column": 18,
+          "row": 7,
+          "value": 50
+        },
+        {
+          "offset": 8,
+          "column": 27,
+          "row": 3,
+          "value": 66
+        },
+        {
+          "offset": 10,
+          "column": 33,
+          "row": 6,
+          "value": 84
+        },
+        {
+          "offset": 12,
+          "column": 36,
+          "row": 10,
+          "value": 66
+        },
+        {
+          "offset": 14,
+          "column": 42,
+          "row": 5,
+          "value": 81
+        },
+        {
+          "offset": 16,
+          "column": 42,
+          "row": 7,
+          "value": 49
+        },
+        {
+          "offset": 18,
+          "column": 50,
+          "row": 7,
+          "value": 83
+        },
+        {
+          "offset": 20,
+          "column": 64,
+          "row": 8,
+          "value": 98
+        },
+        {
+          "offset": 22,
+          "column": 65,
+          "row": 6,
+          "value": 100
+        },
+        {
+          "offset": 24,
+          "column": 66,
+          "row": 12,
+          "value": 4
+        },
+        {
+          "offset": 26,
+          "column": 67,
+          "row": 8,
+          "value": 66
+        },
+        {
+          "offset": 28,
+          "column": 71,
+          "row": 6,
+          "value": 100
+        },
+        {
+          "offset": 30,
+          "column": 72,
+          "row": 8,
+          "value": 98
+        },
+        {
+          "offset": 32,
+          "column": 77,
+          "row": 14,
+          "value": 7
+        },
+        {
+          "offset": 34,
+          "column": 79,
+          "row": 14,
+          "value": 1
+        },
+        {
+          "offset": 36,
+          "column": 80,
+          "row": 13,
+          "value": 73
+        },
+        {
+          "offset": 38,
+          "column": 82,
+          "row": 3,
+          "value": 50
+        },
+        {
+          "offset": 40,
+          "column": 83,
+          "row": 1,
+          "value": 81
+        },
+        {
+          "offset": 42,
+          "column": 89,
+          "row": 8,
+          "value": 82
+        },
+        {
+          "offset": 44,
+          "column": 96,
+          "row": 13,
+          "value": 73
+        },
+        {
+          "offset": 46,
+          "column": 101,
+          "row": 9,
+          "value": 66
+        },
+        {
+          "offset": 48,
+          "column": 102,
+          "row": 3,
+          "value": 83
+        },
+        {
+          "offset": 50,
+          "column": 102,
+          "row": 7,
+          "value": 49
+        },
+        {
+          "offset": 52,
+          "column": 113,
+          "row": 4,
+          "value": 66
+        },
+        {
+          "offset": 54,
+          "column": 115,
+          "row": 6,
+          "value": 49
+        },
+        {
+          "offset": 56,
+          "column": 120,
+          "row": 7,
+          "value": 83
+        },
+        {
+          "offset": 58,
+          "column": 129,
+          "row": 7,
+          "value": 99
+        },
+        {
+          "offset": 60,
+          "column": 130,
+          "row": 9,
+          "value": 97
+        },
+        {
+          "offset": 62,
+          "column": 131,
+          "row": 0,
+          "value": 98
+        },
+        {
+          "offset": 64,
+          "column": 131,
+          "row": 12,
+          "value": 8
+        },
+        {
+          "offset": 66,
+          "column": 132,
+          "row": 2,
+          "value": 55
+        },
+        {
+          "offset": 68,
+          "column": 133,
+          "row": 9,
+          "value": 64
+        },
+        {
+          "offset": 70,
+          "column": 134,
+          "row": 10,
+          "value": 66
+        },
+        {
+          "offset": 72,
+          "column": 137,
+          "row": 9,
+          "value": 64
+        },
+        {
+          "offset": 74,
+          "column": 140,
+          "row": 9,
+          "value": 97
+        },
+        {
+          "offset": 76,
+          "column": 141,
+          "row": 7,
+          "value": 99
+        },
+        {
+          "offset": 78,
+          "column": 147,
+          "row": 9,
+          "value": 81
+        },
+        {
+          "offset": 80,
+          "column": 149,
+          "row": 8,
+          "value": 82
+        },
+        {
+          "offset": 82,
+          "column": 156,
+          "row": 3,
+          "value": 103
+        },
+        {
+          "offset": 84,
+          "column": 157,
+          "row": 3,
+          "value": 49
+        },
+        {
+          "offset": 86,
+          "column": 157,
+          "row": 12,
+          "value": 6
+        },
+        {
+          "offset": 88,
+          "column": 159,
+          "row": 7,
+          "value": 66
+        },
+        {
+          "offset": 90,
+          "column": 159,
+          "row": 10,
+          "value": 66
+        },
+        {
+          "offset": 92,
+          "column": 162,
+          "row": 3,
+          "value": 49
+        },
+        {
+          "offset": 94,
+          "column": 164,
+          "row": 3,
+          "value": 103
+        },
+        {
+          "offset": 96,
+          "column": 172,
+          "row": 3,
+          "value": 52
+        },
+        {
+          "offset": 98,
+          "column": 172,
+          "row": 7,
+          "value": 52
+        },
+        {
+          "offset": 100,
+          "column": 173,
+          "row": 1,
+          "value": 81
+        },
+        {
+          "offset": 102,
+          "column": 180,
+          "row": 3,
+          "value": 51
+        },
+        {
+          "offset": 104,
+          "column": 180,
+          "row": 7,
+          "value": 51
+        },
+        {
+          "offset": 106,
+          "column": 185,
+          "row": 10,
+          "value": 48
+        },
+        {
+          "offset": 108,
+          "column": 186,
+          "row": 9,
+          "value": 97
+        },
+        {
+          "offset": 110,
+          "column": 187,
+          "row": 8,
+          "value": 98
+        },
+        {
+          "offset": 112,
+          "column": 187,
+          "row": 14,
+          "value": 11
+        },
+        {
+          "offset": 114,
+          "column": 189,
+          "row": 5,
+          "value": 9
+        },
+        {
+          "offset": 116,
+          "column": 189,
+          "row": 14,
+          "value": 15
+        },
+        {
+          "offset": 118,
+          "column": 192,
+          "row": 13,
+          "value": 74
+        },
+        {
+          "offset": 120,
+          "column": 199,
+          "row": 13,
+          "value": 71
+        }
+      ],
+      "header": {
+        "entrance_control": 0,
+        "timer_setting": 1,
+        "terrain_control": 1,
+        "background_scenery": 0,
+        "area_style": 0
+      },
+      "enemy_commands": [
+        {
+          "offset": 2,
+          "column": 18,
+          "row": 14,
+          "kind": "area_link",
+          "destination": 37,
+          "world": 2,
+          "entrance_page": 11
+        },
+        {
+          "offset": 5,
+          "column": 18,
+          "row": 14,
+          "kind": "area_link",
+          "destination": 37,
+          "world": 3,
+          "entrance_page": 11
+        },
+        {
+          "offset": 8,
+          "column": 20,
+          "row": 14,
+          "kind": "area_link",
+          "destination": 37,
+          "world": 7,
+          "entrance_page": 11
+        },
+        {
+          "offset": 11,
+          "column": 22,
+          "row": 11,
+          "kind": "enemy",
+          "enemy_id": 7,
+          "hard_only": false
+        },
+        {
+          "offset": 13,
+          "column": 25,
+          "row": 7,
+          "kind": "enemy",
+          "enemy_id": 7,
+          "hard_only": true
+        },
+        {
+          "offset": 15,
+          "column": 46,
+          "row": 9,
+          "kind": "enemy",
+          "enemy_id": 7,
+          "hard_only": false
+        },
+        {
+          "offset": 17,
+          "column": 52,
+          "row": 7,
+          "kind": "enemy",
+          "enemy_id": 7,
+          "hard_only": true
+        },
+        {
+          "offset": 19,
+          "column": 55,
+          "row": 10,
+          "kind": "enemy",
+          "enemy_id": 7,
+          "hard_only": false
+        },
+        {
+          "offset": 21,
+          "column": 77,
+          "row": 6,
+          "kind": "enemy",
+          "enemy_id": 7,
+          "hard_only": true
+        },
+        {
+          "offset": 23,
+          "column": 71,
+          "row": 8,
+          "kind": "enemy",
+          "enemy_id": 7,
+          "hard_only": false
+        },
+        {
+          "offset": 25,
+          "column": 83,
+          "row": 8,
+          "kind": "enemy",
+          "enemy_id": 7,
+          "hard_only": false
+        },
+        {
+          "offset": 27,
+          "column": 90,
+          "row": 11,
+          "kind": "enemy",
+          "enemy_id": 7,
+          "hard_only": true
+        },
+        {
+          "offset": 29,
+          "column": 94,
+          "row": 3,
+          "kind": "enemy",
+          "enemy_id": 7,
+          "hard_only": false
+        },
+        {
+          "offset": 31,
+          "column": 105,
+          "row": 11,
+          "kind": "enemy",
+          "enemy_id": 7,
+          "hard_only": false
+        },
+        {
+          "offset": 35,
+          "column": 150,
+          "row": 8,
+          "kind": "enemy",
+          "enemy_id": 7,
+          "hard_only": true
+        },
+        {
+          "offset": 37,
+          "column": 173,
+          "row": 11,
+          "kind": "enemy",
+          "enemy_id": 7,
+          "hard_only": true
+        },
+        {
+          "offset": 39,
+          "column": 179,
+          "row": 11,
+          "kind": "enemy",
+          "enemy_id": 7,
+          "hard_only": true
+        }
+      ]
+    },
+    "exit": {
+      "area_pointer": 37,
+      "area_type": 1,
+      "streams": {
+        "AREA": {
+          "cpu_address": 42638,
+          "length": 101,
+          "sha256": "162fc0bf0e2e7bd2ecda0ac1bf3551ee5f45a3f116fa6343badda72005c0b4ec"
+        },
+        "ENEMIES": {
+          "cpu_address": 40705,
+          "length": 30,
+          "sha256": "f091a27d7278196232a796c0fab0f7e44cfea0181b8d0bf69f827655463891da"
+        }
+      },
+      "object_commands": [
+        {
+          "offset": 2,
+          "column": 16,
+          "row": 7,
+          "value": 1
+        },
+        {
+          "offset": 4,
+          "column": 20,
+          "row": 7,
+          "value": 36
+        },
+        {
+          "offset": 6,
+          "column": 21,
+          "row": 7,
+          "value": 0
+        },
+        {
+          "offset": 8,
+          "column": 22,
+          "row": 3,
+          "value": 1
+        },
+        {
+          "offset": 10,
+          "column": 23,
+          "row": 7,
+          "value": 1
+        },
+        {
+          "offset": 12,
+          "column": 28,
+          "row": 9,
+          "value": 113
+        },
+        {
+          "offset": 14,
+          "column": 38,
+          "row": 8,
+          "value": 114
+        },
+        {
+          "offset": 16,
+          "column": 46,
+          "row": 7,
+          "value": 115
+        },
+        {
+          "offset": 18,
+          "column": 57,
+          "row": 7,
+          "value": 123
+        },
+        {
+          "offset": 20,
+          "column": 64,
+          "row": 6,
+          "value": 3
+        },
+        {
+          "offset": 22,
+          "column": 69,
+          "row": 12,
+          "value": 1
+        },
+        {
+          "offset": 24,
+          "column": 77,
+          "row": 7,
+          "value": 34
+        },
+        {
+          "offset": 26,
+          "column": 78,
+          "row": 7,
+          "value": 0
+        },
+        {
+          "offset": 28,
+          "column": 80,
+          "row": 3,
+          "value": 39
+        },
+        {
+          "offset": 30,
+          "column": 86,
+          "row": 12,
+          "value": 2
+        },
+        {
+          "offset": 32,
+          "column": 91,
+          "row": 3,
+          "value": 34
+        },
+        {
+          "offset": 34,
+          "column": 94,
+          "row": 3,
+          "value": 1
+        },
+        {
+          "offset": 36,
+          "column": 94,
+          "row": 7,
+          "value": 7
+        },
+        {
+          "offset": 38,
+          "column": 100,
+          "row": 7,
+          "value": 32
+        },
+        {
+          "offset": 40,
+          "column": 101,
+          "row": 7,
+          "value": 6
+        },
+        {
+          "offset": 42,
+          "column": 106,
+          "row": 7,
+          "value": 1
+        },
+        {
+          "offset": 44,
+          "column": 109,
+          "row": 3,
+          "value": 0
+        },
+        {
+          "offset": 46,
+          "column": 109,
+          "row": 7,
+          "value": 1
+        },
+        {
+          "offset": 48,
+          "column": 112,
+          "row": 7,
+          "value": 1
+        },
+        {
+          "offset": 50,
+          "column": 118,
+          "row": 7,
+          "value": 32
+        },
+        {
+          "offset": 52,
+          "column": 121,
+          "row": 3,
+          "value": 34
+        },
+        {
+          "offset": 54,
+          "column": 128,
+          "row": 3,
+          "value": 35
+        },
+        {
+          "offset": 56,
+          "column": 129,
+          "row": 12,
+          "value": 97
+        },
+        {
+          "offset": 58,
+          "column": 129,
+          "row": 7,
+          "value": 33
+        },
+        {
+          "offset": 60,
+          "column": 134,
+          "row": 15,
+          "value": 51
+        },
+        {
+          "offset": 62,
+          "column": 140,
+          "row": 7,
+          "value": 99
+        },
+        {
+          "offset": 64,
+          "column": 141,
+          "row": 8,
+          "value": 98
+        },
+        {
+          "offset": 66,
+          "column": 142,
+          "row": 9,
+          "value": 97
+        },
+        {
+          "offset": 68,
+          "column": 143,
+          "row": 10,
+          "value": 96
+        },
+        {
+          "offset": 70,
+          "column": 148,
+          "row": 15,
+          "value": 51
+        },
+        {
+          "offset": 72,
+          "column": 152,
+          "row": 7,
+          "value": 99
+        },
+        {
+          "offset": 74,
+          "column": 153,
+          "row": 12,
+          "value": 1
+        },
+        {
+          "offset": 76,
+          "column": 155,
+          "row": 7,
+          "value": 99
+        },
+        {
+          "offset": 78,
+          "column": 156,
+          "row": 8,
+          "value": 98
+        },
+        {
+          "offset": 80,
+          "column": 157,
+          "row": 9,
+          "value": 97
+        },
+        {
+          "offset": 82,
+          "column": 158,
+          "row": 10,
+          "value": 96
+        },
+        {
+          "offset": 84,
+          "column": 163,
+          "row": 9,
+          "value": 113
+        },
+        {
+          "offset": 86,
+          "column": 168,
+          "row": 7,
+          "value": 33
+        },
+        {
+          "offset": 88,
+          "column": 170,
+          "row": 7,
+          "value": 1
+        },
+        {
+          "offset": 90,
+          "column": 171,
+          "row": 7,
+          "value": 32
+        },
+        {
+          "offset": 92,
+          "column": 179,
+          "row": 9,
+          "value": 113
+        },
+        {
+          "offset": 94,
+          "column": 181,
+          "row": 15,
+          "value": 56
+        },
+        {
+          "offset": 96,
+          "column": 198,
+          "row": 13,
+          "value": 65
+        },
+        {
+          "offset": 98,
+          "column": 202,
+          "row": 15,
+          "value": 38
+        }
+      ],
+      "header": {
+        "entrance_control": 2,
+        "timer_setting": 1,
+        "terrain_control": 1,
+        "background_scenery": 2,
+        "area_style": 0
+      },
+      "enemy_commands": [
+        {
+          "offset": 0,
+          "column": 17,
+          "row": 14,
+          "kind": "area_link",
+          "destination": 194,
+          "world": 1,
+          "entrance_page": 0
+        },
+        {
+          "offset": 3,
+          "column": 22,
+          "row": 11,
+          "kind": "enemy",
+          "enemy_id": 6,
+          "hard_only": false
+        },
+        {
+          "offset": 5,
+          "column": 40,
+          "row": 11,
+          "kind": "enemy",
+          "enemy_id": 6,
+          "hard_only": false
+        },
+        {
+          "offset": 7,
+          "column": 54,
+          "row": 3,
+          "kind": "enemy",
+          "enemy_id": 55,
+          "hard_only": false
+        },
+        {
+          "offset": 11,
+          "column": 80,
+          "row": 3,
+          "kind": "enemy",
+          "enemy_id": 6,
+          "hard_only": false
+        },
+        {
+          "offset": 13,
+          "column": 82,
+          "row": 3,
+          "kind": "enemy",
+          "enemy_id": 6,
+          "hard_only": false
+        },
+        {
+          "offset": 15,
+          "column": 100,
+          "row": 11,
+          "kind": "enemy",
+          "enemy_id": 55,
+          "hard_only": false
+        },
+        {
+          "offset": 17,
+          "column": 107,
+          "row": 11,
+          "kind": "enemy",
+          "enemy_id": 0,
+          "hard_only": false
+        },
+        {
+          "offset": 19,
+          "column": 117,
+          "row": 11,
+          "kind": "enemy",
+          "enemy_id": 55,
+          "hard_only": false
+        },
+        {
+          "offset": 21,
+          "column": 127,
+          "row": 11,
+          "kind": "enemy",
+          "enemy_id": 55,
+          "hard_only": false
+        },
+        {
+          "offset": 23,
+          "column": 131,
+          "row": 11,
+          "kind": "enemy",
+          "enemy_id": 55,
+          "hard_only": false
+        },
+        {
+          "offset": 27,
+          "column": 177,
+          "row": 11,
+          "kind": "enemy",
+          "enemy_id": 55,
+          "hard_only": false
+        }
+      ]
+    }
+  },
+  "runtime_implemented": false,
+  "exit": {
+    "offset": 2,
+    "column": 18,
+    "row": 14,
+    "kind": "area_link",
+    "destination": 37,
+    "world": 2,
+    "entrance_page": 11
+  },
+  "whirlpools": [
+    {
+      "column": 66,
+      "left": 1040,
+      "length": 96
+    },
+    {
+      "column": 131,
+      "left": 2080,
+      "length": 160
+    },
+    {
+      "column": 157,
+      "left": 2496,
+      "length": 128
+    }
+  ],
+  "frenzy_commands": [
+    {
+      "offset": 36,
+      "column": 80,
+      "row": 13,
+      "value": 73
+    },
+    {
+      "offset": 44,
+      "column": 96,
+      "row": 13,
+      "value": 73
+    },
+    {
+      "offset": 118,
+      "column": 192,
+      "row": 13,
+      "value": 74
+    }
+  ],
+  "water_pipes": [
+    {
+      "offset": 114,
+      "column": 189,
+      "row": 5,
+      "value": 9
+    }
+  ],
+  "checkpoint_page": 5,
+  "checkpoint_table_cpu_address": 37309,
+  "assets": {
+    "palette_cpu_address": 36004,
+    "palettes": [
+      [
+        15,
+        21,
+        18,
+        37
+      ],
+      [
+        15,
+        58,
+        26,
+        15
+      ],
+      [
+        15,
+        48,
+        18,
+        15
+      ],
+      [
+        15,
+        39,
+        18,
+        15
+      ],
+      [
+        34,
+        22,
+        39,
+        24
+      ],
+      [
+        15,
+        16,
+        48,
+        39
+      ],
+      [
+        15,
+        22,
+        48,
+        39
+      ],
+      [
+        15,
+        15,
+        48,
+        16
+      ]
+    ],
+    "files": [
+      {
+        "path": "metatile-0.png",
+        "sha256": "50b068e07b4bf235705c19b77da49fdbbc7e98ddc0a46f1c6659cca98c963904"
+      },
+      {
+        "path": "metatile-1.png",
+        "sha256": "47321182b583811dfa272b9d90aeef9026b2270edaed05bd4bc7401336ab5243"
+      },
+      {
+        "path": "metatile-2.png",
+        "sha256": "67d9554a7b51b62a3ca09d64c6a384f641f544274732f97fd91b51c186b2a52f"
+      },
+      {
+        "path": "metatile-3.png",
+        "sha256": "8007feb92e415ccc7630c4172a0731312285c958ebb239e391faa4340ccda428"
+      },
+      {
+        "path": "metatile-4.png",
+        "sha256": "d7e76baade3002e918a7147c0c9873446ea993c6e6c1445352436ea73a6b3224"
+      },
+      {
+        "path": "metatile-5.png",
+        "sha256": "e7d86d19e365b6022d5e133e39c7608fe2b14750ff306a6f863a386f64ea9bdd"
+      },
+      {
+        "path": "metatile-6.png",
+        "sha256": "b605a270eb84ec95515e3e5086bf9bd05b73573a9c2fd0252a1e295439c22397"
+      },
+      {
+        "path": "metatile-7.png",
+        "sha256": "cc9a008bb323f0a58632e79a063fd56c748680aa40d388647c2dc82d32867eba"
+      },
+      {
+        "path": "metatile-8.png",
+        "sha256": "d2e8bb163c34f648ff959b9983128ed563fb8deee3b1aef04f4925e1c51ab852"
+      },
+      {
+        "path": "metatile-9.png",
+        "sha256": "3e90c94feb108f9587455c91a9af26c5baa932eae97aea20d21c95c504af27dc"
+      },
+      {
+        "path": "metatile-10.png",
+        "sha256": "a31b8697dbe7507ca87489bb3141d2a81cbcb7332dfa73d7e63ede3e66700c64"
+      },
+      {
+        "path": "metatile-11.png",
+        "sha256": "665d63191049ca28a41e1ae9fa2776ff7eb113d51d55a387b49643df1b712893"
+      },
+      {
+        "path": "metatile-12.png",
+        "sha256": "667360397d5eee554de307ae5fb15f8386b710087f2cc3f3d90b7e68de8dba90"
+      },
+      {
+        "path": "metatile-13.png",
+        "sha256": "d61ff317718ab4a83614abcbba0f4b831a95d099f775874a077b1e7677bc6c5b"
+      },
+      {
+        "path": "metatile-14.png",
+        "sha256": "641072d3d0674e9651090d15ceaafad82d882ddf2d3c810d5168355d63cd96f1"
+      },
+      {
+        "path": "metatile-15.png",
+        "sha256": "ceeeca7341557ef20e1ea0f6c467034dc5c255c6f6e2e52a7ae158f33aa31c93"
+      },
+      {
+        "path": "metatile-16.png",
+        "sha256": "bd76794e4fc587947b0038cbedaab071cdf399f251b2f721f9779800423577d6"
+      },
+      {
+        "path": "metatile-17.png",
+        "sha256": "2571d63dfa1bcbf84abf9d7b835cfba76015f9fa1f3968da5cbc9f727cf9fe8c"
+      },
+      {
+        "path": "metatile-18.png",
+        "sha256": "bd76794e4fc587947b0038cbedaab071cdf399f251b2f721f9779800423577d6"
+      },
+      {
+        "path": "metatile-19.png",
+        "sha256": "2571d63dfa1bcbf84abf9d7b835cfba76015f9fa1f3968da5cbc9f727cf9fe8c"
+      },
+      {
+        "path": "metatile-20.png",
+        "sha256": "681a5a08e3610d7d62b2c3975526c572a7e91491b56f245de44d3d9119dbe00b"
+      },
+      {
+        "path": "metatile-21.png",
+        "sha256": "33f55e710660f71bdbb559aecea2a3ca7b7f33a108736774221c3ae6c458ee2c"
+      },
+      {
+        "path": "metatile-22.png",
+        "sha256": "7b0ea7e9088525fbb9afa7ab89d75501eaed8953f00f04a8a5da4b02e09017f4"
+      },
+      {
+        "path": "metatile-23.png",
+        "sha256": "e691fbf906e4f0236f506ca722a58bc761982eb473e58185cab414472cbc864d"
+      },
+      {
+        "path": "metatile-24.png",
+        "sha256": "9d39b0c3ec0c7e5558e23a4ac756adc01973d72b0bd5dbdcff1eed01e264ccd9"
+      },
+      {
+        "path": "metatile-25.png",
+        "sha256": "3bb9a160794274487060d9cdd201fba056de1d7c3940f4713a3c1448ff43a1c0"
+      },
+      {
+        "path": "metatile-26.png",
+        "sha256": "3d0059d9c59da20cda41961a982a4b4f3cc1dd0522ddd0588160a09bf0131844"
+      },
+      {
+        "path": "metatile-27.png",
+        "sha256": "c315db2187087b1a73e24b76910d1803dc9ff68d651086d04665e9dd84b883c4"
+      },
+      {
+        "path": "metatile-28.png",
+        "sha256": "412e53eb088ee580ca4f076b4ca03faf2f14c0489090ca25f7cc5e3be9d0b16f"
+      },
+      {
+        "path": "metatile-29.png",
+        "sha256": "2d57a87e08989311a7dc584626125903a6c4f3d041b8da3939a99167c0b55e72"
+      },
+      {
+        "path": "metatile-30.png",
+        "sha256": "fd3ed622cc5461e34497a2105dcafb627370a35975be24e7eca925023ee35c59"
+      },
+      {
+        "path": "metatile-31.png",
+        "sha256": "273773adcf8cb17a03839c582509b8375d62b879ad2ae6092e6665edc7080ca7"
+      },
+      {
+        "path": "metatile-32.png",
+        "sha256": "5782219772f1be760d77d3cc04d76a8f50f3f5c855290ad5ca88484ba73224ab"
+      },
+      {
+        "path": "metatile-33.png",
+        "sha256": "57c82004152eed9c6a5732e798ea85f491bc7a379b8649745e3477f00c0107d7"
+      },
+      {
+        "path": "metatile-34.png",
+        "sha256": "a4f4e054a6d6511b3e5b53ef83c3a995cef1224f58d0c10f69808e8911735c8d"
+      },
+      {
+        "path": "metatile-35.png",
+        "sha256": "50b068e07b4bf235705c19b77da49fdbbc7e98ddc0a46f1c6659cca98c963904"
+      },
+      {
+        "path": "metatile-36.png",
+        "sha256": "a9cfb1c02adbed63153e1614e962f61b6a6e19dda7462dfb4c687b324c99b702"
+      },
+      {
+        "path": "metatile-37.png",
+        "sha256": "5a26f88974af523d17d91dfaec4119b67ac7a13cff1929abd32e1040f754b394"
+      },
+      {
+        "path": "metatile-38.png",
+        "sha256": "50b068e07b4bf235705c19b77da49fdbbc7e98ddc0a46f1c6659cca98c963904"
+      },
+      {
+        "path": "metatile-64.png",
+        "sha256": "3098f9b40d350fda5756a1ce4632fd34f1d47206127e5f0f3985665a4cf0c1bc"
+      },
+      {
+        "path": "metatile-65.png",
+        "sha256": "835de7abc2624eb26fe6a5eaf899240cc493e645025c6814dee7be1d8e553a28"
+      },
+      {
+        "path": "metatile-66.png",
+        "sha256": "2d631d465912455d2d8e2d4986ae8788e76e0a0167a3bd7b83215e7259ea8794"
+      },
+      {
+        "path": "metatile-67.png",
+        "sha256": "800b76d4d54c6a7c04881b19cafb180147c4d7edffc3b86cce4568000ce173bc"
+      },
+      {
+        "path": "metatile-68.png",
+        "sha256": "50b068e07b4bf235705c19b77da49fdbbc7e98ddc0a46f1c6659cca98c963904"
+      },
+      {
+        "path": "metatile-69.png",
+        "sha256": "34bf497f8297e388b2ce3b39a5a30157b6a44a20c43dd7eb3fea7a9e8460584c"
+      },
+      {
+        "path": "metatile-70.png",
+        "sha256": "58cf9923b60c46a5b8bd7b6503adbef2bfc92712da34c8b042d82a5373b85516"
+      },
+      {
+        "path": "metatile-71.png",
+        "sha256": "0428afcfca2cb85790ed84e03a4548b391a31945130450d07524c9f041cab66e"
+      },
+      {
+        "path": "metatile-72.png",
+        "sha256": "4e1b78dcb5fc4f69304742c527b61892ca0717ee05a0ef51c84719bc67d061e0"
+      },
+      {
+        "path": "metatile-73.png",
+        "sha256": "1cdf9c5856b47d50c679bb92fc46617f882070d93a3673f421af9ae99fe197e7"
+      },
+      {
+        "path": "metatile-74.png",
+        "sha256": "6effdfd8fe1d5fe54343d375768e183e3df2176b3b0b6d48a2b719f3763d67f5"
+      },
+      {
+        "path": "metatile-75.png",
+        "sha256": "789cc3d7c8416b40a4f20155ece071c362f85d610e71b32b328bfc12b4cf2ead"
+      },
+      {
+        "path": "metatile-76.png",
+        "sha256": "46705cb773a2c2682741642dac0231263a1cc9cd9b3aa40b9ca14f62564f8ba9"
+      },
+      {
+        "path": "metatile-77.png",
+        "sha256": "420dced7f2162a77970f5238a9a5f16e9f4757a3d91f4c92acfef8b8f7b57a60"
+      },
+      {
+        "path": "metatile-78.png",
+        "sha256": "170c1ed9ad841ff090d24df53c8bca4b3a11fed151f642c122c3e53b1490782f"
+      },
+      {
+        "path": "metatile-79.png",
+        "sha256": "011e3bd03da516594be03d96f731cc00ca2eff06b2beaef281af078427f69bed"
+      },
+      {
+        "path": "metatile-80.png",
+        "sha256": "fac12c132974d7cbab21f1ee2baf1d88fe3e4d7157091da9187992117403b772"
+      },
+      {
+        "path": "metatile-81.png",
+        "sha256": "2f393b056f1432b5a58411cb2552fbb512e006801dd548a48f7e18ada3c578f7"
+      },
+      {
+        "path": "metatile-82.png",
+        "sha256": "0428afcfca2cb85790ed84e03a4548b391a31945130450d07524c9f041cab66e"
+      },
+      {
+        "path": "metatile-83.png",
+        "sha256": "2f393b056f1432b5a58411cb2552fbb512e006801dd548a48f7e18ada3c578f7"
+      },
+      {
+        "path": "metatile-84.png",
+        "sha256": "af59600459e0bffa39b59ae013b2ee1a78b130d3b605588c4705fd183dcc80df"
+      },
+      {
+        "path": "metatile-85.png",
+        "sha256": "2f393b056f1432b5a58411cb2552fbb512e006801dd548a48f7e18ada3c578f7"
+      },
+      {
+        "path": "metatile-86.png",
+        "sha256": "2f393b056f1432b5a58411cb2552fbb512e006801dd548a48f7e18ada3c578f7"
+      },
+      {
+        "path": "metatile-87.png",
+        "sha256": "2f393b056f1432b5a58411cb2552fbb512e006801dd548a48f7e18ada3c578f7"
+      },
+      {
+        "path": "metatile-88.png",
+        "sha256": "2f393b056f1432b5a58411cb2552fbb512e006801dd548a48f7e18ada3c578f7"
+      },
+      {
+        "path": "metatile-89.png",
+        "sha256": "2f393b056f1432b5a58411cb2552fbb512e006801dd548a48f7e18ada3c578f7"
+      },
+      {
+        "path": "metatile-90.png",
+        "sha256": "0428afcfca2cb85790ed84e03a4548b391a31945130450d07524c9f041cab66e"
+      },
+      {
+        "path": "metatile-91.png",
+        "sha256": "0428afcfca2cb85790ed84e03a4548b391a31945130450d07524c9f041cab66e"
+      },
+      {
+        "path": "metatile-92.png",
+        "sha256": "0428afcfca2cb85790ed84e03a4548b391a31945130450d07524c9f041cab66e"
+      },
+      {
+        "path": "metatile-93.png",
+        "sha256": "0428afcfca2cb85790ed84e03a4548b391a31945130450d07524c9f041cab66e"
+      },
+      {
+        "path": "metatile-94.png",
+        "sha256": "0428afcfca2cb85790ed84e03a4548b391a31945130450d07524c9f041cab66e"
+      },
+      {
+        "path": "metatile-95.png",
+        "sha256": "50b068e07b4bf235705c19b77da49fdbbc7e98ddc0a46f1c6659cca98c963904"
+      },
+      {
+        "path": "metatile-96.png",
+        "sha256": "50b068e07b4bf235705c19b77da49fdbbc7e98ddc0a46f1c6659cca98c963904"
+      },
+      {
+        "path": "metatile-97.png",
+        "sha256": "5b81384f8565bd588e476b1aac6f616eacc7c9a95b9cb0a88b69bea678f3ba33"
+      },
+      {
+        "path": "metatile-98.png",
+        "sha256": "a24f655a8ab47f7c6a58d90f4cd9357f262848f0dc3d0b9d10dfc284130bcc92"
+      },
+      {
+        "path": "metatile-99.png",
+        "sha256": "0e3053c8f6bdbba9bafedbaa8a29de6845e82dee1534ff6e2f87012bf1aeb4cc"
+      },
+      {
+        "path": "metatile-100.png",
+        "sha256": "fee00262c4b7f7748d9edeac14ff2e0a0f18263d10464ed6c8654b38b80fde29"
+      },
+      {
+        "path": "metatile-101.png",
+        "sha256": "c3d962a02f92138a2119d8c6fff000ccf09402cdaa37818090a7aac09c7d5421"
+      },
+      {
+        "path": "metatile-102.png",
+        "sha256": "e2971db79df45bd6f3da95fd0eb377d6c44ca77064b62dc77d4f3426dfea1a30"
+      },
+      {
+        "path": "metatile-103.png",
+        "sha256": "50b068e07b4bf235705c19b77da49fdbbc7e98ddc0a46f1c6659cca98c963904"
+      },
+      {
+        "path": "metatile-104.png",
+        "sha256": "45015066be88cc77812b3eb4ee4e7edbeb46318820cda0cd3aaaea9e6fd37529"
+      },
+      {
+        "path": "metatile-105.png",
+        "sha256": "1cf848279ee64941b4c27b76c20d1e81ad8a2d857e445fe7b7b30b3665111f01"
+      },
+      {
+        "path": "metatile-106.png",
+        "sha256": "45015066be88cc77812b3eb4ee4e7edbeb46318820cda0cd3aaaea9e6fd37529"
+      },
+      {
+        "path": "metatile-107.png",
+        "sha256": "a91a90853c34fd3da4dcd85ecea04dac8829dbb5905c2359b40d3208a308bad2"
+      },
+      {
+        "path": "metatile-108.png",
+        "sha256": "07ea0164898f1f1ba0d8a64b21ed0a7ca25d7f8e48aecc042f00599bbe63e832"
+      },
+      {
+        "path": "metatile-109.png",
+        "sha256": "4fbaa0ccc681687ae8ecf0c79571ddc84c2e408b35562f9ada8807fa631f6edd"
+      },
+      {
+        "path": "metatile-128.png",
+        "sha256": "deec828ec09a611aff3d1151637eafe4463486a52df8e396db1ad21da772b815"
+      },
+      {
+        "path": "metatile-129.png",
+        "sha256": "fa2a38e4246531282a8a3ae2e668acda3810f7658f31116cd304a9aaad76aa6a"
+      },
+      {
+        "path": "metatile-130.png",
+        "sha256": "ee481d257d2bc888ebd892dbe7492836b28cce155d535c67fa3c6b53f2369fe5"
+      },
+      {
+        "path": "metatile-131.png",
+        "sha256": "72666004ffe17876fd3c02d894f16c7c3f9dabe0049afd8398f2d42f79178568"
+      },
+      {
+        "path": "metatile-132.png",
+        "sha256": "acf976f76dd57cad2de1fcde59ef8d916529d5baf2c23587e5622e1670d3354b"
+      },
+      {
+        "path": "metatile-133.png",
+        "sha256": "5bdfbf77c01c2986b6f58a8c4da46c7463bd14c189132e79a6595fd89c5b31b5"
+      },
+      {
+        "path": "metatile-134.png",
+        "sha256": "37508f1aaf398e46f771b59190fc76c7688cfd04c4330c8064f12e2077b5bb30"
+      },
+      {
+        "path": "metatile-135.png",
+        "sha256": "a31b8697dbe7507ca87489bb3141d2a81cbcb7332dfa73d7e63ede3e66700c64"
+      },
+      {
+        "path": "metatile-136.png",
+        "sha256": "0196c3508ca1f2dbb775bf94959fc4caf3076f93dfb65b8f977c7825ac53d864"
+      },
+      {
+        "path": "metatile-137.png",
+        "sha256": "dc7b7172bf6468b15288592aa4ae5d0fe19faf70db14847b0108b970bb8fb909"
+      },
+      {
+        "path": "metatile-192.png",
+        "sha256": "7e93acb1c3fbcbd5c3aebfa3a73fddd44e98e37690f7cd5f7f482f21f6fed7d1"
+      },
+      {
+        "path": "metatile-193.png",
+        "sha256": "7e93acb1c3fbcbd5c3aebfa3a73fddd44e98e37690f7cd5f7f482f21f6fed7d1"
+      },
+      {
+        "path": "metatile-194.png",
+        "sha256": "f429d7ace78e53ac5f662070c9de249bebf537966e545ccbf53edbcb2cf7e130"
+      },
+      {
+        "path": "metatile-195.png",
+        "sha256": "65c4eece854bc514e165b5f1e296af2a2b01f9e126e4fcce2d2721dc36b1f2b5"
+      },
+      {
+        "path": "metatile-196.png",
+        "sha256": "2cf4fe341d22dcdb213f5e912ba4008587a09c7df7ac86a2c004ec51c2d17373"
+      },
+      {
+        "path": "metatile-197.png",
+        "sha256": "5282a54147ae988d9be352e6134ec490906445c5a8e619476584ff023c89edd1"
+      },
+      {
+        "path": "bloober-0.png",
+        "sha256": "621f268b03a91356c4047c1dd438cd3dcb33f6ecbdb37099ec4c38ae58baa4d1"
+      },
+      {
+        "path": "bloober-0-flipped.png",
+        "sha256": "621f268b03a91356c4047c1dd438cd3dcb33f6ecbdb37099ec4c38ae58baa4d1"
+      },
+      {
+        "path": "bloober-1.png",
+        "sha256": "19c631081c7f95611e4d3cd767aa53b15705c3b36fae9ff3c88ef3bcbc090579"
+      },
+      {
+        "path": "bloober-1-flipped.png",
+        "sha256": "19c631081c7f95611e4d3cd767aa53b15705c3b36fae9ff3c88ef3bcbc090579"
+      },
+      {
+        "path": "cheep-0.png",
+        "sha256": "ece08597278303c142ff559fc2fdba5ee8f6b66b088b0bc73c43d857dac4588b"
+      },
+      {
+        "path": "cheep-0-flipped.png",
+        "sha256": "aefd2806a27dc613583d732147a12d269e14201c24694d05dd58e1496770d151"
+      },
+      {
+        "path": "cheep-1.png",
+        "sha256": "dd66d1264001569813146abc5f1b62c0577bb3481ce3f793bb1b03d4de6ae0a3"
+      },
+      {
+        "path": "cheep-1-flipped.png",
+        "sha256": "d5855257dd23517cd4c5577f6c4ada12297489f1557a1afbc8fcf38070da09c3"
+      }
+    ]
+  }
+}
