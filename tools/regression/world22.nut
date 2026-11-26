@@ -1,10 +1,16 @@
-// Diagnostic coverage only; campaign entry, enemies and exit are not complete.
+// Local movement and segmented flow coverage; not whole-level acceptance.
 eve_init <- function() {};eve_update <- function(dt) {};eve_render <- function() {};eve_quit <- function() {};
 dofile("main.nut");
 loadTexture=function(path) {return path;};loadAssets();loadWorld22Assets();
 PARITY_MOVIE_ENABLED=false;
 dofile("tests/fixtures/world22_motion.nut");
 dofile("tests/fixtures/world22_enemies.nut");
+requireSelfTest(ROM_WORLD_2_2_INTRO_AREA.len()==ROM_WORLD_1_2_INTRO.len(),"shared intro data length");
+foreach(i,value in ROM_WORLD_2_2_INTRO_AREA)
+    requireSelfTest(value==ROM_WORLD_1_2_INTRO[i],"2-2 intro must match reused surface data");
+requireSelfTest(ROM_WORLD_2_2_EXIT_AREA.len()==ROM_WORLD_1_1_AREA_DATA.len(),"shared exit data length");
+foreach(i,value in ROM_WORLD_2_2_EXIT_AREA)
+    requireSelfTest(value==ROM_WORLD_1_1_AREA_DATA[i],"2-2 exit must match reused ground data");
 local count=0;
 foreach(caseIndex,rows in WORLD22_MOTION_CASES) {
     local g=createGame();initializeWorld22SwimProbe(g);parityInitialize(g);
@@ -68,4 +74,60 @@ foreach(power in [0,1,2]) {
     if(power==1) requireSelfTest(!g.player.big && !g.player.dead && g.player.invulnerable>0,"big swimmer takes damage");
     if(power==2) requireSelfTest(e.dead && !g.player.dead && g.score==200,"star defeats a water enemy");
 }
+// Exercise the real transition dispatcher, not just isolated area builders.
+foreach(power in [0,1,2]) {
+    local g=createGame();startLevel(g,2,1);
+    g.score=12300;g.coins=27;g.player.big=power>0;g.player.fire=power==2;
+    g.player.height=power>0?32.0:16.0;g.state="levelComplete";
+    simulateFixed(g,FIXED_DT);
+    requireSelfTest(isWorld22(g) && g.stage=="intro" && g.state=="world12Intro",
+        "2-1 completion must load the real 2-2 surface entrance");
+    for(local f=0;f<400 && g.state!="playing";f+=1) simulateFixed(g,FIXED_DT);
+    requireSelfTest(isWorld22Water(g) && g.state=="playing" && g.time==400 &&
+        g.player.big==(power>0) && g.player.fire==(power==2) && g.score==12300 && g.coins==27,
+        "surface pipe must enter water with progress and powers intact");
+    g.time=237;g.displayTime=237;g.cameraX=2800;g.displayCameraX=2800;
+    g.player.x=3000;g.player.y=power>0?112:128;g.player.nesYSpeed=0;g.player.nesYMoveForce=0;g.player.grounded=false;g.input.right=true;
+    g.world22.enemies=array(5,null);g.world22.spawnCursor=g.world22.spawns.len();
+    for(local f=0;f<90 && g.state=="playing";f+=1) simulateFixed(g,FIXED_DT);
+    requireSelfTest(g.state=="world12Pipe" && g.world12Target=="exit",
+        "swimming right into the mouth must start exit without grounded state");
+    local remaining=g.time;
+    for(local f=0;f<350 && g.state!="playing";f+=1) simulateFixed(g,FIXED_DT);
+    requireSelfTest(isWorld22(g) && g.stage=="exit" && g.area=="main" && g.state=="playing" &&
+        g.cameraX==2816 && g.time==remaining && g.player.big==(power>0) &&
+        g.player.fire==(power==2) && !g.romBackgroundCollision,
+        "water exit must emerge on shared ground page 11 without resetting the timer or powers");
+    requireSelfTest(g.flagX>g.player.x && g.flagX<g.areaWidth*16,"exit has a reachable flag");
+    g.input.right=true;g.input.run=true;
+    for(local f=0;f<1800 && g.state!="levelComplete";f+=1) {
+        g.input.jumpDown=f%40<20;g.input.jumpQueued=f%40==0;
+        simulateFixed(g,FIXED_DT);
+    }
+    requireSelfTest(g.state=="levelComplete" && isWorld22(g) && !g.player.dead,
+        "surface exit must support jumping to the flag and completing castle settlement");
+    simulateFixed(g,FIXED_DT);
+    requireSelfTest(g.state=="levelComplete" && isWorld22(g),
+        "unimplemented 2-3 must not silently load a World 1 map");
+    finishPlayerDeath(g);
+    for(local f=0;f<166;f+=1) updateDeathReload(g);
+    requireSelfTest(isWorld22Water(g) && g.checkpointPage==5 && !g.player.big &&
+        !g.player.fire && g.lives==2,"death on the surface exit returns to water checkpoint");
+}
+local blocked=createGame();startWorld22Water(blocked);blocked.input.right=true;
+foreach(y in [80,100,145,180]) {
+    blocked.player.x=3012;blocked.player.y=y;
+    requireSelfTest(!tryWorld22Exit(blocked),"rock above/below the mouth must not trigger exit");
+}
+local over=createGame();startWorld22Water(over);over.lives=1;
+finishPlayerDeath(over);updateDeathReload(over);
+requireSelfTest(over.state=="gameOver" && over.lives==0 && !over.player.dead &&
+    over.soundEvents.find("game_over")!=null,"last water life must enter game over with sound");
+over.input.resetQueued=true;simulateFixed(over,FIXED_DT);over.input.resetQueued=false;
+requireSelfTest(isWorld22Water(over) && over.state=="playing" && over.lives==3 &&
+    over.score==0 && !over.player.big,"game over reset starts a fresh water life");
+local restart=createGame();startLevel(restart,2,2);restart.input.resetQueued=true;
+simulateFixed(restart,FIXED_DT);restart.input.resetQueued=false;
+requireSelfTest(isWorld22(restart) && restart.state=="world12Intro" && restart.player.x==40,
+    "reset during introduction remains in World 2-2");
 print("WORLD22_REGRESSION_OK frames="+count+"\n");

@@ -83,6 +83,7 @@ eve_init = function() {
             initializeWorld21Checkpoint(game,PARITY_CHECKPOINT_PAGE,(game.nesFrameCounter+255)&255);
         }
     }
+    if(config.previewScenario=="world22-route") startLevel(game,2,2);
     if(config.previewScenario=="world22-water") {loadWorld22Assets();startWorld22Water(game);stopMusic();}
     parityInitialize(game);
     if(config.previewScenario=="world21-underground") {

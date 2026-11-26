@@ -1,6 +1,14 @@
-// Water movement/terrain diagnostic. Not registered as a finished campaign stage.
+// World 2-2 water runtime; whole-level parity acceptance is still pending.
 dofile("scripts/generated/world22_data.nut");
 dofile("scripts/generated/world22_map.nut");
+
+function isWorld22(g) {return g.world==2 && g.level==2;}
+
+function startWorld22(g) {
+    loadWorld22Assets();
+    startWorld12(g,"intro");
+    g.world=2;g.romBackgroundCollision=false;
+}
 
 function isWorld22Water(g) {return g.world==2 && g.level==2 && g.area=="water";}
 
@@ -70,10 +78,10 @@ function updateWorld22Whirlpools(g) {
 }
 
 function startWorld22Water(g, page=0) {
-    g.world=2;g.level=2;g.stage="world22-water-probe";g.area="water";
+    g.world=2;g.level=2;g.stage="water";g.area="water";
     g.areaWidth=ROM_WORLD_2_2_METATILES.len();g.romBackgroundCollision=true;
     clearAreaObjects(g);g.plants=[];g.platforms=[];g.enterablePipes=[];
-    g.sidePipeX=-1;g.cameraX=page*256.0;g.displayCameraX=g.cameraX;
+    g.sidePipeX=189;g.world12SidePipeBottomRow <- 8;g.cameraX=page*256.0;g.displayCameraX=g.cameraX;
     g.world22 <- {whirlpools=world22WhirlpoolData()};
     initializeWorld22Enemies(g);
     g.savedMain=null;g.flagX=100000.0;g.castleX=100000.0;
@@ -90,7 +98,9 @@ function startWorld22Water(g, page=0) {
     g.player.fallForce=0x28;
     g.state="playing";g.stateTimer=0.0;g.checkpointPage=page;
     g.time=400;g.displayTime=400;g.gameTimerControl=23;
+    g.hurryActive=false;
     g.soundEvents.clear(); // Water music is pending the stage audio integration.
+    g.soundEvents.append("silence_music");
 }
 
 function initializeWorld22SwimProbe(g) {
@@ -166,10 +176,24 @@ function updateWorld22DeathReload(g) {
     if(g.deathReloadFrames==1) {
         g.checkpointPage=g.cameraX>=1280?5:0;
         g.lives-=1;
-        if(g.lives<=0) {g.lives=0;g.state="gameOver";return;}
+        if(g.lives<=0) {
+            g.lives=0;g.state="gameOver";g.player.dead=false;
+            emitSound(g,"game_over");return;
+        }
     }
     if(g.deathReloadFrames>=166) {
         local page=g.checkpointPage;
         g.player=createPlayer();startWorld22Water(g,page);
     }
+}
+
+// The mouth occupies map rows 7/8. Require the entire collision body to
+// fit the opening; swimming alongside its upper rock must not enter it.
+function tryWorld22Exit(g) {
+    local p=g.player;
+    if(!isWorld22Water(g) || p.dead || !g.input.right) return false;
+    if(p.x+13<g.sidePipeX*16-1 || p.x>=g.sidePipeX*16+16 ||
+        p.y<112 || p.y+p.height>144) return false;
+    startWorld12Transition(g,"exit","side");
+    return true;
 }

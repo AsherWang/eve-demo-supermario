@@ -21,7 +21,7 @@ def main() -> int:
     expected_frames=sum(case['frames'] for case in manifest['cases'])
     passed=result.returncode==0 and f'WORLD22_REGRESSION_OK frames={expected_frames}\n' in text
     report=dict(passed=passed,exit_code=result.returncode,
-        scope='selected player/enemy movement registers, checkpoint and contact diagnostics; full image/audio/campaign acceptance remains pending')
+        scope='selected player/enemy movement registers, checkpoint, contact and segmented entry/exit flow diagnostics; full image/audio/campaign acceptance remains pending')
     (args.output/'summary.json').write_text(json.dumps(report,indent=2)+'\n',encoding='utf-8')
     print(text);print(json.dumps(report))
     return 0 if passed else 1

@@ -253,12 +253,16 @@ function syncWorld12Player(g) {
 }
 
 function updateWorld12Transition(g) {
+    if(isWorld22(g) && g.input.resetQueued &&
+        (g.state=="world12Intro" || g.state=="world12Pipe")) {
+        resetRound(g);return true;
+    }
     if(g.state=="world12Intro") {
         local p=g.player;
         p.x+=1.0;p.facing=1;p.animationFrame=(g.world12TransitionFrames/8)%3;
         p.displayAnimationFrame=p.animationFrame;
         g.world12TransitionFrames+=1;
-        if(p.x>=10*16-13) startWorld12Transition(g,"underground","side");
+        if(p.x>=10*16-13) startWorld12Transition(g,isWorld22(g)?"water":"underground","side");
         syncWorld12Player(g);
         return true;
     }
@@ -279,7 +283,12 @@ function updateWorld12Transition(g) {
             g.state="warpComplete";
             return true;
         }
-        if(target=="return") {
+        if(target=="water" && isWorld22(g)) {
+            local remaining=g.time,display=g.displayTime,control=g.gameTimerControl;
+            startWorld22Water(g);
+            g.time=remaining;g.displayTime=display;g.gameTimerControl=control;
+            g.state="world12Pipe";
+        } else if(target=="return") {
             buildWorld12(g,"underground");
             // E_UndergroundArea3 page 3: $1e,$40,$07 returns to area $40,
             // entry page 7. PlayerEntranceXPos selects $38 for pipe exit.
@@ -288,6 +297,7 @@ function updateWorld12Transition(g) {
             foreach(e in g.goombas) if(e.x<g.cameraX-64) e.alive=false;
         } else if(target=="exit") {
             buildWorld12(g,"exit");
+            if(isWorld22(g)) g.romBackgroundCollision=false;
             resetPlayerForArea(g,11*256+56,240);
             g.cameraX=11*256.0;g.displayCameraX=g.cameraX;
         } else {
@@ -295,7 +305,7 @@ function updateWorld12Transition(g) {
             resetPlayerForArea(g,24,32);
             g.cameraX=0.0;g.displayCameraX=0.0;
         }
-        g.soundEvents.append("resume_music");
+        if(!isWorld22Water(g)) g.soundEvents.append("resume_music");
     } else if(f>=entryFrames+27) {
         if((g.world12Target=="exit" || g.world12Target=="return") && f<entryFrames+123) {
             g.player.y-=1.0;

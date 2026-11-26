@@ -1089,10 +1089,10 @@ function runWorld21SelfTest() {
     requireSelfTest(isWorld21(g) && g.checkpointPage==6 && g.lives==2 &&
         !g.player.big && !g.player.fire && g.score==12300 && g.coins==19,
         "2-1 death must retain world/progress and reset powers at its checkpoint");
-    g.state="levelComplete";g.input.resetQueued=true;simulateFixed(g,FIXED_DT);
-    requireSelfTest(isWorld21(g) && g.state=="playing" && g.player.x==40 &&
+    g.state="levelComplete";g.input.resetQueued=false;simulateFixed(g,FIXED_DT);
+    requireSelfTest(isWorld22(g) && g.state=="world12Intro" && g.player.x==40 &&
         g.score==12300 && g.coins==19 && g.lives==2,
-        "2-1 course completion must restart in World 2 rather than load World 1-2");
+        "2-1 course completion must load World 2-2 surface entrance");
     foreach(phase in [0,1,3,12,19,20]) foreach(page in [0,6]) {
         local reload=createGame();startLevel(reload,2,1);
         reload.cameraX=page*256;reload.score=45600;reload.coins=27;

@@ -1,6 +1,6 @@
 function resetRound(g) {
     if(isWorld22Water(g)) {g.player=createPlayer();startWorld22Water(g,g.checkpointPage);return;}
-    if(g.world==2) {startLevel(g,2,1,true);return;}
+    if(g.world==2) {startLevel(g,2,g.level,true);return;}
     if(g.level>=3) {startWorld1Stage(g,g.level,true);return;}
     if (g.level == 2) { g.player=createPlayer(); startWorld12(g); return; }
     local checkpointPage = g.checkpointPage;
@@ -160,7 +160,7 @@ function restoreMainArea(g) {
 function tryStartAreaTransition(g) {
     if(isWorld21(g)) return tryWorld21BonusPipe(g);
     if(g.level>=3) return false;
-    if(isWorld22Water(g)) return false;
+    if(isWorld22(g)) return tryWorld22Exit(g);
     if (g.level == 2) return tryWorld12Pipe(g);
     local p = g.player;
     if (g.area == "main" && g.input.down && p.grounded) {
@@ -793,7 +793,7 @@ function handlePlayerBackgroundSides(g, p) {
                 // The +13 side probe reaches it one pixel before movePlayerX
                 // sets sidePipeCollision. Let tryWorld12Pipe consume that
                 // contact instead of nudging Mario out of its entry range.
-                if(side==1 && tx==g.sidePipeX && p.grounded && g.input.right &&
+                if(side==1 && tx==g.sidePipeX && (p.grounded || (isWorld22Water(g) && p.y>=112 && p.y+p.height<=144)) && g.input.right &&
                    ty>=g.world12SidePipeBottomRow-1 &&
                    ty<=g.world12SidePipeBottomRow) return;
                 if(world21AnimatedSpringTile(g,tx,ty)) continue;
@@ -2962,7 +2962,7 @@ function updateFireworks(g, dt) {
 }
 
 function updateDeathReload(g) {
-    if(isWorld22Water(g)) {updateWorld22DeathReload(g);return;}
+    if(isWorld22(g)) {updateWorld22DeathReload(g);return;}
     if(isWorld21(g)) {updateWorld21DeathReload(g);return;}
     if(g.level>=3) {updateWorld1StageDeath(g);return;}
     if (g.level == 2) {
@@ -3211,8 +3211,9 @@ function simulateFixed(g, dt) {
     if (g.stageLoadFrames == 166) g.stageLoadFrames = 167;
     if (g.level <= 3 && g.state == "levelComplete") {
         if(g.world==2) {
+            if(g.level==1) {startLevel(g,2,2);return;}
             if(g.input.resetQueued) resetRound(g);
-            return; // World 2-2 is not implemented; never load World 1-2 here.
+            return; // World 2-3 is not implemented; retain the completed-stage boundary.
         }
         // Preserve the established 1-1 parity endpoint; newer whole-route
         // movies include the next stage and therefore must cross this edge.
@@ -3222,7 +3223,7 @@ function simulateFixed(g, dt) {
         }
         return;
     }
-    if (g.world==1 && g.level == 2 && updateWorld12Transition(g)) return;
+    if (g.level == 2 && updateWorld12Transition(g)) return;
     if (g.level == 4 && updateWorld14Transition(g)) {
         if(g.player.playerAnimTimer>0) g.player.playerAnimTimer-=1;
         updatePlayerAnimationState(g);
