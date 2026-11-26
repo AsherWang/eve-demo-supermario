@@ -11,6 +11,14 @@ function runKoopaBounceSelfTest() {
             requireSelfTest(p.y-16==expected[0] && p.nesYSpeed==expected[1] &&
                             p.nesYMoveForce==expected[2] && p.nesYDummy==expected[3],
                             "koopa rebound must preserve the ROM 40-frame fixed-point trajectory");
+            // Exercise the renderer while its pose is still walking but
+            // the collision body has already become a 14px shell.
+            local drawnY=null,savedDraw=worldTexture;
+            worldTexture=function(game,texture,x,y,width,height) {drawnY=y;};
+            drawEnemy(g,e);
+            worldTexture=savedDraw;
+            requireSelfTest(drawnY==184.0,
+                "ground Koopa sprite origin must not sink during the delayed walking-to-shell image");
             local expectedState=(expected[4]&128)!=0?"shellMoving":"shell";
             requireSelfTest(e.state==expectedState,
                             "recontact must kick a stationary shell at the ROM frame without another bounce");

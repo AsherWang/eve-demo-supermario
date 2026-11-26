@@ -168,3 +168,12 @@ The latest frame report is `local-parity/transition13/reports/twentyninth`.
 The only remaining frame difference is five HUD coin pixels during the
 primary VRAM overflow at frame 1419. All 2239 other frames match exactly. No acceptance record is marked
 complete on this evidence alone.
+
+
+## Ground-Koopa presentation regression (2026-11-26)
+
+A ground stomp changed the collision top from 184 to 194 while the 24px walking pose remained visible for two frames, then the shell image returned to 184. Recover the sprite origin from the collision body's foot position; buffer body height alongside buffered Y for World 1-3 and World 2-1. Collision dimensions, bounce physics and pose timing are unchanged. The 40-frame bounce test now calls the real renderer and checks that the origin remains at 184 throughout the stomp/recontact trace, both with A held and released.
+
+Evidence: `local-parity/koopa-sink-20261126`. Ten simulation groups and 35 Python tests pass. World 2-1 held-stomp: 1601/1601 zero-tolerance images and selected states/events pass; full state/event files are byte-identical to the prior accepted capture. World 1-3: 2240 selected states pass; 114 sampled images have only the existing frame-1419 five-pixel HUD difference, zero missing frames. Full-window attempts retained repeated stale presented images (first attempt frames 1158..1181; second from frame 179 onward); neither is counted as image acceptance. Baseline/current serialized states match across the independently replayed 1500-frame prefix. The final sampled replay is diagnostic coverage, not a replacement for whole-level image acceptance.
+
+Preview: `dist/super-mario-koopa-sink-fix-20261126-win64/SuperMario.exe`. First present 1797 ms; visibility/title/icons/normal-close checks and native mixer CTest pass. Version stays 0.0.7; no release published.

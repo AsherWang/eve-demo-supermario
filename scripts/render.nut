@@ -790,7 +790,10 @@ function drawEnemy(g, e) {
     local visualState = e.displayState;
     local levelTexture=g.level==3?world13EnemyTexture(g,e,visualState):null;
     local texture = null;
-    local y = e.y;
+    // Shell collision bounds shorten while keeping the same feet position.
+    // Recover the invariant sprite origin instead of mixing a delayed pose
+    // with the live collision top (which moves down ten pixels on a stomp).
+    local y = e.kind=="koopa"?e.y+e.height-24.0:e.y;
     if((g.level==3 || isWorld21(g)) && e.kind=="goomba") y=e.displayY;
     local height = 24.0;
     if (visualState == "flipped") {
@@ -810,7 +813,6 @@ function drawEnemy(g, e) {
         local shellFrame = visualState == "shellMoving" ? 0 : e.displayShellFrame;
         texture = assets.enemies.greenShell[shellFrame];
         if(levelTexture!=null) texture=levelTexture;
-        y -= 10.0;
     } else if (e.kind == "koopa") {
         local frame = floor(g.simTime * 7.0).tointeger() % 2;
         // TimerControl suppresses EnemyGfxHandler's alternate CHR frame.
@@ -864,13 +866,13 @@ function drawEnemy(g, e) {
         // one pixel below the stored NES sprite Y coordinate.
         // A lethal collision stops movement before OAM is rebuilt on
         // subsequent frozen passes; the live origin then replaces old X.
-        drawX=e.displayX;drawY=e.displayY+1.0;
+        drawX=e.displayX;drawY=e.displayY+e.displayHeight-24.0+1.0;
     }
     if(isWorld21(g) && e.kind=="goomba" &&
         (visualState=="walking" || visualState=="falling" ||
          (visualState=="defeated" && "defeatedMotionRaw" in e && e.defeatedMotionRaw!=4))) drawX=e.displayX;
     if(isWorld21(g) && e.kind=="koopa" && (visualState=="shell" || visualState=="shellMoving")) {
-        drawX=e.displayX;drawY=e.displayY-10.0+3.0;
+        drawX=e.displayX;drawY=e.displayY+e.displayHeight-24.0+3.0;
     }
     if (g.level == 3) {
         if (e.kind == "koopa") {
@@ -879,7 +881,7 @@ function drawEnemy(g, e) {
             drawX += 1.0;
             drawY -= 1.0;
             if(visualState=="walking" || visualState=="falling") {
-                drawY=e.displayY+1.0;
+                drawY=e.displayY+e.displayHeight-24.0+1.0;
             }
         }
         if(visualState=="walking" || visualState=="falling") drawX=e.displayX;

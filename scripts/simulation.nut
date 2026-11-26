@@ -2179,7 +2179,7 @@ function updateGoombas(g, dt) {
         // EnemyGfxHandler reads direction and animation before inter-enemy
         // collisions turn either object or a stomp starts its interval timer.
         e.previousFacing=e.vx<0?-1:(e.vx>0?1:e.shellDirection);
-        e.previousX=e.x;e.previousY=e.y;
+        e.previousX=e.x;e.previousY=e.y;e.previousHeight=e.height;
     }
     if(isWorld21(g)) g.world21.gfxDeathSlot <- p.dead?-1:5;
     if(!isWorld21(g)) updateNormalEnemyCollisions(g);
@@ -2197,10 +2197,10 @@ function updateGoombas(g, dt) {
                 (stopped?(e.previousFacing<0?1:0):(counterBit==(e.previousFacing<0)?1:0));
             // TimerControl freezes movement, but EnemyGfxHandler still
             // prepares the current origin for the next OAM page.
-            e.previousX=e.x;e.previousY=e.y;
+            e.previousX=e.x;e.previousY=e.y;e.previousHeight=e.height;
         }
         if (p.dead) continue;
-        e.previousX=e.x;e.previousY=e.y;
+        e.previousX=e.x;e.previousY=e.y;e.previousHeight=e.height;
         if(!isWorld21(g)) e.previousFacing=e.vx<0?-1:(e.vx>0?1:
             (("world13Facing" in e)?e.world13Facing:-1));
         e.previousParatroopa=("paratroopa" in e) && e.paratroopa;
@@ -2285,7 +2285,7 @@ function updateGoombas(g, dt) {
             // SpawnEnemyGroup initializes later slots before the enemy loop
             // reaches them; those members move on this same pass.
             if(!(isWorld21(g) && e.groupIndex>0)) continue;
-            e.previousX=e.x;e.previousY=e.y;
+            e.previousX=e.x;e.previousY=e.y;e.previousHeight=e.height;
             if(isWorld21(g)) e.previousGraphicsVisible=true;
         }
         // Lower slots have already moved; their saved bounding boxes still
@@ -3400,6 +3400,8 @@ function simulateFixed(g, dt) {
         enemy.queuedState = enemy.state;
         enemy.displayY = enemy.preparedY;
         enemy.preparedY = enemy.previousY;
+        enemy.displayHeight = enemy.preparedHeight;
+        enemy.preparedHeight = enemy.previousHeight;
         enemy.displayX = enemy.preparedX;
         enemy.preparedX = enemy.previousX;
         enemy.displayFacing=enemy.preparedFacing;
