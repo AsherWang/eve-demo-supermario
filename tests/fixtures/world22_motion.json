@@ -1,6 +1,7 @@
 {
   "schema": "world22-motion-fixture-v1",
-  "scope": "player motion and camera only; not image/audio/enemy/whole-level acceptance",
+  "scope": "selected player/enemy movement registers and camera; not image/audio/whole-level acceptance",
+  "enemy_fixture_sha256": "ec60dddbeb45f0dda23aa95c263cee70e68c94e72c238f4799188dbcda58b366",
   "fields": [
     "input_mask",
     "x",

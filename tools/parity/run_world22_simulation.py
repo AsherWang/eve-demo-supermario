@@ -30,11 +30,22 @@ for(local f=0;f<masks.len();f+=1) {
     if(f>0) simulateFixed(g,FIXED_DT);
     g.input.jumpQueued=false;g.input.fireQueued=false;g.input.resetQueued=false;
     print("STATE "+parityStateJson(g,f)+"\n");
+    local actors="[";
+    for(local slot=0;slot<5;slot+=1) {
+        if(slot>0) actors+=",";
+        local e=g.world22.enemies[slot];
+        if(e==null) actors+="null";
+        else if(e.kind=="blooper") actors+="[7,"+e.x+","+e.y+","+e.speed+","+e.force+","+e.phase+","+e.timer+","+e.direction+"]";
+        else actors+="["+e.id+","+e.x+","+e.y+","+e.xForce+","+e.fishDummy+","+e.fishDirection+","+e.originY+"]";
+    }
+    print("ACTORS "+actors+"]\n");
 }
 print("SIMULATION_COMPLETE\n");
 """,encoding='utf-8')
     result=subprocess.run([str(tool_path('eve')),'run','--no-window','-r',str(source)],cwd=ROOT,capture_output=True,text=True,timeout=90)
     (out/'engine.log').write_text(result.stdout+'\n'+result.stderr,encoding='utf-8')
+    actor_rows=[line[7:] for line in result.stdout.splitlines() if line.startswith('ACTORS ')]
+    (out/'actors.jsonl').write_text('\n'.join(actor_rows)+'\n',encoding='utf-8')
     rows=[line[6:] for line in result.stdout.splitlines() if line.startswith('STATE ')]
     if result.returncode or len(rows)!=movie['frames'] or 'SIMULATION_COMPLETE' not in result.stdout:
         raise RuntimeError('simulation failed; inspect '+str(out/'engine.log'))

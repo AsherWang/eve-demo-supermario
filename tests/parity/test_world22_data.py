@@ -51,6 +51,11 @@ class World22DataTests(unittest.TestCase):
         fixture=ROOT/'tests/fixtures/world22_motion.nut'
         self.assertEqual(hashlib.sha256(fixture.read_bytes()).hexdigest(),manifest['fixture_sha256'])
         self.assertEqual(sum(c['frames'] for c in manifest['cases']),1800)
+        enemy_fixture=ROOT/'tests/fixtures/world22_enemies.nut'
+        self.assertEqual(hashlib.sha256(enemy_fixture.read_bytes()).hexdigest(),manifest['enemy_fixture_sha256'])
+        enemy_cases=json.loads(enemy_fixture.read_text().split(' <- ',1)[1].rstrip().removesuffix(';'))
+        self.assertEqual([len(case) for case in enemy_cases],[c['frames'] for c in manifest['cases']])
+        self.assertTrue(all(len(frame)==5 for case in enemy_cases for frame in case))
         rows=json.loads(fixture.read_text().split(' <- ',1)[1].rstrip().removesuffix(';'))
         self.assertEqual(len(rows),len(manifest['cases']))
         for case,frames in zip(manifest['cases'],rows):
@@ -58,6 +63,17 @@ class World22DataTests(unittest.TestCase):
             self.assertEqual(hashlib.sha256(movie.read_bytes()).hexdigest(),case['movie_sha256'])
             self.assertEqual(len(frames),case['frames'])
             self.assertTrue(all(len(row)==len(manifest['fields']) for row in frames))
+
+    def test_water_enemy_register_decoder(self):
+        sys.path.insert(0,str(ROOT/'tools/parity'))
+        from compare_world22_enemies import decode_enemies
+        ram=bytearray(2048);ram[15]=1;ram[22]=7;ram[0x6e]=2;ram[0x87]=20;ram[0xcf]=100
+        ram[0x58]=2;ram[0x434]=2;ram[0xa0]=1;ram[0x796]=0;ram[0x46]=2
+        self.assertEqual(decode_enemies(ram)[0],[7,532,100,2,2,1,0,2])
+        ram[22]=11;ram[0x401]=128;ram[0x417]=32;ram[0x58]=16;ram[0x434]=96
+        self.assertEqual(decode_enemies(ram)[0],[11,532,100,128,32,16,96])
+        ram[22]=99
+        with self.assertRaises(ValueError): decode_enemies(ram)
 
     def test_reference_support_does_not_enable_unimplemented_runtime(self):
         sys.path.insert(0, str(ROOT / "tools/parity"))

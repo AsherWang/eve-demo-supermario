@@ -17,7 +17,10 @@ function loadWorld22Assets() {
             loadTexture("assets/world22/mario-"+size+"-swim-"+i+"-left.png")]);
         swim[size] <- frames;
     }
-    assets.world22 <- {metatiles=tiles,swim=swim};
+    assets.world22 <- {metatiles=tiles,swim=swim,fish=[
+        [loadTexture("assets/world22/cheep-0-flipped.png"),loadTexture("assets/world22/cheep-1-flipped.png")],
+        [loadTexture("assets/world22/red-cheep-0-flipped.png"),loadTexture("assets/world22/red-cheep-1-flipped.png")]],bloopers=[
+        loadTexture("assets/world22/bloober-0.png"),loadTexture("assets/world22/bloober-1.png")]};
 }
 
 function world22WhirlpoolData() {
@@ -72,6 +75,7 @@ function startWorld22Water(g, page=0) {
     clearAreaObjects(g);g.plants=[];g.platforms=[];g.enterablePipes=[];
     g.sidePipeX=-1;g.cameraX=page*256.0;g.displayCameraX=g.cameraX;
     g.world22 <- {whirlpools=world22WhirlpoolData()};
+    initializeWorld22Enemies(g);
     g.savedMain=null;g.flagX=100000.0;g.castleX=100000.0;
     for(local x=0;x<g.areaWidth;x+=1) for(local r=0;r<13;r+=1) {
         local meta=ROM_WORLD_2_2_METATILES[x][r];
@@ -97,7 +101,8 @@ function initializeWorld22SwimProbe(g) {
     p.y=68.0;p.previousY=p.y;p.nesYSpeed=3;
     p.nesYMoveForce=200;p.nesYDummy=240;
     p.jumpOriginY=16.0;p.preparedRelY=52;p.queuedRelY=52;p.displayRelY=52;
-    g.nesFrameCounter=59;
+    g.nesFrameCounter=59;g.intervalTimerControl=10;
+    g.world22.random=[166,179,254,153,100,86,158];
 }
 
 function world22TileTexture(g,tx,ty) {

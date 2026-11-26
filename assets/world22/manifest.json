@@ -1545,6 +1545,22 @@
         "sha256": "d5855257dd23517cd4c5577f6c4ada12297489f1557a1afbc8fcf38070da09c3"
       },
       {
+        "path": "red-cheep-0.png",
+        "sha256": "c23a114a34acc07c29f8b2a9282d9212253ff61677509fe9027996b381d8351e"
+      },
+      {
+        "path": "red-cheep-0-flipped.png",
+        "sha256": "78c4e81ddca919f758617d3d1fe44da5fc90c0accd2d044bf48cd2cf8a8568b7"
+      },
+      {
+        "path": "red-cheep-1.png",
+        "sha256": "eef2a8909e3b28c0b546e2f979cf409667610a131901a64318eef73798993724"
+      },
+      {
+        "path": "red-cheep-1-flipped.png",
+        "sha256": "c1ead04c828a3515ed51ca884540e25f3676dae0f4281a518423eb26fb021797"
+      },
+      {
         "path": "mario-big-swim-0-right.png",
         "sha256": "cadb48dbc7b1ded380b40d36005986cbb3e9008c4c9bb1fe18f583cc917a080c"
       },

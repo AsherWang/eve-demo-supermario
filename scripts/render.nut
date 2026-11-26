@@ -1367,6 +1367,7 @@ function renderGameScene(g) {
     if (g.level == 3) drawWorld13Actors(g, false);
     if (g.level == 4) drawWorld14Actors(g, false);
     if(isWorld21(g)) drawWorld21Actors(g,false);
+    if(isWorld22Water(g)) drawWorld22Enemies(g);
     if (!playerBehindBackground && !playerHidden) drawPlayer(g);
     if(isWorld21(g) && g.area!="underground")
         screenTexture(assets.world21.spriteZeroMasks[g.displayColorPhase],88,25,8,8);

@@ -3359,6 +3359,7 @@ function simulateFixed(g, dt) {
             if (g.level == 3) updateWorld13Actors(g);
             if (g.level == 4) updateWorld14Actors(g);
             if(isWorld21(g)) updateWorld21Actors(g);
+            if(isWorld22Water(g)) updateWorld22Enemies(g);
         } else if (g.state == "pipeDown" || g.state == "pipeSide") {
             // Pipe-entry player control is a game-engine subroutine; normal
             // enemy objects still run on the transition's first frame.

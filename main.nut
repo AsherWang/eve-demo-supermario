@@ -29,6 +29,7 @@ dofile("scripts/world14.nut");
 dofile("scripts/world21.nut");
 dofile("scripts/world21_sky.nut");
 dofile("scripts/world22.nut");
+dofile("scripts/world22_enemies.nut");
 dofile("scripts/title.nut");
 dofile("scripts/level_data.nut");
 dofile("scripts/levels.nut");

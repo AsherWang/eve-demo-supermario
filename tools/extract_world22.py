@@ -147,6 +147,11 @@ def extract_assets(raw: bytes, output: Path) -> dict:
             palettes[4+ENEMY_PALETTES[index]], 3, mirror_right=name.startswith("bloober"))
         save(image, name+".png")
         save(image.transpose(Image.Transpose.FLIP_LEFT_RIGHT), name+"-flipped.png")
+    for frame in range(2):
+        index=12+frame
+        image=compose_sprite(chr_data, prg[graphics+index*6:graphics+(index+1)*6], palettes[6], 3)
+        save(image, f"red-cheep-{frame}.png")
+        save(image.transpose(Image.Transpose.FLIP_LEFT_RIGHT), f"red-cheep-{frame}-flipped.png")
     player = find_once(prg, bytes(range(16)), "player graphics")
     for size, base in [("big",0),("small",96)]:
         for frame in range(3):
