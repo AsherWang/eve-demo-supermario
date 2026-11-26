@@ -1,0 +1,71 @@
+{
+  "schema": "smb-parity-movie-v1",
+  "name": "world-2-2-swim-controls-probe",
+  "level_id": "2-2",
+  "world": 2,
+  "level": 2,
+  "description": "Reference-only water diagnostic: idle sinking, grounded swim, held A, release, reverse direction. Not a whole-level route.",
+  "frames": 480,
+  "reference_bootstrap": {
+    "frames": 180,
+    "inputs": [
+      {
+        "port": 0,
+        "start": 40,
+        "end": 46,
+        "buttons": [
+          "start"
+        ]
+      }
+    ]
+  },
+  "inputs": [
+    {
+      "port": 0,
+      "start": 81,
+      "end": 160,
+      "buttons": [
+        "a"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 201,
+      "end": 209,
+      "buttons": [
+        "a"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 1,
+      "end": 240,
+      "buttons": [
+        "right"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 241,
+      "end": 479,
+      "buttons": [
+        "left"
+      ]
+    }
+  ],
+  "capture_frames": [
+    0,
+    40,
+    80,
+    120,
+    160,
+    200,
+    240,
+    280,
+    320,
+    360,
+    400,
+    440,
+    479
+  ]
+}

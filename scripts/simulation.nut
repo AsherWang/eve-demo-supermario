@@ -1,4 +1,5 @@
 function resetRound(g) {
+    if(isWorld22Water(g)) {g.player=createPlayer();startWorld22Water(g,g.checkpointPage);return;}
     if(g.world==2) {startLevel(g,2,1,true);return;}
     if(g.level>=3) {startWorld1Stage(g,g.level,true);return;}
     if (g.level == 2) { g.player=createPlayer(); startWorld12(g); return; }
@@ -159,6 +160,7 @@ function restoreMainArea(g) {
 function tryStartAreaTransition(g) {
     if(isWorld21(g)) return tryWorld21BonusPipe(g);
     if(g.level>=3) return false;
+    if(isWorld22Water(g)) return false;
     if (g.level == 2) return tryWorld12Pipe(g);
     local p = g.player;
     if (g.area == "main" && g.input.down && p.grounded) {
@@ -936,7 +938,8 @@ function updateNesHorizontalPhysics(g, p, direction) {
         }
         return;
     }
-    if (g.input.run && p.grounded && direction != 0) p.runningTimer = 10;
+    local swimming=isWorld22Water(g);
+    if (!swimming && g.input.run && p.grounded && direction != 0) p.runningTimer = 10;
     else if (p.runningTimer > 0) p.runningTimer -= 1;
 
     // PlayerPhysicsSub chooses three distinct ROM table paths.  Running is
@@ -953,7 +956,7 @@ function updateNesHorizontalPhysics(g, p, direction) {
     local force = 0x98;
     local directionMatchesMotion = direction != 0 &&
         direction == (p.movingDir == 1 ? 1 : -1);
-    if (p.grounded && directionMatchesMotion &&
+    if (!swimming && p.grounded && directionMatchesMotion &&
         (g.input.run || p.runningTimer > 0)) {
         maximum = 0x28;
         force = 0xE4;
@@ -964,6 +967,7 @@ function updateNesHorizontalPhysics(g, p, direction) {
         maximum = 0x18;
         force = 0xD0;
     }
+    if(swimming && p.grounded) maximum=0x10;
     local oldSign = p.nesXSpeed > 0 ? 1 : (p.nesXSpeed < 0 ? -1 : 0);
     // ConfigureHorizontalPhysics compares FacingDir with the sticky
     // Player_MovingDir, not with the current speed sign.  This still doubles
@@ -977,7 +981,7 @@ function updateNesHorizontalPhysics(g, p, direction) {
     // fixed this frame's limits/friction, but before applying that friction.
     // Preserve that order: Running_Speed and Player_MovingDir affect the next
     // frame, while a low-speed skid can zero this frame's velocity fraction.
-    if (p.grounded) {
+    if (p.grounded || swimming) {
         local animationSpeed = p.nesXSpeedAbsolute;
         p.playerAnimTimerSet = animationSpeed >= 0x1C ? 2 :
             (animationSpeed >= 0x0E ? 4 : 7);
@@ -1172,6 +1176,7 @@ function updatePlayer(g, dt) {
         return;
     }
 
+    if(isWorld22Water(g)) {updateWorld22Swimming(g,dt);return;}
     if(isWorld21(g) && updateWorld21Climbing(g)) return;
     if (g.input.fireQueued && p.fire) spawnFireball(g);
 
@@ -2507,6 +2512,9 @@ function updateCamera(g) {
         // pixel from displacements of two or more pixels.
         local positionForScroll = (g.state == "pipeDown" ?
             floor(p.x + 0.5).tofloat() : p.previousX) - g.cameraX;
+        // Water's late whirlpool pass changes X after PlayerGraphics stores
+        // Player_Pos_ForScroll. Preserve that pre-pull relative coordinate.
+        if(isWorld22Water(g)) positionForScroll=p.preparedRelX;
         if (g.state == "pipeDown" && g.areaTransitionFrames == 1 && !isWorld21(g)) {
             scrollAmount = p.nesXScroll;
         } else if (positionForScroll >= 80.0) {
@@ -2855,6 +2863,14 @@ function updatePlayerAnimationState(g) {
     local p = g.player;
 
     if (p.dead) return;
+    if(isWorld22Water(g) && !p.grounded) {
+        p.animationFrame=-10-p.playerAnimCtrl;
+        if((p.swimTimer>0 || p.playerAnimCtrl>0 || g.input.jumpDown) && p.playerAnimTimer==0) {
+            p.playerAnimTimer=p.playerAnimTimerSet;
+            p.playerAnimCtrl=(p.playerAnimCtrl+1)%3;
+        }
+        return;
+    }
     if(isWorld21(g) && "vineClimbing" in p && p.vineClimbing) {
         if(p.nesYSpeed==0) {p.animationFrame=-5;p.playerAnimCtrl=0;return;}
         p.animationFrame=(p.playerAnimCtrl&1)==0?-5:-6;
@@ -2946,6 +2962,7 @@ function updateFireworks(g, dt) {
 }
 
 function updateDeathReload(g) {
+    if(isWorld22Water(g)) {updateWorld22DeathReload(g);return;}
     if(isWorld21(g)) {updateWorld21DeathReload(g);return;}
     if(g.level>=3) {updateWorld1StageDeath(g);return;}
     if (g.level == 2) {
@@ -3205,7 +3222,7 @@ function simulateFixed(g, dt) {
         }
         return;
     }
-    if (g.level == 2 && updateWorld12Transition(g)) return;
+    if (g.world==1 && g.level == 2 && updateWorld12Transition(g)) return;
     if (g.level == 4 && updateWorld14Transition(g)) {
         if(g.player.playerAnimTimer>0) g.player.playerAnimTimer-=1;
         updatePlayerAnimationState(g);
@@ -3338,7 +3355,7 @@ function simulateFixed(g, dt) {
             updateFireballs(g, dt);
             updateGoombas(g, dt);
             updateLevelCoins(g);
-            if (g.level == 2) updateWorld12Actors(g);
+            if (g.world==1 && g.level == 2) updateWorld12Actors(g);
             if (g.level == 3) updateWorld13Actors(g);
             if (g.level == 4) updateWorld14Actors(g);
             if(isWorld21(g)) updateWorld21Actors(g);
@@ -3457,6 +3474,7 @@ function simulateFixed(g, dt) {
     // lockstep with the ROM instead of lagging alternating 2/3px scrolls.
     updateEffects(g, dt);
     preparePlayerPresentation(g);
+    if(isWorld22Water(g)) updateWorld22Whirlpools(g);
     // Flagpole sprites use the same object-OAM handoff as Mario. Keep the raw
     // object coordinates separate from the DMA page currently being shown.
     g.displayFlagY = g.preparedFlagY;

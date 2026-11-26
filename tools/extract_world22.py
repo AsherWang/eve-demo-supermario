@@ -147,6 +147,13 @@ def extract_assets(raw: bytes, output: Path) -> dict:
             palettes[4+ENEMY_PALETTES[index]], 3, mirror_right=name.startswith("bloober"))
         save(image, name+".png")
         save(image.transpose(Image.Transpose.FLIP_LEFT_RIGHT), name+"-flipped.png")
+    player = find_once(prg, bytes(range(16)), "player graphics")
+    for size, base in [("big",0),("small",96)]:
+        for frame in range(3):
+            offset = player+base+(5+frame)*8
+            image = compose_sprite(chr_data, prg[offset:offset+8], palettes[4], 4)
+            save(image, f"mario-{size}-swim-{frame}-right.png")
+            save(image.transpose(Image.Transpose.FLIP_LEFT_RIGHT), f"mario-{size}-swim-{frame}-left.png")
     return dict(palette_cpu_address=water+0x8000, palettes=palettes, files=files)
 
 

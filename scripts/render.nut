@@ -470,6 +470,7 @@ function positiveModulo(value, divisor) {
 }
 
 function drawBackground(g) {
+    if(isWorld22Water(g)) return;
     if(isWorld21(g)) {if(g.area=="main") drawWorld13Background(g);return;}
     if(g.level==3) {drawWorld13Background(g);return;}
     if(g.level==4) {drawWorld14Background(g);return;}
@@ -552,6 +553,11 @@ function drawTiles(g) {
                     tile = entry.tile;
                     break;
                 }
+            }
+            if(isWorld22Water(g)) {
+                local texture=world22TileTexture(g,tx,ty);
+                if(texture!=null) worldTexture(g,texture,tx*16.0,ty*16.0,16,16);
+                continue;
             }
             if(isWorld21(g)) {
                 if(world21BlockRestorationPending(g,tx,ty) &&
@@ -676,6 +682,8 @@ function marioTextureFromSet(g, set) {
 
 function marioTexture(g) {
     local p = g.player;
+    if(isWorld22Water(g) && !p.dead && !p.grounded)
+        return assets.world22.swim[p.big?"big":"small"][p.displayAnimationFrame<=-10?(-10-p.displayAnimationFrame)%3:0][p.displayFacing>0?0:1];
     if (isWorld21(g)?p.displayAnimationFrame==-7:p.dead)
         return p.facing > 0 ? assets.mario.deadRight : assets.mario.deadLeft;
     local palettePhase = playerPalettePhase(g);
@@ -1293,6 +1301,7 @@ function renderGameScene(g) {
         }
         return;
     }
+    if(isWorld22Water(g)) screenRect(0,0,LOGICAL_WIDTH,LOGICAL_HEIGHT,60.0/255,60.0/255,1.0);
     if (g.area == "underground" || g.area == "castle")
         screenRect(0.0, 0.0, LOGICAL_WIDTH, LOGICAL_HEIGHT, 0.0, 0.0, 0.0);
     renderOffsetY=g.displayBackgroundYOffset;
@@ -1301,7 +1310,7 @@ function renderGameScene(g) {
     renderOffsetY=0.0;
     drawPowerUps(g, true);
     drawFireballs(g);
-    if (g.level == 2) drawWorld12Actors(g, true);
+    if (g.world==1 && g.level == 2) drawWorld12Actors(g, true);
     if (g.level == 3) drawWorld13Actors(g, true);
     if (g.level == 4) drawWorld14Actors(g, true);
     if(isWorld21(g)) drawWorld21Actors(g,true);
@@ -1354,7 +1363,7 @@ function renderGameScene(g) {
                 e.erasedDisplayFrames > 0 && e.erasedSlot == slot))
                 drawEnemy(g, e);
     drawEffects(g);
-    if (g.level == 2) drawWorld12Actors(g, false);
+    if (g.world==1 && g.level == 2) drawWorld12Actors(g, false);
     if (g.level == 3) drawWorld13Actors(g, false);
     if (g.level == 4) drawWorld14Actors(g, false);
     if(isWorld21(g)) drawWorld21Actors(g,false);

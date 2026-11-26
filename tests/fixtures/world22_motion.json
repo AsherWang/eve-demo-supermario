@@ -1,0 +1,40 @@
+{
+  "schema": "world22-motion-fixture-v1",
+  "scope": "player motion and camera only; not image/audio/enemy/whole-level acceptance",
+  "fields": [
+    "input_mask",
+    "x",
+    "y",
+    "x_speed_raw",
+    "y_speed_raw",
+    "x_acceleration_fraction",
+    "x_position_fraction",
+    "y_move_force",
+    "y_move_dummy",
+    "grounded",
+    "facing_direction_raw",
+    "moving_direction_raw",
+    "camera_x"
+  ],
+  "cases": [
+    {
+      "movie": "tests/parity/movies/world-2-2-swim-probe.json",
+      "movie_sha256": "745a9818c0cb358bcc51e16e87d9fae3bade76016f6003b412bfd9c9c7e60d00",
+      "state_sha256": "067072e2b9bd57d9aa89ec0e6752f03db9be01b78da146a050e9702f6e981888",
+      "frames": 360
+    },
+    {
+      "movie": "tests/parity/movies/world-2-2-swim-controls-probe.json",
+      "movie_sha256": "18fcc9950de4dc34fbdf36d1d84cbe13440e490cba5301d5c42d4c49ea4e8efd",
+      "state_sha256": "58e03e7f9877b199230f9e313a0aadc3d9e05bfb11f4a2f70a531f9effc68059",
+      "frames": 480
+    },
+    {
+      "movie": "tests/parity/movies/world-2-2-whirlpool-probe.json",
+      "movie_sha256": "27971e135419dc65bbf22a511ffa14e553b09d1aaef57f13123af984ec909883",
+      "state_sha256": "b68dd2f7fefbbf35312f4dabb9b92c8819392dbce24d11ef3f9c1bf852164982",
+      "frames": 960
+    }
+  ],
+  "fixture_sha256": "75335277b736aef1ef0156596c0b0c7ff670289b2bb17da8c9d7a0c0d40746f0"
+}

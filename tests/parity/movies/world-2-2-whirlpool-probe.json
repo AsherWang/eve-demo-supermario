@@ -1,0 +1,367 @@
+{
+  "schema": "smb-parity-movie-v1",
+  "name": "world-2-2-whirlpool-probe",
+  "level_id": "2-2",
+  "world": 2,
+  "level": 2,
+  "description": "Reference-only normal water-origin movement through first whirlpool. Not whole-level acceptance.",
+  "frames": 960,
+  "reference_bootstrap": {
+    "frames": 180,
+    "inputs": [
+      {
+        "port": 0,
+        "start": 40,
+        "end": 46,
+        "buttons": [
+          "start"
+        ]
+      }
+    ]
+  },
+  "inputs": [
+    {
+      "port": 0,
+      "start": 1,
+      "end": 959,
+      "buttons": [
+        "right"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 8,
+      "end": 15,
+      "buttons": [
+        "a"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 32,
+      "end": 39,
+      "buttons": [
+        "a"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 56,
+      "end": 63,
+      "buttons": [
+        "a"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 80,
+      "end": 87,
+      "buttons": [
+        "a"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 104,
+      "end": 111,
+      "buttons": [
+        "a"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 128,
+      "end": 135,
+      "buttons": [
+        "a"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 152,
+      "end": 159,
+      "buttons": [
+        "a"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 176,
+      "end": 183,
+      "buttons": [
+        "a"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 200,
+      "end": 207,
+      "buttons": [
+        "a"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 224,
+      "end": 231,
+      "buttons": [
+        "a"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 248,
+      "end": 255,
+      "buttons": [
+        "a"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 272,
+      "end": 279,
+      "buttons": [
+        "a"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 296,
+      "end": 303,
+      "buttons": [
+        "a"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 320,
+      "end": 327,
+      "buttons": [
+        "a"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 344,
+      "end": 351,
+      "buttons": [
+        "a"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 368,
+      "end": 375,
+      "buttons": [
+        "a"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 392,
+      "end": 399,
+      "buttons": [
+        "a"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 416,
+      "end": 423,
+      "buttons": [
+        "a"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 440,
+      "end": 447,
+      "buttons": [
+        "a"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 464,
+      "end": 471,
+      "buttons": [
+        "a"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 488,
+      "end": 495,
+      "buttons": [
+        "a"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 512,
+      "end": 519,
+      "buttons": [
+        "a"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 536,
+      "end": 543,
+      "buttons": [
+        "a"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 560,
+      "end": 567,
+      "buttons": [
+        "a"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 584,
+      "end": 591,
+      "buttons": [
+        "a"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 608,
+      "end": 615,
+      "buttons": [
+        "a"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 632,
+      "end": 639,
+      "buttons": [
+        "a"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 656,
+      "end": 663,
+      "buttons": [
+        "a"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 680,
+      "end": 687,
+      "buttons": [
+        "a"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 704,
+      "end": 711,
+      "buttons": [
+        "a"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 728,
+      "end": 735,
+      "buttons": [
+        "a"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 752,
+      "end": 759,
+      "buttons": [
+        "a"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 776,
+      "end": 783,
+      "buttons": [
+        "a"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 800,
+      "end": 807,
+      "buttons": [
+        "a"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 824,
+      "end": 831,
+      "buttons": [
+        "a"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 848,
+      "end": 855,
+      "buttons": [
+        "a"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 872,
+      "end": 879,
+      "buttons": [
+        "a"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 896,
+      "end": 903,
+      "buttons": [
+        "a"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 920,
+      "end": 927,
+      "buttons": [
+        "a"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 944,
+      "end": 951,
+      "buttons": [
+        "a"
+      ]
+    }
+  ],
+  "capture_frames": [
+    0,
+    80,
+    160,
+    240,
+    320,
+    400,
+    480,
+    560,
+    640,
+    720,
+    800,
+    880,
+    959
+  ]
+}

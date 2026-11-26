@@ -1543,6 +1543,54 @@
       {
         "path": "cheep-1-flipped.png",
         "sha256": "d5855257dd23517cd4c5577f6c4ada12297489f1557a1afbc8fcf38070da09c3"
+      },
+      {
+        "path": "mario-big-swim-0-right.png",
+        "sha256": "cadb48dbc7b1ded380b40d36005986cbb3e9008c4c9bb1fe18f583cc917a080c"
+      },
+      {
+        "path": "mario-big-swim-0-left.png",
+        "sha256": "33fc6dc57ed32906da3e76f5c1239ca969c1080b7d164d7cd8906093757089a9"
+      },
+      {
+        "path": "mario-big-swim-1-right.png",
+        "sha256": "7a52eb20b52b484b2408b76a8a61d8725729dc447cde375de01dd1f06253f395"
+      },
+      {
+        "path": "mario-big-swim-1-left.png",
+        "sha256": "70d0da4c7c53c4c9028fd5146dbed5cb321b94e9e1ac40f59421c0a8f3c49f4f"
+      },
+      {
+        "path": "mario-big-swim-2-right.png",
+        "sha256": "64e3edd685c69e4dfdaec691fc94b8ae151710a78daf96e097fb4f3c80b2216b"
+      },
+      {
+        "path": "mario-big-swim-2-left.png",
+        "sha256": "480b4d1fca65b7023aa7c37925c4671fa712717dfcb49683420dc4608229c8b5"
+      },
+      {
+        "path": "mario-small-swim-0-right.png",
+        "sha256": "b89d65b14bd32bcedfeb360c7f4e2b2c76a9ccbdf6189bdefa7450c74ae91ff1"
+      },
+      {
+        "path": "mario-small-swim-0-left.png",
+        "sha256": "105d273ee1ee5694284f07ea27ec82beae6156a49ac72e5120ce97d7eb935668"
+      },
+      {
+        "path": "mario-small-swim-1-right.png",
+        "sha256": "f62c4b2b0e6281a436c75fb56117931473acf72afdf89f25e27a6b2b2d1b4cce"
+      },
+      {
+        "path": "mario-small-swim-1-left.png",
+        "sha256": "ce0b1410c1b196a2c73e022aef44b1c0a693f34dbd09355a571bea193b4ead92"
+      },
+      {
+        "path": "mario-small-swim-2-right.png",
+        "sha256": "31a1cea5ece18620bc2a2eef9cabbc0f9ec02e869dd9b8a92ff54f531c768448"
+      },
+      {
+        "path": "mario-small-swim-2-left.png",
+        "sha256": "a3ec8b708cbbfe53b1dd80f627ea9e41f690aba8dc41169d9ab0f2f8cbaa8e99"
       }
     ]
   }

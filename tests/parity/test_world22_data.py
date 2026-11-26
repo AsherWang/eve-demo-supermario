@@ -46,6 +46,19 @@ class World22DataTests(unittest.TestCase):
         self.assertEqual(manifest["tail_overlap_columns"],list(range(194,200)))
         self.assertFalse(manifest["runtime_implemented"])
 
+    def test_committed_motion_fixture_provenance(self):
+        manifest=json.loads((ROOT/'tests/fixtures/world22_motion.json').read_text())
+        fixture=ROOT/'tests/fixtures/world22_motion.nut'
+        self.assertEqual(hashlib.sha256(fixture.read_bytes()).hexdigest(),manifest['fixture_sha256'])
+        self.assertEqual(sum(c['frames'] for c in manifest['cases']),1800)
+        rows=json.loads(fixture.read_text().split(' <- ',1)[1].rstrip().removesuffix(';'))
+        self.assertEqual(len(rows),len(manifest['cases']))
+        for case,frames in zip(manifest['cases'],rows):
+            movie=ROOT/case['movie']
+            self.assertEqual(hashlib.sha256(movie.read_bytes()).hexdigest(),case['movie_sha256'])
+            self.assertEqual(len(frames),case['frames'])
+            self.assertTrue(all(len(row)==len(manifest['fields']) for row in frames))
+
     def test_reference_support_does_not_enable_unimplemented_runtime(self):
         sys.path.insert(0, str(ROOT / "tools/parity"))
         from common import require_supported_stage

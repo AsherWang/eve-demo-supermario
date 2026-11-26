@@ -28,6 +28,7 @@ dofile("scripts/world13.nut");
 dofile("scripts/world14.nut");
 dofile("scripts/world21.nut");
 dofile("scripts/world21_sky.nut");
+dofile("scripts/world22.nut");
 dofile("scripts/title.nut");
 dofile("scripts/level_data.nut");
 dofile("scripts/levels.nut");
@@ -81,6 +82,7 @@ eve_init = function() {
             initializeWorld21Checkpoint(game,PARITY_CHECKPOINT_PAGE,(game.nesFrameCounter+255)&255);
         }
     }
+    if(config.previewScenario=="world22-water") {loadWorld22Assets();startWorld22Water(game);stopMusic();}
     parityInitialize(game);
     if(config.previewScenario=="world21-underground") {
         startLevel(game,2,1);loadWorld21Underground(game);
@@ -212,7 +214,7 @@ eve_render = function() {
     if (parityIsEnabled()) parityCaptureRenderedFrame(game);
     renderGame(game);
     if (config.capturePreview && !game.previewCaptured && game.simTime > 0.5) {
-        local previewName = "world-1-" + game.level + "-" + config.previewScenario + "-preview.png";
+        local previewName = "world-" + game.world + "-" + game.level + "-" + config.previewScenario + "-preview.png";
         if (gfx.saveFramePng(previewName)) game.previewCaptured = true;
     }
 };
