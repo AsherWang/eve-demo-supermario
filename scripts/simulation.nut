@@ -6,7 +6,7 @@ function resetRound(g) {
     g.player = createPlayer();
     g.cameraX = checkpointPage * 256.0;
     if (checkpointPage > 0) {
-        g.player.x = checkpointPage * 256.0 + 32.0;
+        g.player.x = checkpointPage * 256.0 + 40.0;
         g.player.previousX = g.player.x;
     }
     g.state = "playing";
@@ -2964,6 +2964,9 @@ function updateDeathReload(g) {
     g.deathReloadFrames += 1;
     local frame = g.deathReloadFrames;
     if (frame == 1) {
+        // PlayerLoseLife compares the current area's screen-left page, not
+        // the player's X or a checkpoint retained from another area.
+        g.checkpointPage = (g.area == "main" && g.cameraX >= 5.0 * 256.0) ? 5 : 0;
         g.lives -= 1;
         if (g.lives <= 0) {
             g.lives = 0;
@@ -2992,7 +2995,10 @@ function updateDeathReload(g) {
     } else if (frame == 3) {
         parityRecordEvent(g, "music", "silence");
         buildLevel(g);
-        g.cameraX = 0.0;
+        g.savedMain = null;
+        g.cameraX = g.checkpointPage * 256.0;
+        g.displayCameraX = g.cameraX;
+        g.previousScrollAmount = 0.0;
         g.player = createPlayer();
         g.player.x = 0.0;
         g.player.previousX = 0.0;
@@ -3014,6 +3020,8 @@ function updateDeathReload(g) {
         g.hurryActive = false;
         g.gameTimerControl = 0;
         g.player = createPlayer();
+        g.player.x += g.checkpointPage * 256.0;
+        g.player.previousX = g.player.x;
         g.state = "deathEntrance";
     } else if (frame == 167) {
         g.state = "playing";

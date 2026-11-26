@@ -1202,14 +1202,34 @@ function runSimulationSelfTest() {
     requireSelfTest(timerTest.state == "gameOver" && timerTest.lives == 0,
                     "last life must enter Game Over on the following mode-task frame");
 
-    local checkpointTest = createGame();
-    checkpointTest.player.x = 5.0 * 256.0 + 120.0;
-    checkpointTest.cameraX = 5.0 * 256.0;
-    updateCamera(checkpointTest);
-    resetRound(checkpointTest);
-    requireSelfTest(checkpointTest.checkpointPage == 5 &&
-                    checkpointTest.player.x == 5.0 * 256.0 + 32.0,
-                    "World 1-1 deaths after page five must use the ROM halfway page");
+    // Exercise the actual delayed life reload, rather than resetRound.
+    foreach (checkpointCase in [[1279.0, "main", 0], [1280.0, "main", 5],
+                                 [2200.0, "main", 5], [0.0, "underground", 0]]) {
+        local checkpointTest = createGame();
+        checkpointTest.cameraX = checkpointCase[0];
+        checkpointTest.area = checkpointCase[1];
+        checkpointTest.checkpointPage = 5; // stale progress must not win
+        checkpointTest.player.x = checkpointTest.cameraX + 160.0;
+        checkpointTest.player.big = true;
+        checkpointTest.player.fire = true;
+        checkpointTest.score = 12300;
+        checkpointTest.coins = 23;
+        for (local life = 2; life >= 1; life -= 1) {
+            finishPlayerDeath(checkpointTest);
+            for (local reloadFrame = 1; reloadFrame <= 167; reloadFrame += 1)
+                updateDeathReload(checkpointTest);
+            local expectedCamera = checkpointCase[2] * 256.0;
+            requireSelfTest(checkpointTest.state == "playing" &&
+                checkpointTest.lives == life && checkpointTest.checkpointPage == checkpointCase[2] &&
+                checkpointTest.cameraX == expectedCamera && checkpointTest.displayCameraX == expectedCamera &&
+                checkpointTest.player.x == expectedCamera + 40.0 &&
+                checkpointTest.player.previousX == checkpointTest.player.x &&
+                !checkpointTest.player.big && !checkpointTest.player.fire &&
+                checkpointTest.score == 12300 && checkpointTest.coins == 23 &&
+                checkpointTest.time == 401 && checkpointTest.area == "main",
+                "World 1-1 actual death reload must restore the ROM halfway page and small Mario");
+        }
+    }
 
     requireSelfTest(createGame().flagY == 48.0,
                     "flagpole flag must start at the ROM $30 Y position");
