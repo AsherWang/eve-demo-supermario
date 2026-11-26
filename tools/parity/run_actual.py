@@ -60,7 +60,31 @@ PARITY_CAPTURE_FRAMES <- [{captures}];
 
 def runtime_error_lines(log: str) -> list[str]:
     return [line.strip() for line in log.splitlines()
-            if "frame error:" in line.lower() or "run failed:" in line.lower()]
+            if any(marker in line.lower() for marker in
+                   ("frame error:", "run failed:", "eve_init failed:"))]
+
+
+class RuntimeLogMonitor:
+    """Consume appended log bytes, retaining a partial line across polls."""
+
+    def __init__(self, paths: list[Path]):
+        self.positions = {path: (0, b"") for path in paths}
+
+    def poll(self) -> list[str]:
+        errors = []
+        for path, (offset, pending) in self.positions.items():
+            if not path.is_file():
+                continue
+            with path.open("rb") as stream:
+                stream.seek(offset)
+                chunk = stream.read()
+                offset = stream.tell()
+            if not chunk:
+                continue
+            lines = (pending + chunk).split(b"\n")
+            self.positions[path] = (offset, lines[-1])
+            errors.extend(runtime_error_lines(b"\n".join(lines).decode("utf-8", errors="replace")))
+        return errors
 
 
 def main() -> int:
@@ -104,13 +128,24 @@ def main() -> int:
         )
         final_frame = frames / f"frame-{movie['frames'] - 1:06d}.png"
         deadline = time.monotonic() + args.timeout
+        monitor = RuntimeLogMonitor([log_path, output / "process-stdout.log",
+                                     output / "process-stderr.log"])
+        next_log_check = 0.0
         while time.monotonic() < deadline:
+            if time.monotonic() >= next_log_check:
+                errors = monitor.poll()
+                if errors:
+                    raise RuntimeError(f"EVEngine replay failed; logs preserved in {output}: {errors[0]}")
+                next_log_check = time.monotonic() + 0.5
             if process.poll() is not None:
                 break
             if final_frame.is_file() and final_frame.stat().st_size > 0:
                 time.sleep(0.25)
                 break
             time.sleep(0.05)
+        errors = monitor.poll()
+        if errors:
+            raise RuntimeError(f"EVEngine replay failed; logs preserved in {output}: {errors[0]}")
         if not final_frame.is_file():
             raise RuntimeError(f"EVEngine did not produce {final_frame} before exit/timeout")
     finally:

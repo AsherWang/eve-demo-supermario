@@ -135,6 +135,7 @@ function startWorld21(g) {
     decodeWorld11Enemies(g,descriptor.enemies);
     g.flagX=descriptor.goal.flagColumn*16.0;g.castleX=descriptor.goal.castleColumn*16.0;g.flagY=48.0;
     g.preparedFlagY=48.0;g.displayFlagY=48.0;g.castleFlagVisible=false;
+    g.preparedCastleFlagY=144.0;g.displayCastleFlagY=144.0;
     resetPlayerForArea(g,descriptor.entry.x,descriptor.entry.y);g.player.grounded=true;g.player.entranceFalling=false;
     g.state="playing";g.stateTimer=0.0;g.checkpointPage=0;
     g.time=descriptor.time;g.displayTime=descriptor.time;g.gameTimerControl=23;g.hurryActive=false;
@@ -211,6 +212,9 @@ function restoreWorld21Main(g,page=7) {
     loadSavedMainArea(g);g.areaWidth=ROM_WORLD_2_1_METATILES.len();
     g.world21=main;g.plants=actors.plants;g.checkpointPage=actors.checkpoint;
     delete main.savedActors;delete g.world21Main;
+    // InitializeArea clears enemy objects/OAM; only modified terrain survives
+    // the bonus round trip. A grown vine is not persistent map geometry.
+    g.world21.vines=[];
     g.cameraX=page*256.0;g.displayCameraX=g.cameraX;
     // Area initialization reparses enemy slots, even when retaining changed
     // main terrain. A plant frozen at its old raised Y must not greet Mario
@@ -420,7 +424,7 @@ function updateWorld21Actors(g) {
         if(vine.height<maximum && (g.nesFrameCounter&2)!=0) vine.height+=1;
         // VineObject draws before OffscreenBits retires it. The last prepared
         // X is still an OAM byte, including the -1 -> 255 boundary crossing.
-        if(vine.height>=8 && vine.x<g.cameraX) vine.oamRetired <- true;
+        if(vine.height>=8 && vine.x<=g.cameraX) vine.oamRetired <- true;
     }
     if(g.state=="playing") attachWorld21Vine(g);
     updateWorld21CloudPlatform(g);
@@ -716,6 +720,22 @@ function runWorld21SelfTest() {
     updateWorld21Actors(vineEdge);
     requireSelfTest(!vineEdge.world21.vines[0].displayActive,
         "a retired vine must not wrap back onto the display on later passes");
+    local vineZero=createGame();startLevel(vineZero,2,1);
+    vineZero.world21.vines.append({x=64.0,y=240.0,height=96.0});
+    vineZero.cameraX=64;vineZero.player.dead=true;
+    updateWorld21Actors(vineZero);
+    requireSelfTest(vineZero.world21.vines[0].displayActive &&
+        vineZero.world21.vines[0].oamRetired,
+        "vine left-edge equality must retire after its final prepared image");
+    updateWorld21Actors(vineZero);
+    requireSelfTest(!vineZero.world21.vines[0].displayActive,
+        "a vine at the left boundary must not survive another sprite pass");
+    local vineReturn=createGame();startLevel(vineReturn,2,1);
+    hitBlock(vineReturn,83,5);loadWorld21Sky(vineReturn);
+    restoreWorld21Main(vineReturn,10);
+    requireSelfTest(vineReturn.world21.vines.len()==0 &&
+        getTile(vineReturn,83,5)==TILE_USED,
+        "sky return must retain the used producer block but clear old vine sprites");
     foreach(sample in [[0,-16],[198,182],[199,-72],[255,-16],[256,240],[1675,1659]])
         requireSelfTest(world21PlantLeftBound(sample[0])==sample[1],
             "piranha left bounds must preserve ADC/SBC carry at low-byte boundaries");

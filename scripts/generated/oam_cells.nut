@@ -599,6 +599,39 @@ OAM_TEXTURE_CELLS <- [
     ]
   ],
   [
+    "assets/items/mushroom.png",
+    2,
+    2,
+    [
+      "assets/oam-cells/items/mushroom/0-0.png",
+      "assets/oam-cells/items/mushroom/0-1.png",
+      "assets/oam-cells/items/mushroom/1-0.png",
+      "assets/oam-cells/items/mushroom/1-1.png"
+    ]
+  ],
+  [
+    "assets/items/one-up.png",
+    2,
+    2,
+    [
+      "assets/oam-cells/items/one-up/0-0.png",
+      "assets/oam-cells/items/one-up/0-1.png",
+      "assets/oam-cells/items/one-up/1-0.png",
+      "assets/oam-cells/items/one-up/1-1.png"
+    ]
+  ],
+  [
+    "assets/items/fire-flower.png",
+    2,
+    2,
+    [
+      "assets/oam-cells/items/fire-flower/0-0.png",
+      "assets/oam-cells/items/fire-flower/0-1.png",
+      "assets/oam-cells/items/fire-flower/1-0.png",
+      "assets/oam-cells/items/fire-flower/1-1.png"
+    ]
+  ],
+  [
     "assets/enemies/goomba-1.png",
     2,
     3,

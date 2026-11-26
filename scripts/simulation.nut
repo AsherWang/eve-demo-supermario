@@ -461,7 +461,8 @@ function retainOldTileForPpu(g, tx, ty, tile) {
     // The power-up setup path fills the VRAM update buffer one pass earlier
     // than the ordinary coin/brick paths in the captured World 1-1 trace.
     local frames = tile == TILE_POWERUP_BLOCK ? 1 : 2;
-    if(isWorld21(g) && (tile==TILE_QUESTION || tile==TILE_BRICK_STAR)) frames=1;
+    if(isWorld21(g) && (tile==TILE_QUESTION || tile==TILE_BRICK_STAR ||
+                         tile==TILE_BRICK_POWERUP)) frames=1;
     g.displayTileOverrides.append({ tx = tx, ty = ty, tile = tile, frames = frames });
 }
 
@@ -2172,9 +2173,13 @@ function updateGoombas(g, dt) {
         if(isWorld21(g)) {
             e.previousGraphicsVisible=e.awake && e.slot>=0;
             local counterBit=(g.nesFrameCounter&8)!=0;
+            // The host entity array can outlive/reuse ROM slots. A lower slot
+            // prepared its image before a higher slot inflicted the fatal hit,
+            // even when that lower-slot object occurs later in this array.
+            local stopped=p.dead && e.slot>g.world21.gfxDeathSlot;
             e.previousGfxFrame=e.kind=="koopa"?
-                ((!p.dead && e.intervalTimer<5 && !counterBit)?1:0):
-                (p.dead?(e.previousFacing<0?1:0):(counterBit==(e.previousFacing<0)?1:0));
+                ((!stopped && e.intervalTimer<5 && !counterBit)?1:0):
+                (stopped?(e.previousFacing<0?1:0):(counterBit==(e.previousFacing<0)?1:0));
             // TimerControl freezes movement, but EnemyGfxHandler still
             // prepares the current origin for the next OAM page.
             e.previousX=e.x;e.previousY=e.y;
@@ -3431,6 +3436,10 @@ function simulateFixed(g, dt) {
     // object coordinates separate from the DMA page currently being shown.
     g.displayFlagY = g.preparedFlagY;
     g.preparedFlagY = g.flagY;
+    if(isWorld21(g)) {
+        g.displayCastleFlagY = g.preparedCastleFlagY;
+        g.preparedCastleFlagY = g.castleFlagY;
+    }
     g.displayFlagScoreY = g.preparedFlagScoreY;
     g.preparedFlagScoreY = g.flagScoreY;
     // ColorRotation reads FrameCounter before the common end-of-frame

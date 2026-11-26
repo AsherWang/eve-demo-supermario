@@ -16,6 +16,8 @@ def main():
     sources += sorted((ROOT / 'assets/world21').glob('star-palette-*.png'))
     sources += [ROOT / 'assets/world21/cloud-platform.png']
     sources += [ROOT / 'assets/scenery/flagpole-flag.png']
+    sources += [ROOT / 'assets/items' / name for name in
+                ('mushroom.png', 'one-up.png', 'fire-flower.png')]
     sources += sorted((ROOT / 'assets/enemies').glob('goomba*.png'))
     sources += sorted((ROOT / 'assets/enemies').glob('green-koopa-*-*.png'))
     sources += sorted((ROOT / 'assets/enemies').glob('green-shell-[0-9].png'))

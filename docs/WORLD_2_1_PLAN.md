@@ -1,6 +1,6 @@
 # World 2-1 implementation plan
 
-Updated 2026-11-08. The main route, 1-4 to 2-1 transition, underground bonus
+Updated 2026-11-26. The main route, 1-4 to 2-1 transition, underground bonus
 and vine/sky bonus are implemented. Checkpoint-origin branch diagnostics cover
 natural entry, automatic entrance, platforms and return to the main route.
 Strict normal-entrance whole-level acceptance remains pending.
@@ -876,3 +876,24 @@ Win64 预览包 `dist/super-mario-world21-coin-tail-preview-20261109-win64/Super
 旧踩踏 1601 帧与死亡/标题 3116 帧完整窗口复验六项门禁全部通过，零画面差异、零缺帧，分别在 `full/held-stomp`、`full/main-route`。两条路线重新生成 8804 / 15118 次 APU 写入，核对一致后复用 PCM。旧路线采集发生在最终弹簧素材翻转前，但最大 cameraX 分别只有 505 / 975，尚未解析 x=3008 的弹簧，最终素材修正不会改变它们的绘制；该适用范围核对保留在 `final-validation-proof.json`。
 
 最终 Win64 预览包 `dist/super-mario-world21-spring-oam-preview-20261110-win64/SuperMario.exe`，首帧显示 1734 ms，标题/图标和正常关闭检查通过，见 `package-startup.json`。包内脚本及素材逐字节匹配工作区，回放默认禁用，无 ROM/存档。版本仍为 0.0.7，未发布。下一步定位第 1661 帧的剩余显示差异。
+
+
+## Normal-clear and death-route image closure (2026-11-26)
+
+本轮证据根目录为 `local-parity/final-tail-20261126`。沿用原始固定按键及零容差，没有截短录像、删除失败帧或改变参考图片。
+
+- 2398 帧正常通关路线：原有 167 帧显示失败，先降至 18 帧，再全部归零。旗杆旗帜按原版右侧 8×8 单元边界隐藏；城堡旗帜按 `$22` 属性置于不透明背景之后，并使用独立的准备/显示坐标，消除升旗提前一帧的问题。最终完整重采报告为 `final2/normal-clear/reports`。
+- 3210 帧旧死亡路线：历史 242 帧显示失败在当前基线上剩 12 帧；本轮将这 12 帧全部归零。补齐三个道具画布的 12 个原生单元，参与逐扫描线精灵数量及像素优先级计算；蘑菇越过左界时按单元隐藏。含蘑菇的砖块走与星星砖相同的替换排队时序。致命碰撞时按敌人槽号判断动画是否已经准备，避免宿主数组顺序与复用后的槽号顺序不同造成一帧乌龟动画错误。`final/candidate/reports` 六项门禁全部通过；该录像仍为三次死亡后返回标题的诊断。
+- 工具改进：`run_actual.py` 增量读取日志，识别 `eve_init failed`、`frame error` 和 `Run failed` 后保留日志、结束子进程并禁用回放适配器。新增分段日志与初始化故障清理测试；35 项 Python 测试通过。此前 Vulkan `VK_INCOMPLETE` 重试及一次字段初始化失败的日志保留，未计入成功采集。
+
+正常通关路线的状态和事件与此前相同：前 2397 帧选定状态一致，末帧缺少进入 2-2 的关卡/加载切换及静音事件，因此完整门禁仍失败。不能用画面全通过声称跨关完成。World 2-2 尚未实现；后续必须实现真实水下关卡和衔接，再扩展录像验证加载后的可控游玩。32 关正式验收状态不变。
+
+
+天空分支复验另外暴露 3 帧旧藤蔓残影：第 1085 帧在镜头与藤蔓 X 相等时未及时退役；第 2309/2310 帧区域重载恢复了旧藤蔓对象。原版 RAM 证实左界相等时已清除 VineFlag/Height；现保留最后准备图像后退役，回到主图则保留使用后的砖块、清除旧藤蔓对象。新增边界与往返模拟回归。重采的 `final2/sky/reports` 2400 帧六项门禁全部通过；首轮三帧失败仍保存在 `final/sky/reports`。
+
+
+最终六条录像共 **13625 帧画面全部零差异、零缺帧**：正常通关 2398、旧死亡路线 3210、踩踏 1601、死亡/标题 3116、地下 900、天空 2400。除正常通关末帧仍缺少 2-2 衔接外，其余五条录像六项门禁全部通过。最终藤蔓修正后重采受影响的正常通关和天空路线；另外四条没有藤蔓激活事件，其执行路径不受该修正影响。汇总及范围说明见 `final-validation-proof.json`。
+
+各回放均从本轮实际状态/事件重新生成模型 APU，确认与已验收写入流逐字节一致后复用模型 PCM，再执行 APU、PCM 和产物门禁；每例留有 `audio-reuse-proof.json`。不是新增设备录音。35 项 Python 测试、10 组模拟回归和原生混音 CTest 通过；三个道具画布与 12 个拆分单元的重组像素完全一致，见 `item-cells-proof.json`。
+
+新 Win64 预览包：`dist/super-mario-world21-verified-preview-20261126-win64/SuperMario.exe`，F5 进入 2-1。启动检查首帧 1594 ms，显示前不露白窗，标题/大小图标及正常关闭通过。包内 1370 个脚本/素材文件与最终验证快照逐字节一致，回放默认关闭，无 ROM/存档，见 `package-startup.json` 和 `package-proof.json`。版本仍为 0.0.7，没有发布 release。

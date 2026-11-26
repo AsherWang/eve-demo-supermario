@@ -426,6 +426,8 @@ function createGame() {
         castleX = 205.0 * TILE_SIZE,
         castleFlagVisible = false,
         castleFlagY = 144.0,
+        preparedCastleFlagY = 144.0,
+        displayCastleFlagY = 144.0,
         fireworksRemaining = 0,
         fireworksOffsetState = -1,
         fireworkSpawnFrames = 0,

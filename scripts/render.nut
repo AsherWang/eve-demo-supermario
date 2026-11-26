@@ -741,7 +741,7 @@ function drawPowerUps(g, behindTiles, afterHud=false) {
         if (item.kind == "oneup") texture = assets.items.oneUp;
         if (item.kind == "star") texture = isWorld21(g)?
             assets.world21.starPalettes[item.displayPalette]:assets.items.star;
-        if(isWorld21(g) && item.kind=="star") {
+        if(isWorld21(g)) {
             oamBase=world21OamOffset(g,5);
             screenOamTexture(texture,floor(item.displayX-visualCameraX(g)),
                 floor(item.displayRomY+POWERUP_DRAW_Y_OFFSET),16,16);
@@ -908,13 +908,13 @@ function drawFlag(g) {
     renderOffsetY=0.0;
     // OAM Y is the scanline immediately above a sprite.  EnemyGfxHandler
     // writes the flag at g.flagY, and the PPU exposes its first pixel at +1.
-    if(g.level==3 && g.flagX-8.0-visualCameraX(g)<240.0)
+    if((g.level==3 || isWorld21(g)) && g.flagX-8.0-visualCameraX(g)<240.0)
         screenOamTexture(assets.scenery.flagpoleFlag,g.flagX-8.0-visualCameraX(g),
             g.displayFlagY+1.0,16.0,16.0,g.flagX-g.cameraX,
             // FlagpoleGfxHandler adds 8 then 12 to relative X for the score
             // baseline. ADC #8 for the third sprite retains that carry.
             g.flagX-8.0-visualCameraX(g)>=236.0?1:0);
-    else if(g.level!=3) worldTexture(g, assets.scenery.flagpoleFlag,
+    else if(g.level!=3 && !isWorld21(g)) worldTexture(g, assets.scenery.flagpoleFlag,
                  g.flagX - 8.0, g.displayFlagY + 1.0, 16.0, 16.0);
 }
 
@@ -931,7 +931,7 @@ function drawFireworks(g) {
 function drawCastle(g) {
     if(isWorld21(g)) {
         if(g.castleFlagVisible) worldTexture(g,assets.scenery.castleFlag,
-            g.castleX+32,g.castleFlagY+1,16,16);
+            g.castleX+32,g.displayCastleFlagY+1,16,16);
         return;
     }
     // World 1-3 carries its full castle in the area tilemap and has no
@@ -1313,13 +1313,16 @@ function renderGameScene(g) {
         playerBehindBackground=g.player.displayBehindBackground;
     local playerHidden = g.state == "areaReload" || (isWorld21(g) && g.state=="deathEntrance");
     if (playerBehindBackground && !playerHidden) drawPlayer(g);
+    // DrawStarFlag uses OAM attribute $22: opaque castle metatiles
+    // cover the rising flag, including the crenellations at its final height.
+    if(isWorld21(g) && g.area=="main") drawCastle(g);
     renderOffsetY=g.displayBackgroundYOffset;
     drawTiles(g);
     renderOffsetY=0.0;
     drawPowerUps(g, false);
     if (g.area == "main") {
         if (!(g.level == 2 && g.stage == "intro")) drawFlag(g);
-        drawCastle(g);
+        if(!isWorld21(g)) drawCastle(g);
     }
     drawFireworks(g);
     local hudBeforeSprites=g.state!="gameOver" && g.state!="warpComplete" &&
