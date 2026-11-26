@@ -232,6 +232,29 @@ end, emu.eventType.endFrame)
     return manifest
 
 
+def extract_bowser_sprites(raw: bytes, output: Path) -> None:
+    """Bowser consists of two independently animated 16x24 enemy objects."""
+    prg, chr_data = raw[16:32784], raw[32784:40976]
+    at = find_once(prg, BOWSER_PALETTE_SIGNATURE, "BowserPaletteData")
+    palette = list(prg[at + 3:at + 7])
+    fronts = [bytes.fromhex("bfbec1c0c2fc"), bytes.fromhex("bfbecac9c2fc")]
+    rears = [bytes.fromhex("c4c3c6c5c8c7"), bytes.fromhex("c4c3c6c5cccb")]
+    for direction in ("left", "right"):
+        for mouth in range(2):
+            for feet in range(2):
+                front = compose_sprite(chr_data, fronts[mouth], palette, 3)
+                rear = compose_sprite(chr_data, rears[feet], palette, 3)
+                if direction == "left":
+                    front = front.transpose(Image.Transpose.FLIP_LEFT_RIGHT)
+                    rear = rear.transpose(Image.Transpose.FLIP_LEFT_RIGHT)
+                canvas = Image.new("RGBA", (32, 32))
+                canvas.alpha_composite(front, (0 if direction == "left" else 16, 0))
+                canvas.alpha_composite(rear, (16 if direction == "left" else 0, 8))
+                canvas.save(output / f"bowser-{direction}-{mouth * 2 + feet}.png")
+                if direction == "left" and mouth == feet:
+                    canvas.save(output / f"bowser-{mouth}.png")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--rom", type=Path,
@@ -330,17 +353,7 @@ def main() -> None:
     for name, tiles in bowser_rows.items():
         if tiles not in enemy_gfx:
             raise SystemExit(f"Bowser graphics row missing: {name}")
-    for frame in range(2):
-        canvas = Image.new("RGBA", (32, 32), (0, 0, 0, 0))
-        front = compose_sprite(
-            chr_data, bowser_rows[f"front-{frame}"], bowser_palette, 3
-        )
-        rear = compose_sprite(
-            chr_data, bowser_rows[f"rear-{frame}"], bowser_palette, 3
-        )
-        canvas.alpha_composite(front, (0, 0))
-        canvas.alpha_composite(rear, (16, 8))
-        canvas.save(out / f"bowser-{frame}.png")
+    extract_bowser_sprites(raw, out)
 
     # Original World 1-4 saves the mushroom retainer/Toad, not the princess.
     # This is the exact six-tile entry at EnemyGraphicsTable $a2. Castle sprite
@@ -380,7 +393,8 @@ def main() -> None:
 
     metadata["generated_textures"] = {
         "metatiles": "assets/world14/metatile-*.png",
-        "bowser": ["assets/world14/bowser-0.png", "assets/world14/bowser-1.png"],
+        "bowser": [f"assets/world14/bowser-{direction}-{pose}.png"
+                   for direction in ("left", "right") for pose in range(4)],
         "mushroom_retainer": "assets/world14/toad.png",
         "firebar": ["assets/world14/firebar-0.png", "assets/world14/firebar-1.png"],
         "flame": "assets/world14/bowser-flame.png",

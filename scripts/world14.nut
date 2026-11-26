@@ -48,8 +48,14 @@ function loadWorld14Assets() {
             loadTexture("assets/world14/hud-coin-4.png"),
             loadTexture("assets/world14/hud-coin-5.png")],
         metatiles = metatiles,
-        bowser = [loadTexture("assets/world14/bowser-0.png"),
-                  loadTexture("assets/world14/bowser-1.png")],
+        bowserLeft = [loadTexture("assets/world14/bowser-left-0.png"),
+            loadTexture("assets/world14/bowser-left-1.png"),
+            loadTexture("assets/world14/bowser-left-2.png"),
+            loadTexture("assets/world14/bowser-left-3.png")],
+        bowserRight = [loadTexture("assets/world14/bowser-right-0.png"),
+            loadTexture("assets/world14/bowser-right-1.png"),
+            loadTexture("assets/world14/bowser-right-2.png"),
+            loadTexture("assets/world14/bowser-right-3.png")],
         retainer = loadTexture("assets/world14/toad.png"),
         firebar = [loadTexture("assets/world14/firebar-0.png"),
                    loadTexture("assets/world14/firebar-1.png")],
@@ -642,11 +648,13 @@ function drawWorld14Actors(g, behind) {
         }
     }
     local b = w.bowser;
-    if(b != null && !b.hidden && !b.falling) {
-        local texture = world14Assets.bowser[(frame >> 4) & 1];
-        worldTexture(g, texture, b.x, b.y, 32.0, 32.0);
-    } else if(b != null && !b.hidden && b.falling) {
-        worldTexture(g, world14Assets.bowser[1], b.x, b.y, 32.0, 32.0);
+    if(b != null && !b.hidden) {
+        local right=b.movingDir==1;
+        local pose=((b.bodyControls & 0x80)!=0?2:0)+(b.bodyControls & 1);
+        // b.x is the front object. The rear is +16 when facing left,
+        // -16 when facing right, and always eight pixels below the front.
+        local texture=right?world14Assets.bowserRight[pose]:world14Assets.bowserLeft[pose];
+        worldTexture(g,texture,b.x-(right?16.0:0.0),b.y,32.0,32.0);
     }
     foreach(shot in w.projectiles)
         worldTexture(g, world14Assets.bowserFlame, shot.x, shot.y, 24.0, 8.0);

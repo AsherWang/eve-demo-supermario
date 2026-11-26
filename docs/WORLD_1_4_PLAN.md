@@ -287,3 +287,12 @@ evidence. The new `world-1-4-to-world-2-1.json` host replay runs 2800 frames,
 enters World 2-1 at frame 2496, retains three lives and has no death.
 Small/big/fire transition behavior is covered by the simulation regression.
 This does not resolve the existing strict Bowser and victory-timing differences.
+
+
+## Bowser sprite assembly correction (2026-11-26)
+
+修正库巴头与身体断开的贴图：原表为向右的 16×24 半身，朝左时须分别水平翻转两个半身；后半身位于前半身右侧 16 像素、下方 8 像素。朝右时后半身改在左侧，绘制以原前半身坐标为锚。嘴部 bit 7 与脚部 bit 0 独立选择动画，生成左右各四种组合，代替原先共用全局计时器的两张错误拼图。提取器与素材清单同步更新。
+
+`local-parity/bowser-coin-20261126/asset-proof.json` 验证八种组合左右镜像及嘴/脚独立性；`visual` 是原始通关输入的 2400 帧实际窗口回放，19 张采样画面，保留三条命到达营救状态，1800 帧人工检查确认库巴拼接正确。不是原版整关逐帧验收。另有旧路线 2400 帧采集 `castle`（该路线包含死亡，不作成功通关证明）。10 组模拟回归、35 项 Python 测试、原生混音及包启动检查通过。
+
+同批补齐顶砖收取紧邻正上方金币：1-2 实际地图测试覆盖小马里奥顶砖、大马里奥碎砖、重复顶击不重复计数、相邻列金币不误收。预览包 `dist/super-mario-bowser-coin-fix-20261126-win64/SuperMario.exe`，版本仍为 0.0.7，未发 release。

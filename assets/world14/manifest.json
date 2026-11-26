@@ -26,8 +26,14 @@
   "generated_textures": {
     "metatiles": "assets/world14/metatile-*.png",
     "bowser": [
-      "assets/world14/bowser-0.png",
-      "assets/world14/bowser-1.png"
+      "assets/world14/bowser-left-0.png",
+      "assets/world14/bowser-left-1.png",
+      "assets/world14/bowser-left-2.png",
+      "assets/world14/bowser-left-3.png",
+      "assets/world14/bowser-right-0.png",
+      "assets/world14/bowser-right-1.png",
+      "assets/world14/bowser-right-2.png",
+      "assets/world14/bowser-right-3.png"
     ],
     "mushroom_retainer": "assets/world14/toad.png",
     "firebar": [

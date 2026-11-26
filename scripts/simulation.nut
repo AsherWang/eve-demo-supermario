@@ -506,6 +506,19 @@ function breakBrick(g, tx, ty) {
     emitSound(g, "break");
 }
 
+function collectCoinAboveBlock(g, tx, ty) {
+    foreach(coin in g.levelCoins) {
+        if(!coin.active || floor(coin.x/TILE_SIZE).tointeger()!=tx ||
+           floor(coin.y/TILE_SIZE).tointeger()!=ty-1) continue;
+        coin.active=false;
+        coin.visualErasePending <- true;
+        g.vramBufferAddrCtrl=6;
+        startJumpingCoin(g,tx,ty);
+        awardCoin(g,true);
+        return;
+    }
+}
+
 function bumpEnemiesAbove(g, tx, ty) {
     local blockX = tx * TILE_SIZE.tofloat();
     local blockTop = ty * TILE_SIZE.tofloat();
@@ -532,6 +545,7 @@ function hitBlock(g, tx, ty) {
         tile == TILE_HIDDEN_COIN) {
         beginWorld21Block(g);
         retainOldTileForPpu(g, tx, ty, tile);
+        collectCoinAboveBlock(g,tx,ty);
         bumpEnemiesAbove(g, tx, ty);
         g.bump.active=true;g.bump.tx=tx;g.bump.ty=ty;g.bump.tile=tile;
         g.bump.time=0.0;g.bump.frame=0;g.bump.powerupPending=true;
@@ -559,6 +573,7 @@ function hitBlock(g, tx, ty) {
     parityRecordEvent(g, "gameplay", "block_hit",
         ",\"tile_x\":" + tx + ",\"tile_y\":" + ty + ",\"tile\":" + tile);
 
+    collectCoinAboveBlock(g,tx,ty);
     bumpEnemiesAbove(g, tx, ty);
 
     if (tile == TILE_BRICK && g.player.big) {

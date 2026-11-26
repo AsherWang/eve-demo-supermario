@@ -544,6 +544,29 @@ function runWorld12LiftSelfTest() {
 }
 
 function runWorld12SelfTest() {
+    foreach(big in [false,true]) {
+        local above=createGame();startWorld12(above,"underground");
+        above.player.big=big;above.player.height=big?32.0:16.0;
+        local target=null;
+        foreach(coin in above.levelCoins) if(target==null &&
+            getTile(above,(coin.x/16).tointeger(),(coin.y/16).tointeger()+1)==TILE_BRICK)
+            target=coin;
+        requireSelfTest(target!=null,"1-2 must contain a coin directly over a brick");
+        local tx=(target.x/16).tointeger(),ty=(target.y/16).tointeger()+1;
+        local coins=above.coins,score=above.score;
+        hitBlock(above,tx,ty);
+        requireSelfTest(!target.active && above.coins==coins+1 &&
+            above.score==score+200+(big?50:0) && above.coinEffect.active &&
+            getTile(above,tx,ty)==(big?TILE_EMPTY:TILE_BRICK),
+            "bumping or breaking the brick must collect its overhead coin once");
+        hitBlock(above,tx,ty);
+        requireSelfTest(above.coins==coins+1,"repeat bumps must not duplicate the collected coin");
+        local nearby={x=(tx+1)*16.0,y=(ty-1)*16.0,active=true};
+        above.levelCoins.append(nearby);setTile(above,tx,ty,TILE_BRICK);
+        hitBlock(above,tx,ty);
+        requireSelfTest(nearby.active && above.coins==coins+1,
+            "a neighboring column coin must not be collected by a block bump");
+    }
     local g=createGame();startWorld12(g,"underground");
     requireSelfTest(g.areaWidth==208 && g.level==2,"1-2 area dimensions");
     requireSelfTest(getTile(g,10,9)==TILE_POWERUP_BLOCK,"1-2 opening mushroom at ROM column 10");
