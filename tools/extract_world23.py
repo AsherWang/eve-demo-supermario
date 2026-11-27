@@ -119,6 +119,7 @@ def main() -> None:
     enemy_graphics = find_once(prg, bytes.fromhex("fcfcaaabacadfcfcaeafb0b1"), "enemy graphics")
     for frame, index in enumerate((12,13)):
         image = compose_sprite(chr_data, prg[enemy_graphics+index*6:enemy_graphics+(index+1)*6], sprite_palettes[2], 3)
+        compose_sprite(chr_data, prg[enemy_graphics+index*6:enemy_graphics+(index+1)*6], sprite_palettes[1], 3).transpose(Image.Transpose.FLIP_LEFT_RIGHT).save(out / f"green-fish-{frame}.png")
         image.save(out / f"fish-{frame}-right.png")
         image.transpose(Image.Transpose.FLIP_LEFT_RIGHT).save(out / f"fish-{frame}-left.png")
 

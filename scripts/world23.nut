@@ -4,6 +4,14 @@ dofile("scripts/generated/world23_map.nut");
 
 function isWorld23(g) {return g.world==2 && g.level==3;}
 
+function initializeWorld23Parity(g) {
+    // Offline first-control fixture only. Never call during a gameplay route.
+    // Verified continuous-boot origin: frame 67, RAM FrameCounter=$1a.
+    g.nesFrameCounter=0x1a;g.intervalTimerControl=0;g.gameTimerControl=23;
+    g.player.movingDir=0;
+    g.world23.random=[200,173,60,102,30,210,239];
+}
+
 function world23LevelDescriptor() {
     return {world=2,level=3,stage="world23",areaPointer=0x27,
         metatiles=ROM_WORLD_2_3_METATILES,blocks=ROM_WORLD_2_3_BLOCKS,
@@ -15,7 +23,7 @@ function world23LevelDescriptor() {
 function loadWorld23Assets() {
     if(assets==null) loadAssets();
     if("world23" in assets) return;
-    local tiles={},coins=[],questions=[],left=[],right=[];
+    local tiles={},coins=[],questions=[],left=[],right=[],green=[];
     foreach(column in ROM_WORLD_2_3_METATILES) foreach(meta in column)
         if(meta!=0 && !(meta in tiles)) tiles[meta]<-loadTexture("assets/world23/metatile-"+meta+".png");
     for(local i=0;i<6;i+=1) {
@@ -25,8 +33,9 @@ function loadWorld23Assets() {
     for(local i=0;i<2;i+=1) {
         left.append(loadTexture("assets/world23/fish-"+i+"-left.png"));
         right.append(loadTexture("assets/world23/fish-"+i+"-right.png"));
+        green.append(loadTexture("assets/world23/green-fish-"+i+".png"));
     }
-    assets.world23 <- {metatiles=tiles,coins=coins,questions=questions,left=left,right=right};
+    assets.world23 <- {metatiles=tiles,coins=coins,questions=questions,left=left,right=right,green=green};
 }
 
 function world23FrenzyCommands() {
@@ -49,8 +58,8 @@ function startWorld23(g,page=0) {
     g.world=2;g.level=3;g.stage="world23";g.area="main";g.areaWidth=d.metatiles.len();
     g.romBackgroundCollision=true;g.cameraX=page*256.0;g.displayCameraX=g.cameraX;
     local state={descriptor=d,baseTiles=[],enemies=array(5,null),random=[165,0,0,0,0,0,0],
-        fractions=array(5,0),timer=0,frenzy=false,commands=world23FrenzyCommands(),commandCursor=0,
-        spawned=0,defeated=0};
+        fractions=array(5,0),yDummies=array(5,0),timer=0,frenzy=false,commands=world23FrenzyCommands(),commandCursor=0,
+        spawned=0,defeated=0,enemyCursor=0,enemyPage=0,enemyPageSelected=false};
     if("world23" in g) g.world23=state;else g.world23<-state;
     for(local x=0;x<g.areaWidth;x+=1) for(local row=0;row<13;row+=1) {
         local meta=d.metatiles[x][row],block=d.blocks[x][row];
@@ -110,11 +119,40 @@ function spawnWorld23Fish(g,slot) {
     if(p.nesXSpeed==0 && (offsetIndex&2)) {speed=-speed;direction=2;}
     local offset=[128,48,64,128,48,80,80,112,32,64,128,160,112,64,144,104][offsetIndex];
     local x=floor(p.x).tointeger()+((offsetIndex&2)?offset:-offset);
-    s.enemies[slot]={kind="flying_cheep",slot=slot,x=x,y=248,previousX=x,previousY=248,
+    s.enemies[slot]={kind="flying_cheep",id=20,slot=slot,x=x,y=248,previousX=x,previousY=248,
         displayX=x,displayY=248,preparedX=x,preparedY=248,displayFrame=0,preparedFrame=0,
-        speed=speed,direction=direction,nesYSpeed=-5,nesYMoveForce=0,nesYDummy=0,
+        speed=speed,direction=direction,nesYSpeed=-5,nesYMoveForce=0,nesYDummy=s.yDummies[slot],
         dead=false,age=0};
     s.spawned+=1;
+}
+
+function consumeWorld23EnemyCommand(g,slot,camera) {
+    local s=g.world23,d=ROM_WORLD_2_3_ENEMIES;
+    while(s.enemyCursor<d.len() && d[s.enemyCursor]!=255) {
+        local a=d[s.enemyCursor],b=d[s.enemyCursor+1];
+        if((b&128) && !s.enemyPageSelected) {s.enemyPage+=1;s.enemyPageSelected=true;}
+        if((a&15)==15 && !s.enemyPageSelected) {
+            s.enemyPage=b&63;s.enemyPageSelected=true;s.enemyCursor+=2;continue;
+        }
+        local x=s.enemyPage*256+(a&240);
+        if(x>=camera+255 && x>=(floor((camera+303)/16).tointeger()*16)+1) return false;
+        s.enemyCursor+=2;s.enemyPageSelected=false;
+        // Even a secondary-hard-mode command consumes this empty slot's parser
+        // pass. Omitting it shifts the frenzy timer to the wrong random byte.
+        if(x<camera+255 || (b&64)) return true;
+        local id=b&63;
+        if(id!=10) throw "Unsupported World 2-3 normal enemy ID "+id;
+        // The $0f,$8a stream pair is not an absolute-page command: its high
+        // bit already set EnemyObjectPageSel. It instantiates a green Cheep
+        // at row $f, mostly below the viewport, and still occupies a slot.
+        local y=(a&15)*16+8;
+        s.enemies[slot]={kind="cheep",id=10,slot=slot,x=x,y=y,previousX=x,previousY=y,
+            displayX=x,displayY=y,preparedX=x,preparedY=y,displayFrame=0,preparedFrame=0,
+            speed=s.random[slot]&16,direction=2,nesYSpeed=0,nesYMoveForce=y,
+            nesYDummy=s.yDummies[slot],dead=false,age=0};
+        return true;
+    }
+    return false;
 }
 
 function stepWorld23Fish(e,gravity=13) {
@@ -143,6 +181,11 @@ function updateWorld23Actors(g) {
     world23AdvanceRandom(s.random);
     if(p.dead || p.transformFrames>0) return;
     if(s.timer>0) s.timer-=1;
+    local camera=g.cameraX;
+    if(p.nesXScroll>0 && !p.scrollSideCollisionTimer && p.preparedRelX>=80) {
+        local scroll=p.nesXScroll;if(p.preparedRelX<112 && scroll>=2) scroll-=1;
+        camera+=scroll;
+    }
     local parsedColumn=floor(g.cameraX/32).tointeger()*2+22;
     if(g.vramAreaParserTask==6)
         while(s.commandCursor<s.commands.len() && s.commands[s.commandCursor].column<=parsedColumn) {
@@ -151,39 +194,68 @@ function updateWorld23Actors(g) {
     for(local slot=0;slot<5;slot+=1) {
         local e=s.enemies[slot];
         if(e==null) {
-            if(s.frenzy && s.timer==0 && (g.vramAreaParserTask&7)!=7) spawnWorld23Fish(g,slot);
+            if((g.vramAreaParserTask&7)==7) continue;
+            if(consumeWorld23EnemyCommand(g,slot,camera)) continue;
+            if(s.frenzy && s.timer==0) spawnWorld23Fish(g,slot);
             continue;
+        }
+        // Flying horizontal motion still runs once before the vertical helper
+        // erases an object whose high Y byte has already crossed the screen.
+        if(e.y>255) {
+            if(!e.dead && e.id==20) s.fractions[slot]=(s.fractions[slot]+(e.speed<<4))&255;
+            s.enemies[slot]=null;continue;
         }
         e.displayX=e.preparedX;e.displayY=e.preparedY;e.displayFrame=e.preparedFrame;
         e.previousX=e.x;e.previousY=e.y;e.preparedX=e.x;e.preparedY=e.y;
-        e.preparedFrame=((g.nesFrameCounter+1)&8)!=0?0:1;
+        e.preparedFrame=(g.nesFrameCounter&8)!=0?0:1;
         if(!e.dead) {
             foreach(fireball in g.fireballs)
                 if(fireball.active && overlaps(fireball.x,fireball.y,8,8,e.x+3,e.y+14,11,7)) {
                     fireball.active=false;defeatWorld23Fish(g,e);break;
                 }
             local py=p.y-(p.big?0:16);
-            if(!e.dead && !((g.nesFrameCounter+1)&1) && e.x>=g.cameraX && e.x<g.cameraX+256 &&
+            if(!e.dead && !(g.nesFrameCounter&1) && e.x>=g.cameraX && e.x<g.cameraX+256 &&
                 overlaps(p.x+(p.big?2:3),py+(p.big?8:20),p.big?13:11,p.big?25:13,e.x+3,e.y+14,11,7)) {
                 if(p.starTimer>0) defeatWorld23Fish(g,e);
-                else if(p.nesYSpeed>0 && p.previousY+p.height<=e.y+20) defeatWorld23Fish(g,e,true);
+                else if(p.nesYSpeed>0 || py+12<e.y) defeatWorld23Fish(g,e,true);
                 else {hurtPlayer(g,e);if(p.dead || p.transformFrames>0) return;}
             }
         }
-        if(!e.dead) {
+        if(!e.dead && e.id==10) {
+            local sum=s.fractions[slot]-64;s.fractions[slot]=sum&255;if(sum<0) e.x-=1;
+            if(slot>=2) {
+                sum=e.nesYDummy+(e.speed>=16?32:-32);e.nesYDummy=sum&255;
+                if(sum<0) e.y=(e.y-1)&255;else if(sum>=256) e.y=(e.y+1)&255;
+                local delta=e.y-e.nesYMoveForce;if(abs(delta)>=15) e.speed=delta<0?16:0;
+            }
+        } else if(!e.dead) {
             local sum=s.fractions[slot]+(e.speed<<4);
             e.x+=sum>>8;s.fractions[slot]=sum&255;
         }
-        stepWorld23Fish(e,e.dead?32:13);e.age+=1;
-        if(e.x<g.cameraX-72 || (e.age>8 && e.y>255)) s.enemies[slot]=null;
+        if(e.dead || e.id==20) stepWorld23Fish(e,e.dead?32:13);e.age+=1;
+        // InitVStf clears speed/force but preserves Enemy_YMF_Dummy on slot reuse.
+        s.yDummies[slot]=e.nesYDummy;
+        if(e.id!=20 && (e.x<camera-73 || e.x>=camera+328)) s.enemies[slot]=null;
     }
 }
 
 function drawWorld23Actors(g) {
     foreach(e in g.world23.enemies) if(e!=null) {
-        local texture=e.direction==1?assets.world23.right[e.displayFrame]:assets.world23.left[e.displayFrame];
+        local texture=e.id==10?assets.world23.green[e.displayFrame]:
+            (e.direction==1?assets.world23.right[e.displayFrame]:assets.world23.left[e.displayFrame]);
         worldTexture(g,texture,e.displayX,e.displayY+1,16,24);
     }
+}
+
+function world23ActorRegistersJson(g) {
+    local text="[";
+    foreach(slot,e in g.world23.enemies) {
+        if(slot) text+=",";
+        if(e==null) {text+="null";continue;}
+        text+="["+e.x+","+e.y+","+e.speed+","+g.world23.fractions[slot]+","+
+            e.nesYSpeed+","+e.nesYMoveForce+","+e.nesYDummy+","+e.direction+","+(e.dead?32:0)+"]";
+    }
+    return text+"]";
 }
 
 function updateWorld23DeathReload(g) {

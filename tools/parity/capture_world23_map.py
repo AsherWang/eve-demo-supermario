@@ -93,14 +93,14 @@ emu.addEventCallback(function()
 end,emu.eventType.endFrame)
 """
     script=out/"capture-forward.lua"
-    script.write_text(lua,encoding="utf-8")
+    script.write_text(lua,encoding="utf-8", newline='\n')
     result=subprocess.run([str(tool_path("mesen")),str(args.rom.resolve()),
         "--frames","2600","--home",str(out/"forward-home"),
         "--input","0:start@40-46","--input","0:right,b@80-2599",
         "--lua",str(script),"--lua-allow-io","--timeout","120"],
         capture_output=True,text=True,encoding="utf-8")
-    (out/"stdout.log").write_text(result.stdout,encoding="utf-8")
-    (out/"stderr.log").write_text(result.stderr,encoding="utf-8")
+    (out/"stdout.log").write_text(result.stdout,encoding="utf-8", newline='\n')
+    (out/"stderr.log").write_text(result.stderr,encoding="utf-8", newline='\n')
     if result.returncode: raise RuntimeError(result.stdout+result.stderr)
     columns={v["x"]:{"tiles":v["tiles"],"blocks":v["blocks"]}
         for v in map(json.loads,(out/"columns.jsonl").read_text().splitlines())
@@ -118,13 +118,13 @@ end,emu.eventType.endFrame)
         tail_lua=lua.replace(build_world23_origin_lua(),build_world23_origin_lua(14))
         tail_lua=tail_lua.replace(str(out/"columns.jsonl").replace(chr(92),"/"),
             str(tail/"columns.jsonl").replace(chr(92),"/"))
-        tail_script=tail/"capture.lua";tail_script.write_text(tail_lua,encoding="utf-8")
+        tail_script=tail/"capture.lua";tail_script.write_text(tail_lua,encoding="utf-8", newline='\n')
         result=subprocess.run([str(tool_path("mesen")),str(args.rom.resolve()),
             "--frames","360","--home",str(tail/"home"),"--input","0:start@40-46",
             "--lua",str(tail_script),"--lua-allow-io","--timeout","120"],
             capture_output=True,text=True,encoding="utf-8")
-        (tail/"stdout.log").write_text(result.stdout,encoding="utf-8")
-        (tail/"stderr.log").write_text(result.stderr,encoding="utf-8")
+        (tail/"stdout.log").write_text(result.stdout,encoding="utf-8", newline='\n')
+        (tail/"stderr.log").write_text(result.stderr,encoding="utf-8", newline='\n')
         if result.returncode: raise RuntimeError(result.stdout+result.stderr)
         extra={v["x"]:{"tiles":v["tiles"],"blocks":v["blocks"]}
             for v in map(json.loads,(tail/"columns.jsonl").read_text().splitlines())}
@@ -174,10 +174,10 @@ end,emu.eventType.endFrame)
     }
     (out / "manifest.json").write_text(
         json.dumps(manifest, indent=2) + "\n", encoding="utf-8"
-    )
+    , newline='\n')
     asset_manifest=ROOT/"assets/world23/map-manifest.json"
     asset_manifest.parent.mkdir(parents=True,exist_ok=True)
-    asset_manifest.write_text(json.dumps(manifest,indent=2)+"\n",encoding="utf-8")
+    asset_manifest.write_text(json.dumps(manifest,indent=2)+"\n",encoding="utf-8", newline='\n')
     print(f"captured {len(columns)} columns; wrote {destination}")
 
 

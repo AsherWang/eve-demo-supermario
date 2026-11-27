@@ -44,4 +44,12 @@ class World23DataTests(unittest.TestCase):
             self.assertIn(text,source)
         with self.assertRaises(ValueError): build_world23_origin_lua(15)
 
+    def test_motion_fixture_provenance(self):
+        record=json.loads((ROOT/'tests/fixtures/world23_fish_motion.json').read_text())
+        fixture=ROOT/'tests/fixtures/world23_fish_motion.nut'
+        self.assertEqual(hashlib.sha256(fixture.read_bytes()).hexdigest(),record['fixture_sha256'])
+        self.assertEqual(hashlib.sha256((ROOT/record['movie']).read_bytes()).hexdigest(),record['movie_sha256'])
+        self.assertEqual(record['pairs'],2727)
+        self.assertGreater(record['spawns'],5)
+
 if __name__=='__main__': unittest.main()
