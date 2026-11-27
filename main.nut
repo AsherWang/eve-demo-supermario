@@ -84,7 +84,7 @@ eve_init = function() {
         }
     }
     if(config.previewScenario=="world22-route") startLevel(game,2,2);
-    if(config.previewScenario=="world22-water") {loadWorld22Assets();startWorld22Water(game);stopMusic();}
+    if(config.previewScenario=="world22-water") {loadWorld22Assets();startWorld22Water(game);}
     parityInitialize(game);
     if(config.previewScenario=="world21-underground") {
         startLevel(game,2,1);loadWorld21Underground(game);

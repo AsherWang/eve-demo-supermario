@@ -25,7 +25,7 @@ function parityInitialize(g) {
     if (parityIsEnabled()) {
         print("PARITY_BEGIN " + PARITY_MOVIE_NAME + " frames=" + PARITY_FRAME_MASKS.len() + "\n");
         parityRecordEvent(g, "music", g.area == "castle" ? "castle" :
-            (g.area == "underground" ? "underground" : "overworld"),
+            (g.area == "underground" ? "underground" : (g.area=="water"?"water":"overworld")),
             ",\"action\":\"start\",\"phase\":\"intro\"");
     }
 }

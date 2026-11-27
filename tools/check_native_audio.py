@@ -28,7 +28,14 @@ def main() -> int:
     parser.add_argument("--project", type=Path, default=PROJECT)
     parser.add_argument("--eve", type=Path, default=tool_path("eve"))
     parser.add_argument("--output", type=Path, default=PROJECT / "local-parity/native-audio-runtime")
+    parser.add_argument("--area", choices=["main", "water", "underground", "castle"],
+                        help="Select a runtime area track in a stationary scene; not a transition test")
+    parser.add_argument("--sample-seconds", type=float, help="Compare only this prefix of the supplied reference")
     args = parser.parse_args()
+    if args.area and (not args.use_game_assets or args.death_respawn):
+        parser.error("--area requires --use-game-assets and cannot be combined with --death-respawn")
+    if args.sample_seconds is not None and args.sample_seconds <= 0:
+        parser.error("--sample-seconds must be positive")
     output = args.output.resolve()
     stage = output / "game"
     stage.mkdir(parents=True, exist_ok=True)
@@ -36,6 +43,8 @@ def main() -> int:
         shutil.copytree(args.project / directory, stage / directory, dirs_exist_ok=True)
     shutil.copy2(args.project / "main.nut", stage / "main.nut")
     raw = pcm(args.reference)
+    if args.sample_seconds is not None:
+        raw = raw[:round(args.sample_seconds * 48000) * 4]
     seconds = (len(raw) // 4 + 47999) // 48000 + 1
     capture = output / "runtime-submitted.wav"
     config = (args.project / "config.nut").read_text(encoding="utf-8")
@@ -45,6 +54,20 @@ def main() -> int:
         config += "config.audioReferenceClip <- " + json.dumps(args.reference.resolve().as_posix()) + ";\n"
     (stage / "config.nut").write_text(config, encoding="utf-8")
     main_source = (stage / "main.nut").read_text(encoding="utf-8")
+    if args.area:
+        main_source += """
+local areaCaptureInit = eve_init;
+eve_init = function() {
+    areaCaptureInit();
+    nativeAudio.stopAll();
+    nativeAudio.beginCapture(config.audioCaptureSeconds);
+    nativeAudioCaptureTime = 0.0;
+    game.area = """ + json.dumps(args.area) + """;
+    game.state = "preview";
+    game.soundEvents.clear();
+    resumeMusic();
+};
+"""
     if args.death_respawn:
         main_source += """
 local capturedInit = eve_init;
@@ -88,7 +111,7 @@ eve_update = function(dt) {
               "reference_pcm_sha256": hashlib.sha256(raw).hexdigest(),
               "compared_sample_frames": len(raw) // 4, "startup_offset_frames": offset // 4,
               "sample_exact": equal, "runtime_status": status[-1],
-              "scenario": "World 1-1 death reload music boundary" if args.death_respawn else "opening",
+              "scenario": "World 1-1 death reload music boundary" if args.death_respawn else ("stationary area track: " + args.area if args.area else "opening"),
               "boundary": "PCM submitted to waveOut; excludes Windows/device processing"}
     (output / "report.json").write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
     print(json.dumps(report, indent=2))

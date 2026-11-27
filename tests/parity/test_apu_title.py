@@ -18,6 +18,14 @@ class TitleSoundTest(unittest.TestCase):
         return {"frame_counter": counter,
                 "rom_state": {"oper_mode": mode, "oper_mode_task": task}}
 
+    def test_water_music_event_queues_rom_area_bit_after_origin(self):
+        model = self.model()
+        model.queue_event({"type": "music", "name": "water", "frame": 4}, None)
+        self.assertEqual(model.r(0xFB), 0x02)
+        model.s(0xFB, 0)
+        model.queue_event({"type": "music", "name": "water", "frame": 0}, None)
+        self.assertEqual(model.r(0xFB), 0)
+
     def test_title_disables_channels_without_consuming_queues_or_advancing_music(self):
         model = self.model()
         before = bytes(model.ram)

@@ -626,6 +626,8 @@ class SmbApuModel:
             name = event.get("name")
             if name == "silence":
                 self.s(0xFC, 0x80)
+            elif name == "water" and event.get("frame", 0) > 0:
+                self.s(0xFB, 0x02)
             elif name == "underground" and event.get("frame", 0) > 0:
                 self.s(0xFB, 0x04)
             elif name == "overworld" and event.get("frame", 0) > 0:

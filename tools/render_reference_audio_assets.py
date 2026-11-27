@@ -20,6 +20,8 @@ REQUESTS = {
     "star": (0xFB, 0x40, 1202),
     "vine": (0xFE, 0x04, 180),
     "underground": (0xFB, 0x04, 10820),
+    "water": (0xFB, 0x02, 10820),
+    "water_fast": (0xFB, 0x02, 3600),
     "hurry": (0xFC, 0x40, 180),
     "overworld_fast": (0xFB, 0x01, 3600),
     "underground_fast": (0xFB, 0x04, 3600),

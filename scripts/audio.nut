@@ -13,7 +13,8 @@ function loadAudio() {
         "oneup", "stomp", "kick", "fireball", "pipe", "death", "flag",
         "course_clear", "game_over", "blast", "overworld", "star", "underground",
         "hurry", "overworld_fast", "underground_fast", "star_fast", "timer_tick",
-        "castle_theme", "castle_fast", "castle_clear", "bowser_fire", "bowser_fall"
+        "castle_theme", "castle_fast", "castle_clear", "bowser_fire", "bowser_fall",
+        "water", "water_fast"
     ];
     foreach (name in names)
         nativeAudio.loadClip(name, root + "/assets/audio/" + name + ".wav");
@@ -54,16 +55,21 @@ function stopMusic() {
     musicState = "stopped";
 }
 
+function areaMusicName(g, useStarMusic=false) {
+    local name=useStarMusic?"star":
+        (g!=null && g.area=="castle"?"castle_theme":
+        (g!=null && g.area=="underground"?"underground":
+        (g!=null && g.area=="water"?"water":
+        (g!=null && g.area=="sky"?"star":"overworld"))));
+    if(g!=null && g.hurryActive)
+        name=name=="castle_theme"?"castle_fast":name+"_fast";
+    return name;
+}
+
 function resumeMusic(useStarMusic = false) {
     hurryMusicTime = 0.0;
     if (nativeAudio == null) return;
-    local name = useStarMusic ? "star" :
-        ((game != null && game.area == "castle") ? "castle_theme" :
-         ((game != null && game.area == "underground") ? "underground" :
-          ((game != null && game.area == "sky") ? "star" : "overworld")));
-    if (game != null && game.hurryActive)
-        name = name == "castle_theme" ? "castle_fast" : name + "_fast";
-    nativeAudio.playMusic(name);
+    nativeAudio.playMusic(areaMusicName(game,useStarMusic));
     musicState = useStarMusic ? "star" : "ground";
 }
 

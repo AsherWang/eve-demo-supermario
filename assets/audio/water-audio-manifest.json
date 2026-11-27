@@ -1,0 +1,34 @@
+{
+  "schema": "smb-oracle-audio-assets-v1",
+  "rom_sha256": "f61548fdf1670cffefcc4f0b7bdcdd9eaba0c226e3b74f8666071496988248de",
+  "mesen_sha256": "4143766f2b900e63663ea000655f24fd824f2ce5324c2575025f8bb68030a910",
+  "origin_sha256": "2a750b6cff722b04edf24eb90242693cefef6a14003459418f3dfdd9d87db8c6",
+  "sample_rate": 48000,
+  "channels": 2,
+  "sample_width": 2,
+  "method": "Offline original SoundEngine and Mesen 2A03; unmodified captured PCM",
+  "limitation": "Isolated clips; runtime shared APU channel stealing is not reproduced",
+  "clips": {
+    "water": {
+      "sha256": "157dfd9f66b593147af733f526cb0ffda6d95e2bbedbf1bc8896240686e65882",
+      "sample_frames": 8641698,
+      "queue_address": 251,
+      "queue_value": 2,
+      "emulated_frames": 10820,
+      "timer_freeze_after_frame": 700,
+      "note_length_table_adder": 0,
+      "duration_frames": null
+    },
+    "water_fast": {
+      "sha256": "e7d75e410fdcaef492a26a0266109c3cac31f6c331845f597a97866a9a2a0054",
+      "sample_frames": 2875196,
+      "queue_address": 251,
+      "queue_value": 2,
+      "emulated_frames": 3600,
+      "timer_freeze_after_frame": 700,
+      "note_length_table_adder": 8,
+      "duration_frames": null
+    }
+  },
+  "generator": "tools/render_reference_audio_assets.py"
+}
