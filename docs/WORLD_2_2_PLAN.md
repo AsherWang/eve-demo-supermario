@@ -48,19 +48,23 @@ powers. Surface-exit death is checked on a separate 2-2 game.
   Both capture tools require fresh output directories, atomically claim the
   shared lock, and remove only their own token in `finally`. Busy locks exit 75.
 
-Evidence is in `local-parity/world22-route/`, including `regression-final3/`,
-`world1-regressions/`, `negative-no-swim/`, and `original/`.
+Evidence is in `local-parity/world22-route/`, including `committed-regression/`,
+`world1-regressions/`, `negative-no-swim/`, and `original-final/`.
 `assets/world22/route-diagnostic.json` preserves the movie hash and compact
 observed results. Large raw evidence stays ignored. All 10 pre-existing
 World 1/campaign simulation suites pass.
 
-Final native evidence is `native4/`: 3,436 PNGs and all 3,436 decoded states
+Final native evidence is `native-final/`: 3,436 PNGs and all 3,436 decoded states
 exactly equal the headless replay. Screenshots were reviewed at water midcourse,
 side-pipe entry, and final settlement. The zero-tolerance original frame
-comparison (`frame-comparison-final/`) fails all 3,436 frames, with zero missing
+comparison (`committed-frame-comparison/`) fails all 3,436 frames, with zero missing
 frames. `native2/` preserves an earlier wrapper omission of sky initialization;
 `native3/` preserves the transient SDK Vulkan `VK_INCOMPLETE` startup failure.
 Neither is substituted for the corrected successful capture.
+The final reference and native captures were regenerated from the committed LF
+movie bytes (SHA-256 `928ccfe2947901ba94230e2809de54f056c329690da4d972e32f2a4904fb1a34`).
+Earlier CRLF-movie captures remain diagnostic history; their old byte hashes
+are not relabeled as current evidence.
 
 
 The 43 Python tests pass with the three motion movies restored locally to the

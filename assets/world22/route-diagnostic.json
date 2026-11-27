@@ -1,7 +1,7 @@
 {
   "schema": "world22-route-diagnostic-v1",
   "movie": "tests/parity/movies/world-2-2-normal-route.json",
-  "movie_sha256": "f17020848f4d35c83730c26415b0aab1873a0ca440850ae1cb74d21c0955a2aa",
+  "movie_sha256": "928ccfe2947901ba94230e2809de54f056c329690da4d972e32f2a4904fb1a34",
   "strict_parity_accepted": false,
   "host": {
     "frames": 3436,
@@ -211,7 +211,8 @@
     "death_engine_frame": 2953,
     "life_loss_frame": 3189,
     "final_lives": 2,
-    "final_x": 93
+    "final_x": 93,
+    "evidence": "local-parity/world22-route/original-final"
   },
   "evidence_root": "local-parity/world22-route",
   "limitations": [
@@ -220,12 +221,13 @@
     "No strict frame/state/event/APU/audio acceptance claim.",
     "Original capture is a continuous run, not a restored-state replay proof."
   ],
+  "host_evidence": "local-parity/world22-route/committed-regression/whole-route",
   "native": {
     "frames": 3436,
     "state_rows": 3436,
     "headless_states_identical": true,
     "silent_visual_only": true,
-    "evidence": "local-parity/world22-route/native4"
+    "evidence": "local-parity/world22-route/native-final"
   },
   "frames": {
     "passed": false,

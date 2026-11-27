@@ -60,7 +60,7 @@ eve_update=function(dt) {
     requireSelfTest(!g.player.dead && g.lives==3 && g.player.invulnerable==0 &&
         g.player.starTimer==0,"native route must stay alive and unprotected");
     if(f==PARITY_FRAME_MASKS.len()-1) requireSelfTest(g.state=="levelComplete","native route settlement");
-    g.soundEvents.clear(); // Silent visual diagnostic; never audio acceptance.
+    // Audio is not initialized in this visual diagnostic; keep queued events.
     g.parity.awaitingCapture=true;
 };
 ''',encoding='utf-8')
