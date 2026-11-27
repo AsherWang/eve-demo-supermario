@@ -4,8 +4,10 @@ eve_init <- function() {};eve_update <- function(dt) {};eve_render <- function()
 dofile("main.nut");loadTexture=function(path) {return path;};loadAssets();PARITY_MOVIE_ENABLED=false;
 dofile("tools/regression/world23_hooks.nut");loadWorld23Assets();
 local best=0.0;
+local referenceOrigin="WORLD23_SEARCH_REFERENCE_ORIGIN" in getroottable() && WORLD23_SEARCH_REFERENCE_ORIGIN;
 for(local trial=0;trial<600;trial+=1) {
     local g=createGame();initializeWorld23Diagnostic(g);
+    if(referenceOrigin) {initializeWorld23Parity(g);g.player.parityOriginFriction=true;}
     local random=trial+1,hold=0,wait=trial%31,masks=[],lastJump=-100;
     for(local f=0;f<3600;f+=1) {
         random=(random*1103515245+12345)&0x7fffffff;
@@ -23,7 +25,9 @@ for(local trial=0;trial<600;trial+=1) {
             }
             if(hold>0) {mask=mask|1;hold-=1;}
         } else mask=0;
-        masks.append(mask);parityApplyMask(g,mask);simulateFixed(g,FIXED_DT);
+        masks.append(mask);parityApplyMask(g,mask);
+        if(referenceOrigin && f==0) g.nesFrameCounter=(g.nesFrameCounter+1)&255;
+        else simulateFixed(g,FIXED_DT);
         g.input.jumpQueued=false;g.input.fireQueued=false;g.input.resetQueued=false;
         if(g.player.x>best) best=g.player.x;
         if(g.player.dead || g.lives!=3) break;

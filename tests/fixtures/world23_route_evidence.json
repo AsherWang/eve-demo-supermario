@@ -1,0 +1,247 @@
+{
+  "movie": "tests/parity/movies/world-2-3-original-clear-candidate.json",
+  "movie_sha256": "701e38be5635173e6e88807121dbd738721488949d8bb69cf562a4fcc56a7f50",
+  "reference": {
+    "movie_sha256": "701e38be5635173e6e88807121dbd738721488949d8bb69cf562a4fcc56a7f50",
+    "rom_sha256": "f61548fdf1670cffefcc4f0b7bdcdd9eaba0c226e3b74f8666071496988248de",
+    "origin_frame": 67,
+    "comparison_frames": 2132,
+    "flag_frame": 1563,
+    "transition_frame": 2103,
+    "minimum_lives": 3,
+    "furthest_x": 3682,
+    "successful_normal_route": true,
+    "exit_code": 0,
+    "summary": {
+      "event": "summary",
+      "ok": true,
+      "reason": "frame_limit",
+      "start_frame": 1,
+      "final_frame": 2201,
+      "frames_executed": 2200,
+      "stop_code": 0
+    },
+    "strict_parity_accepted": false,
+    "limitation": "Continuous diagnostic; audio includes bootstrap and is not normalized for the strict audio gate."
+  },
+  "remake_reference_origin": {
+    "movie_sha256": "701e38be5635173e6e88807121dbd738721488949d8bb69cf562a4fcc56a7f50",
+    "frames": 2132,
+    "entrance_x": 40.0,
+    "flag_frame": 1563,
+    "settlement_frame": 2101,
+    "minimum_lives": 3,
+    "fish_spawned": 15,
+    "successful_normal_route": true,
+    "reference_origin": true,
+    "strict_parity_accepted": false,
+    "limitation": "CPU gameplay diagnostic. Shared next-stage loader and all six strict parity gates require separate evidence."
+  },
+  "fish_registers": {
+    "passed": true,
+    "frames": 2132,
+    "actual_frames": 2132,
+    "slot_snapshots": 10660,
+    "active_slot_snapshots": 2942,
+    "fields": [
+      "x",
+      "y",
+      "x_speed_raw",
+      "x_fraction",
+      "y_speed_raw",
+      "y_force",
+      "y_dummy",
+      "direction",
+      "state_raw",
+      "id"
+    ],
+    "mismatched_slots": 0,
+    "first_mismatches": [],
+    "reference_sha256": "5ba6dfabe3cbbb34cbe75e28ca9ba430efb069fc8a7f6eb26ac2f687b6b9a0f6",
+    "actual_sha256": "2865147eb3e2c0f7fd0f5c2b181b14c56e96eb1c4af665293428e60bf93a3a4b",
+    "scope": "fish identity, active slots and movement registers only; not graphics/OAM/audio/whole-level acceptance"
+  },
+  "state_comparison": {
+    "passed": false,
+    "compared_frames": 2132,
+    "matching_prefix_frames": 2102,
+    "failed_fields": [
+      {
+        "field": "level",
+        "compared_frames": 2132,
+        "start_frame": 0,
+        "mismatch_frames": 29,
+        "first_mismatch": {
+          "frame": 2103,
+          "reference": 4,
+          "actual": 3
+        }
+      },
+      {
+        "field": "frame_counter",
+        "compared_frames": 2132,
+        "start_frame": 0,
+        "mismatch_frames": 30,
+        "first_mismatch": {
+          "frame": 2102,
+          "reference": 80,
+          "actual": 79
+        }
+      },
+      {
+        "field": "player.x",
+        "compared_frames": 2132,
+        "start_frame": 0,
+        "mismatch_frames": 27,
+        "first_mismatch": {
+          "frame": 2105,
+          "reference": 0,
+          "actual": 3682
+        }
+      },
+      {
+        "field": "player.y",
+        "compared_frames": 2132,
+        "start_frame": 0,
+        "mismatch_frames": 27,
+        "first_mismatch": {
+          "frame": 2105,
+          "reference": 0,
+          "actual": 176
+        }
+      },
+      {
+        "field": "player.x_speed_raw",
+        "compared_frames": 2132,
+        "start_frame": 0,
+        "mismatch_frames": 3,
+        "first_mismatch": {
+          "frame": 2102,
+          "reference": 1,
+          "actual": 0
+        }
+      },
+      {
+        "field": "player.y_move_dummy",
+        "compared_frames": 2132,
+        "start_frame": 0,
+        "mismatch_frames": 28,
+        "first_mismatch": {
+          "frame": 2104,
+          "reference": 0,
+          "actual": 50
+        }
+      },
+      {
+        "field": "player.x_acceleration_fraction",
+        "compared_frames": 2132,
+        "start_frame": 0,
+        "mismatch_frames": 30,
+        "first_mismatch": {
+          "frame": 2102,
+          "reference": 120,
+          "actual": 224
+        }
+      },
+      {
+        "field": "player.x_position_fraction",
+        "compared_frames": 2132,
+        "start_frame": 0,
+        "mismatch_frames": 30,
+        "first_mismatch": {
+          "frame": 2102,
+          "reference": 64,
+          "actual": 48
+        }
+      },
+      {
+        "field": "camera_x",
+        "compared_frames": 2132,
+        "start_frame": 0,
+        "mismatch_frames": 28,
+        "first_mismatch": {
+          "frame": 2104,
+          "reference": 0,
+          "actual": 3532
+        }
+      },
+      {
+        "field": "color_rotation_offset",
+        "compared_frames": 2132,
+        "start_frame": 0,
+        "mismatch_frames": 30,
+        "first_mismatch": {
+          "frame": 2102,
+          "reference": 0,
+          "actual": 5
+        }
+      },
+      {
+        "field": "vram_scheduler.scroll_thirty_two",
+        "compared_frames": 2132,
+        "start_frame": 0,
+        "mismatch_frames": 28,
+        "first_mismatch": {
+          "frame": 2104,
+          "reference": 0,
+          "actual": 12
+        }
+      },
+      {
+        "field": "vram_scheduler.buffer_addr_ctrl",
+        "compared_frames": 2132,
+        "start_frame": 0,
+        "mismatch_frames": 1,
+        "first_mismatch": {
+          "frame": 2106,
+          "reference": 3,
+          "actual": 0
+        }
+      },
+      {
+        "field": "rom_state.oper_mode_task",
+        "compared_frames": 2132,
+        "start_frame": 0,
+        "mismatch_frames": 29,
+        "first_mismatch": {
+          "frame": 2103,
+          "reference": 0,
+          "actual": 3
+        }
+      },
+      {
+        "field": "rom_state.game_engine_subroutine",
+        "compared_frames": 2132,
+        "start_frame": 0,
+        "mismatch_frames": 27,
+        "first_mismatch": {
+          "frame": 2105,
+          "reference": 0,
+          "actual": 5
+        }
+      }
+    ]
+  },
+  "stage_source_sha256": "3b45f2272ed70e2c83e346f17319c2edc166c37c68a95b51a6ae2249aecfaa27",
+  "artifacts": "local-parity/world23-reference-candidate",
+  "strict_parity_accepted": false,
+  "limitations": [
+    "Only sampled PNGs; no all-frame pixel gate",
+    "Shared next-stage load differs after frame 2101 in this baseline",
+    "Events/APU/device-audio comparisons and reviewer records outstanding",
+    "Captured-reference entrance initializer is separate from normal startLevel gameplay"
+  ],
+  "normal_gameplay": {
+    "movie_sha256": "df405fd199ea8cdeca7e9017480648e8fbd772bbbb1a668d9c73abe767ce1d84",
+    "frames": 2243,
+    "entrance_x": 40.0,
+    "flag_frame": 1657,
+    "settlement_frame": 2212,
+    "minimum_lives": 3,
+    "fish_spawned": 16,
+    "successful_normal_route": true,
+    "reference_origin": false,
+    "strict_parity_accepted": false,
+    "limitation": "CPU gameplay diagnostic. Shared next-stage loader and all six strict parity gates require separate evidence."
+  }
+}

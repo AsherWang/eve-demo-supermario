@@ -1,0 +1,496 @@
+{
+  "schema": "smb-parity-movie-v1",
+  "name": "world-2-3-original-clear-candidate",
+  "level_id": "2-3",
+  "world": 2,
+  "level": 3,
+  "description": "Controller-only runtime search candidate. Original ROM independent verification required.",
+  "frames": 2132,
+  "inputs": [
+    {
+      "port": 0,
+      "start": 12,
+      "end": 49,
+      "buttons": [
+        "b",
+        "right"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 50,
+      "end": 72,
+      "buttons": [
+        "a",
+        "b",
+        "right"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 73,
+      "end": 90,
+      "buttons": [
+        "b",
+        "right"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 91,
+      "end": 113,
+      "buttons": [
+        "a",
+        "b",
+        "right"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 114,
+      "end": 147,
+      "buttons": [
+        "b",
+        "right"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 148,
+      "end": 170,
+      "buttons": [
+        "a",
+        "b",
+        "right"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 171,
+      "end": 198,
+      "buttons": [
+        "b",
+        "right"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 199,
+      "end": 221,
+      "buttons": [
+        "a",
+        "b",
+        "right"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 222,
+      "end": 327,
+      "buttons": [
+        "b",
+        "right"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 328,
+      "end": 350,
+      "buttons": [
+        "a",
+        "b",
+        "right"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 351,
+      "end": 402,
+      "buttons": [
+        "b",
+        "right"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 403,
+      "end": 425,
+      "buttons": [
+        "a",
+        "b",
+        "right"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 426,
+      "end": 451,
+      "buttons": [
+        "b",
+        "right"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 452,
+      "end": 474,
+      "buttons": [
+        "a",
+        "b",
+        "right"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 475,
+      "end": 514,
+      "buttons": [
+        "b",
+        "right"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 515,
+      "end": 537,
+      "buttons": [
+        "a",
+        "b",
+        "right"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 538,
+      "end": 580,
+      "buttons": [
+        "b",
+        "right"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 581,
+      "end": 603,
+      "buttons": [
+        "a",
+        "b",
+        "right"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 604,
+      "end": 630,
+      "buttons": [
+        "b",
+        "right"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 631,
+      "end": 653,
+      "buttons": [
+        "a",
+        "b",
+        "right"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 654,
+      "end": 682,
+      "buttons": [
+        "b",
+        "right"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 683,
+      "end": 705,
+      "buttons": [
+        "a",
+        "b",
+        "right"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 706,
+      "end": 746,
+      "buttons": [
+        "b",
+        "right"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 747,
+      "end": 769,
+      "buttons": [
+        "a",
+        "b",
+        "right"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 770,
+      "end": 840,
+      "buttons": [
+        "b",
+        "right"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 841,
+      "end": 863,
+      "buttons": [
+        "a",
+        "b",
+        "right"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 864,
+      "end": 877,
+      "buttons": [
+        "b",
+        "right"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 878,
+      "end": 900,
+      "buttons": [
+        "a",
+        "b",
+        "right"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 901,
+      "end": 955,
+      "buttons": [
+        "b",
+        "right"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 956,
+      "end": 978,
+      "buttons": [
+        "a",
+        "b",
+        "right"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 979,
+      "end": 1004,
+      "buttons": [
+        "b",
+        "right"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 1005,
+      "end": 1027,
+      "buttons": [
+        "a",
+        "b",
+        "right"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 1028,
+      "end": 1071,
+      "buttons": [
+        "b",
+        "right"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 1072,
+      "end": 1094,
+      "buttons": [
+        "a",
+        "b",
+        "right"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 1095,
+      "end": 1154,
+      "buttons": [
+        "b",
+        "right"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 1155,
+      "end": 1177,
+      "buttons": [
+        "a",
+        "b",
+        "right"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 1178,
+      "end": 1203,
+      "buttons": [
+        "b",
+        "right"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 1204,
+      "end": 1226,
+      "buttons": [
+        "a",
+        "b",
+        "right"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 1227,
+      "end": 1320,
+      "buttons": [
+        "b",
+        "right"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 1321,
+      "end": 1343,
+      "buttons": [
+        "a",
+        "b",
+        "right"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 1344,
+      "end": 1382,
+      "buttons": [
+        "b",
+        "right"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 1383,
+      "end": 1405,
+      "buttons": [
+        "a",
+        "b",
+        "right"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 1406,
+      "end": 1423,
+      "buttons": [
+        "b",
+        "right"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 1424,
+      "end": 1446,
+      "buttons": [
+        "a",
+        "b",
+        "right"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 1447,
+      "end": 1461,
+      "buttons": [
+        "b",
+        "right"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 1462,
+      "end": 1484,
+      "buttons": [
+        "a",
+        "b",
+        "right"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 1485,
+      "end": 1501,
+      "buttons": [
+        "b",
+        "right"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 1502,
+      "end": 1524,
+      "buttons": [
+        "a",
+        "b",
+        "right"
+      ]
+    },
+    {
+      "port": 0,
+      "start": 1525,
+      "end": 1563,
+      "buttons": [
+        "b",
+        "right"
+      ]
+    }
+  ],
+  "reference_bootstrap": {
+    "frames": 600,
+    "inputs": [
+      {
+        "port": 0,
+        "start": 40,
+        "end": 46,
+        "buttons": [
+          "start"
+        ]
+      }
+    ]
+  },
+  "capture_frames": [
+    0,
+    400,
+    800,
+    1200,
+    2131
+  ]
+}

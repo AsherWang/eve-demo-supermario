@@ -25,6 +25,28 @@ fixture explicitly retains both hashes and the capture's CRLF provenance.
 - 2727 exact horizontal/vertical ROM register pairs and 18 spawn tuples pass.
 - Normal fixed route still completes with three lives after these corrections.
 
+## Successful original comparison route
+
+`world-2-3-original-clear-candidate.json` is independently verified despite its
+historical candidate name. Its 2132-frame LF movie SHA-256 is
+`701e38be5635173e6e88807121dbd738721488949d8bb69cf562a4fcc56a7f50`.
+The original reaches flag contact at frame 1563 and transitions to 2-4 at frame
+2103 with all three lives. The remake with the captured-reference entrance
+initializer reaches the same flag frame and natural settlement at frame 2101.
+Every compared semantic field matches for frames 0..2101. The full state gate
+still fails at the subsequent shared transition in this pre-integration baseline.
+
+All five fish slots, including identity and ten movement/state fields, match for
+all 2132 frames: 10660 slot snapshots, 2942 active snapshots, zero mismatches.
+The end-of-stream sixth-slot frenzy timer side effect was required for this.
+`tests/fixtures/world23_route_evidence.json` preserves the reports and trace hashes.
+This route uses fixed inputs after the entrance initializer, with no teleports,
+invulnerability, state injections, or altered collisions during play.
+
+The ordinary runtime and captured ROM entrance have different RNG/frame phases.
+Keep `world-2-3-normal-clear.json` for normal `startLevel` gameplay; use the new
+movie and `initializeWorld23Parity` for reference-origin comparisons.
+
 ## Origin comparison and remaining failures
 
 `initializeWorld23Parity(g)` is a test-origin initializer only. It sets the
@@ -38,10 +60,10 @@ Player X first diverges at frame 1010; Y first diverges at frame 985, during
 death/reload. The original movie's maximum X is 1722 and it loses two lives.
 Matching a failed route is a useful diagnostic, not whole-level acceptance.
 
-Still missing: a common successful normal-entry original/remake movie, exact
-death/reload phase and RNG continuity, every-frame pixel equality, complete
+Still missing: exact next-stage/death/reload phases and campaign RNG continuity,
+every-frame pixel equality, complete
 actor/OAM serialization in shared parity output, event/APU/device-audio gates,
-and the route/branch review records. Seven reference screenshots were sampled;
+and the route/branch review records. Only selected reference screenshots were sampled;
 they cannot satisfy the all-frame gate. No acceptance thresholds were changed.
 
 ## Reproduce

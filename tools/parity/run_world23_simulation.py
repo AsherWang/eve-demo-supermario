@@ -46,7 +46,7 @@ print("SIMULATION_COMPLETE\\n");
         raise RuntimeError('Replay failed: '+str(output/'engine.log'))
     (output/'state.jsonl').write_text(''.join(json.dumps(s)+'\n' for s in states), encoding='utf-8', newline='\n')
     complete = next((int(r[0]) for r in routes if r[3]=='levelComplete'), None)
-    flag = next((int(r[0]) for r in routes if r[3]=='endLevel'), None)
+    flag = next((int(r[0]) for r in routes if r[3] in ('flagSlide','endLevel')), None)
     lives = min(int(r[4]) for r in routes)
     report = dict(movie_sha256=sha256_file(movie_path),frames=len(states),entrance_x=float(routes[0][1]),
                   flag_frame=flag,settlement_frame=complete,minimum_lives=lives,fish_spawned=int(routes[-1][5]),

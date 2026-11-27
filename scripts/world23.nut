@@ -122,7 +122,7 @@ function spawnWorld23Fish(g,slot) {
     s.enemies[slot]={kind="flying_cheep",id=20,slot=slot,x=x,y=248,previousX=x,previousY=248,
         displayX=x,displayY=248,preparedX=x,preparedY=248,displayFrame=0,preparedFrame=0,
         speed=speed,direction=direction,nesYSpeed=-5,nesYMoveForce=0,nesYDummy=s.yDummies[slot],
-        dead=false,age=0};
+        dead=false,alive=true,age=0};
     s.spawned+=1;
 }
 
@@ -149,18 +149,18 @@ function consumeWorld23EnemyCommand(g,slot,camera) {
         s.enemies[slot]={kind="cheep",id=10,slot=slot,x=x,y=y,previousX=x,previousY=y,
             displayX=x,displayY=y,preparedX=x,preparedY=y,displayFrame=0,preparedFrame=0,
             speed=s.random[slot]&16,direction=2,nesYSpeed=0,nesYMoveForce=y,
-            nesYDummy=s.yDummies[slot],dead=false,age=0};
+            nesYDummy=s.yDummies[slot],dead=false,alive=true,age=0};
         return true;
     }
     return false;
 }
 
-function stepWorld23Fish(e,gravity=13) {
+function stepWorld23Fish(e,gravity=13,maximum=5) {
     local sum=e.nesYDummy+e.nesYMoveForce;
     e.y+=e.nesYSpeed+(sum>>8);e.nesYDummy=sum&255;
     local velocity=e.nesYMoveForce+gravity;
     e.nesYMoveForce=velocity&255;e.nesYSpeed+=velocity>>8;
-    if(e.nesYSpeed>=5 && e.nesYMoveForce>=128) {e.nesYSpeed=5;e.nesYMoveForce=0;}
+    if(e.nesYSpeed>=maximum && e.nesYMoveForce>=128) {e.nesYSpeed=maximum;e.nesYMoveForce=0;}
     if(!e.dead) {
         local reference=ROM_WORLD_2_3_FISH_Y_REFERENCE[e.nesYMoveForce>>4];
         local delta=(e.y-reference)&255;if(delta>=128) delta=256-delta;
@@ -169,10 +169,17 @@ function stepWorld23Fish(e,gravity=13) {
 }
 
 function defeatWorld23Fish(g,e,stomp=false) {
-    e.dead=true;e.nesYSpeed=-3;g.world23.defeated+=1;
-    awardScoreControl(g,2);emitSound(g,stomp?"stomp":"kick");
-    parityRecordEvent(g,"gameplay",stomp?"enemy_stomp":"enemy_kick",",\"enemy\":\"flying_cheep\"");
-    if(stomp) {g.player.nesYSpeed=-4;g.player.vy=-4*NES_FRAME_RATE;g.player.grounded=false;}
+    awardStomp(g,e,2);
+    local score=g.floatingScores[g.floatingScores.len()-1];score.y=e.y-1.0;score.displayY=score.y;
+    e.dead=true;e.y-=2;e.nesYSpeed=-3;g.world23.defeated+=1;
+    emitSound(g,stomp?"stomp":"kick");
+    parityRecordEvent(g,"gameplay",stomp?"enemy_stomp":"enemy_kick",",\"enemy\":\""+e.kind+"\"");
+    if(stomp) {
+        // Flying-cheep stomp uses the special branch: zero enemy velocity,
+        // preserve its Y dummy, and bounce Mario at $fd (not shell bounce $fc).
+        e.speed=0;e.nesYSpeed=0;e.nesYMoveForce=0;
+        g.player.nesYSpeed=-3;g.player.vy=-3*NES_FRAME_RATE;g.player.grounded=false;
+    }
 }
 
 function updateWorld23Actors(g) {
@@ -203,15 +210,16 @@ function updateWorld23Actors(g) {
         // erases an object whose high Y byte has already crossed the screen.
         if(e.y>255) {
             if(!e.dead && e.id==20) s.fractions[slot]=(s.fractions[slot]+(e.speed<<4))&255;
-            s.enemies[slot]=null;continue;
+            e.alive=false;s.enemies[slot]=null;continue;
         }
         e.displayX=e.preparedX;e.displayY=e.preparedY;e.displayFrame=e.preparedFrame;
         e.previousX=e.x;e.previousY=e.y;e.preparedX=e.x;e.preparedY=e.y;
         e.preparedFrame=(g.nesFrameCounter&8)!=0?0:1;
         if(!e.dead) {
             foreach(fireball in g.fireballs)
-                if(fireball.active && overlaps(fireball.x,fireball.y,8,8,e.x+3,e.y+14,11,7)) {
-                    fireball.active=false;defeatWorld23Fish(g,e);break;
+                if(fireball.active && !fireball.exploding && overlaps(fireball.x,fireball.y,8,8,e.x+3,e.y+14,11,7)) {
+                    explodeFireball(fireball);defeatWorld23Fish(g,e);
+                    parityRecordEvent(g,"gameplay","fireball_enemy_hit",",\"enemy\":\""+e.kind+"\"");break;
                 }
             local py=p.y-(p.big?0:16);
             if(!e.dead && !(g.nesFrameCounter&1) && e.x>=g.cameraX && e.x<g.cameraX+256 &&
@@ -232,10 +240,18 @@ function updateWorld23Actors(g) {
             local sum=s.fractions[slot]+(e.speed<<4);
             e.x+=sum>>8;s.fractions[slot]=sum&255;
         }
-        if(e.dead || e.id==20) stepWorld23Fish(e,e.dead?32:13);e.age+=1;
+        if(e.dead || e.id==20) stepWorld23Fish(e,e.dead?28:13,e.dead?3:5);e.age+=1;
         // InitVStf clears speed/force but preserves Enemy_YMF_Dummy on slot reuse.
         s.yDummies[slot]=e.nesYDummy;
-        if(e.id!=20 && (e.x<camera-73 || e.x>=camera+328)) s.enemies[slot]=null;
+        if(e.id!=20 && (e.x<camera-73 || e.x>=camera+328)) {e.alive=false;s.enemies[slot]=null;}
+    }
+    // EnemiesAndLoopsCore visits slot 5 too. The stream guard excludes that
+    // power-up slot until the terminator; after EOD its failed frenzy init
+    // still consumes random byte 6 and resets FrenzyEnemyTimer.
+    if(s.enemyCursor<ROM_WORLD_2_3_ENEMIES.len() && ROM_WORLD_2_3_ENEMIES[s.enemyCursor]==255 &&
+        s.frenzy && s.timer==0 && (g.vramAreaParserTask&7)!=7) {
+        local occupied=false;foreach(item in g.powerups) if(item.active) occupied=true;
+        if(!occupied) spawnWorld23Fish(g,5);
     }
 }
 
@@ -253,7 +269,7 @@ function world23ActorRegistersJson(g) {
         if(slot) text+=",";
         if(e==null) {text+="null";continue;}
         text+="["+e.x+","+e.y+","+e.speed+","+g.world23.fractions[slot]+","+
-            e.nesYSpeed+","+e.nesYMoveForce+","+e.nesYDummy+","+e.direction+","+(e.dead?32:0)+"]";
+            e.nesYSpeed+","+e.nesYMoveForce+","+e.nesYDummy+","+e.direction+","+(e.dead?32:0)+","+e.id+"]";
     }
     return text+"]";
 }

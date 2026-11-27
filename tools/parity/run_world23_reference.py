@@ -39,7 +39,7 @@ def run(movie_path,output):
     rows=[decode_line(line) for line in (output/'ram-trace.jsonl').read_text().splitlines()]
     (output/'state.jsonl').write_text(''.join(json.dumps(r)+'\n' for r in rows),encoding='utf-8', newline='\n')
     transition=next((r['frame'] for r in rows if r['world']==2 and r['level']==4),None)
-    flag=next((r['frame'] for r in rows if r['rom_state']['game_engine_subroutine']==4),None)
+    flag=next((r['frame'] for r in rows if r['rom_state']['game_engine_subroutine'] in (4,5)),None)
     summary=dict(movie_sha256=sha256_file(movie_path),rom_sha256=EXPECTED_ROM_SHA256,
         origin_frame=int(match[1]),comparison_frames=len(rows),flag_frame=flag,transition_frame=transition,
         minimum_lives=min(r['lives'] for r in rows),furthest_x=max(r['player']['x'] for r in rows),

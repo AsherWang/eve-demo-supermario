@@ -52,4 +52,14 @@ class World23DataTests(unittest.TestCase):
         self.assertEqual(record['pairs'],2727)
         self.assertGreater(record['spawns'],5)
 
+    def test_successful_original_movie_provenance(self):
+        record=json.loads((ROOT/'tests/fixtures/world23_route_evidence.json').read_text())
+        movie=ROOT/record['movie']
+        self.assertEqual(hashlib.sha256(movie.read_bytes()).hexdigest(),record['movie_sha256'])
+        self.assertTrue(record['reference']['successful_normal_route'])
+        self.assertEqual(record['reference']['minimum_lives'],3)
+        self.assertEqual(record['reference']['transition_frame'],2103)
+        self.assertEqual(record['fish_registers']['mismatched_slots'],0)
+        self.assertFalse(record['strict_parity_accepted'])
+
 if __name__=='__main__': unittest.main()

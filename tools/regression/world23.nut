@@ -50,6 +50,13 @@ a.world23.enemyCursor=16;a.world23.enemyPage=8;a.world23.enemyPageSelected=false
 requireSelfTest(consumeWorld23EnemyCommand(a,3,2016) && a.world23.enemies[3].id==10 &&
     a.world23.enemies[3].x==2304 && a.world23.enemies[3].y==248,
     "page-bit row-f pair must preserve its original below-screen green fish actor");
+foreach(slot in [0,1,2]) spawnWorld23Fish(a,slot);
+a.cameraX=2193;a.world23.timer=1;a.world23.frenzy=true;
+a.world23.random=[83,209,119,213,57,144,227];
+// One shift produces the ROM frame-1010 bytes [169,232,187,106,28,200,241].
+updateWorld23Actors(a);
+requireSelfTest(a.world23.enemyCursor==20 && a.world23.timer==96,
+    "stream terminator must permit slot-5 failed initialization to reset the timer");
 spawnWorld23Fish(a,0);
 requireSelfTest(b.world23.enemies[0]==null && b.world23.random[0]==165,
     "level instances must own their mutable enemy and random state");
@@ -65,4 +72,18 @@ foreach(power in [0,1,2]) {
     if(power==1) requireSelfTest(!t.player.big && t.player.invulnerable>0,"big Mario must shrink");
     if(power==2) requireSelfTest(fish.dead && !t.player.dead,"star must defeat fish");
 }
+local stompGame=createGame();startWorld23(stompGame);spawnWorld23Fish(stompGame,0);
+local stompFish=stompGame.world23.enemies[0];stompFish.y=120;stompFish.nesYDummy=91;
+defeatWorld23Fish(stompGame,stompFish,true);
+requireSelfTest(stompGame.player.nesYSpeed==-3 && stompFish.speed==0 && stompFish.nesYSpeed==0 &&
+    stompFish.nesYMoveForce==0 && stompFish.nesYDummy==91 && stompFish.y==118 && stompGame.score==0,
+    "special fish stomp must preserve dummy, shift Y, use fd bounce, and defer points");
+for(local f=0;f<5;f+=1) updateFloatingScores(stompGame);
+requireSelfTest(stompGame.score==200,"fish points must use the shared delayed score display");
+local fireGame=createGame();startWorld23(fireGame);spawnWorld23Fish(fireGame,0);
+local target=fireGame.world23.enemies[0];target.x=300;target.y=120;
+local shot={x=303,y=134,active=true,exploding=false,explosionFrames=0,vx=4.0,vy=0.0};
+fireGame.fireballs.append(shot);updateWorld23Actors(fireGame);
+requireSelfTest(target.dead && shot.exploding && shot.explosionFrames==6,
+    "fish fireball contact must retain the shared six-frame explosion");
 print("WORLD23_REGRESSION_OK\n");
