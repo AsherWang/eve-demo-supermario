@@ -1,0 +1,52 @@
+{
+  "schema": "smb-world24-assets-v1",
+  "rom_sha256": "f61548fdf1670cffefcc4f0b7bdcdd9eaba0c226e3b74f8666071496988248de",
+  "offline_only": true,
+  "levels": [
+    "2-4"
+  ],
+  "streams": {
+    "AREA": {
+      "label": "L_CastleArea3",
+      "cpu_address": "0xa28f",
+      "length": 115,
+      "sha256": "2dc4ee9df25aaa8f39e0043d920977404c38ebb20ce9eb281ce74d761c6bbcf7"
+    },
+    "ENEMY": {
+      "label": "E_CastleArea3",
+      "cpu_address": "0x9db0",
+      "length": 47,
+      "sha256": "610fdfcfdac018559534387105398591fbb69da0972105acf275ca20e63c2c21"
+    }
+  },
+  "area_pointer": "0x62",
+  "internal_area": 4,
+  "level_number": 3,
+  "shared_rom_level": "5-4",
+  "generated_textures": {
+    "metatiles": "assets/world24/metatile-*.png",
+    "bowser": [
+      "assets/world24/bowser-left-0.png",
+      "assets/world24/bowser-left-1.png",
+      "assets/world24/bowser-left-2.png",
+      "assets/world24/bowser-left-3.png",
+      "assets/world24/bowser-right-0.png",
+      "assets/world24/bowser-right-1.png",
+      "assets/world24/bowser-right-2.png",
+      "assets/world24/bowser-right-3.png"
+    ],
+    "mushroom_retainer": "assets/world24/toad.png",
+    "firebar": [
+      "assets/world24/firebar-0.png",
+      "assets/world24/firebar-1.png"
+    ],
+    "flame": "assets/world24/bowser-flame.png"
+  },
+  "audio_manifest": "assets/world14/audio-manifest.json",
+  "map": {
+    "columns": 160,
+    "source": "ROM RenderAreaGraphics, single forward pass",
+    "sha256": "50356b7efffef8de5a0bc1058541758b0cc5958323478a2c5573b877025376f4",
+    "route_evidence": false
+  }
+}

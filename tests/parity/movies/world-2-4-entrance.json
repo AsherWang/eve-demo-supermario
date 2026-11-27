@@ -1,0 +1,22 @@
+{
+  "schema": "smb-parity-movie-v1",
+  "name": "world-2-4-entrance",
+  "level_id": "2-4",
+  "world": 2,
+  "level": 4,
+  "frames": 32,
+  "description": "Supplemental normal entrance diagnostic only; not whole-level acceptance.",
+  "reference_bootstrap": {
+    "frames": 800,
+    "inputs": [
+      {
+        "start": 40,
+        "end": 46,
+        "buttons": [
+          "start"
+        ]
+      }
+    ]
+  },
+  "inputs": []
+}
