@@ -67,6 +67,8 @@ function updateWorld22Enemies(g) {
     local state=g.world22,p=g.player;
     world22AdvanceRandom(state.random);
     if(p.dead || p.transformFrames>0) return;
+    updateWorld22Bubbles(g);
+    updateWorld22FireballHits(g);
     local camera=g.cameraX;
     if(p.nesXScroll>0 && !p.scrollSideCollisionTimer && p.preparedRelX>=80) {
         local scroll=p.nesXScroll;if(p.preparedRelX<112 && scroll>=2) scroll-=1;
@@ -114,7 +116,7 @@ function updateWorld22Enemies(g) {
         e.previousX=e.x;e.previousY=e.y;
         e.preparedX=e.x;e.preparedY=e.y;e.preparedFrame=e.kind=="blooper"?(e.timer==1?0:1):((frame&8)!=0?0:1);
         if(e.dead) {
-            e.y+=world22VerticalDelta(e,0x20,2);
+            e.y+=world22VerticalDelta(e,0x0f,2);
             if(e.y>255) {state.enemies[slot]=null;continue;}
         } else {
             // SmallEnemyBoundingBox $09: [3,14,13,20]. Water contact hurts;
@@ -123,10 +125,10 @@ function updateWorld22Enemies(g) {
             if(!(frame&1) && e.x>=camera && e.x<camera+256 &&
                 overlaps(p.x+(p.big?2:3),py+(p.big?8:20),p.big?13:11,p.big?25:13,
                     e.previousX+3,e.previousY+14,11,7)) {
-                if(p.starTimer>0) {e.dead=true;e.nesYSpeed=-3;awardScoreControl(g,2);emitSound(g,"kick");}
+                if(p.starTimer>0) defeatWorld22Enemy(g,e);
                 else {hurtPlayer(g,e);if(p.dead || p.transformFrames>0) return;}
             }
-            if(e.dead) e.y+=world22VerticalDelta(e,0x20,2);
+            if(e.dead) e.y+=world22VerticalDelta(e,0x0f,2);
             else if(e.kind=="blooper") stepWorld22Blooper(e,frame,state.random[slot+1],p.x,
                 (p.y-(p.big?0:16)).tointeger()&255,p.movingDir);
             else stepWorld22Cheep(e);
@@ -136,13 +138,41 @@ function updateWorld22Enemies(g) {
 }
 
 function drawWorld22Enemies(g) {
+    drawWorld22Bubbles(g);
     for(local slot=4;slot>=0;slot-=1) {
         local e=g.world22.enemies[slot];if(e==null) continue;
         local frame=e.displayFrame;
         local texture=e.kind=="blooper"?assets.world22.bloopers[frame]:
             assets.world22.fish[e.id==11?1:0][frame];
+        if(e.dead) texture=e.kind=="blooper"?assets.world22.deadBloopers[frame]:
+            assets.world22.deadFish[e.id==11?1:0][frame];
         worldTexture(g,texture,e.displayX,
             e.displayY+(e.kind=="blooper" && frame==1?3:0)+1,16,24);
+    }
+}
+
+function defeatWorld22Enemy(g,e) {
+    if(e.dead) return;
+    // SetStun uses -1 in water (land's -3 is not correct for swimming enemies).
+    e.dead=true;e.y-=2;e.nesYSpeed=-1;e.nesYMoveForce=0;e.nesYDummy=0;
+    awardScoreControl(g,2);emitSound(g,"kick");
+}
+
+// Shared updateFireballs has already advanced and checked terrain. Water actors
+// live outside g.goombas; resolve their contact before their movement pass.
+function updateWorld22FireballHits(g) {
+    if((g.nesFrameCounter+1)&1) return;
+    foreach(fireball in g.fireballs) {
+        if(!fireball.active || fireball.exploding) continue;
+        for(local slot=4;slot>=0;slot-=1) {
+            local e=g.world22.enemies[slot];
+            if(e==null || e.dead || e.x<g.cameraX || e.x>=g.cameraX+256) continue;
+            if(!overlaps(fireball.x,fireball.y,fireball.width,fireball.height,
+                e.x+3,e.y+14,11,7)) continue;
+            defeatWorld22Enemy(g,e);explodeFireball(fireball);
+            parityRecordEvent(g,"gameplay","fireball_enemy_hit",",\"enemy\":\""+e.kind+"\"");
+            break;
+        }
     }
 }
 

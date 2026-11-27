@@ -1109,6 +1109,10 @@
     ],
     "files": [
       {
+        "path": "bubble.png",
+        "sha256": "be300587993952f1497118436b1e2b39779f541baed811f5302ee16a96218099"
+      },
+      {
         "path": "metatile-0.png",
         "sha256": "50b068e07b4bf235705c19b77da49fdbbc7e98ddc0a46f1c6659cca98c963904"
       },
@@ -1521,12 +1525,20 @@
         "sha256": "621f268b03a91356c4047c1dd438cd3dcb33f6ecbdb37099ec4c38ae58baa4d1"
       },
       {
+        "path": "bloober-0-dead.png",
+        "sha256": "43ad7c38ed2037ba4ed6adea41573c799033e77755cd384723e576a39809dcbb"
+      },
+      {
         "path": "bloober-1.png",
         "sha256": "19c631081c7f95611e4d3cd767aa53b15705c3b36fae9ff3c88ef3bcbc090579"
       },
       {
         "path": "bloober-1-flipped.png",
         "sha256": "19c631081c7f95611e4d3cd767aa53b15705c3b36fae9ff3c88ef3bcbc090579"
+      },
+      {
+        "path": "bloober-1-dead.png",
+        "sha256": "2876200ad58f53241560c052a09f0f635931c9b5cb2909a9b8ff23ffd4397b60"
       },
       {
         "path": "cheep-0.png",
@@ -1537,12 +1549,20 @@
         "sha256": "aefd2806a27dc613583d732147a12d269e14201c24694d05dd58e1496770d151"
       },
       {
+        "path": "cheep-0-dead.png",
+        "sha256": "82ff26409e0542f911436c06aa345d47c2e678af0121fadb6e09e89509a6a796"
+      },
+      {
         "path": "cheep-1.png",
         "sha256": "dd66d1264001569813146abc5f1b62c0577bb3481ce3f793bb1b03d4de6ae0a3"
       },
       {
         "path": "cheep-1-flipped.png",
         "sha256": "d5855257dd23517cd4c5577f6c4ada12297489f1557a1afbc8fcf38070da09c3"
+      },
+      {
+        "path": "cheep-1-dead.png",
+        "sha256": "b58f7968f17024c7d57f247dd3b4f62da4049fcb3e2b1c42dda43881fb7cea60"
       },
       {
         "path": "red-cheep-0.png",
@@ -1553,12 +1573,20 @@
         "sha256": "78c4e81ddca919f758617d3d1fe44da5fc90c0accd2d044bf48cd2cf8a8568b7"
       },
       {
+        "path": "red-cheep-0-dead.png",
+        "sha256": "7bb5120f345623720e31f9d41e94d79eca9fc75c9d1971e6bc45a47df2e9ff5e"
+      },
+      {
         "path": "red-cheep-1.png",
         "sha256": "eef2a8909e3b28c0b546e2f979cf409667610a131901a64318eef73798993724"
       },
       {
         "path": "red-cheep-1-flipped.png",
         "sha256": "c1ead04c828a3515ed51ca884540e25f3676dae0f4281a518423eb26fb021797"
+      },
+      {
+        "path": "red-cheep-1-dead.png",
+        "sha256": "616bb8db1b6e695e2c3f3b1e98e5d3ff020511d638ca179ccb385bfca67dac29"
       },
       {
         "path": "mario-big-swim-0-right.png",

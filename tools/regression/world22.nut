@@ -106,13 +106,25 @@ foreach(power in [0,1,2]) {
     }
     requireSelfTest(g.state=="levelComplete" && isWorld22(g) && !g.player.dead,
         "surface exit must support jumping to the flag and completing castle settlement");
+    local hasNext=false,settledScore=g.score,settledCoins=g.coins;
+    foreach(definition in LEVEL_DATA)
+        if(definition.world==2 && definition.stage==3) hasNext=true;
     simulateFixed(g,FIXED_DT);
-    requireSelfTest(g.state=="levelComplete" && isWorld22(g),
-        "unimplemented 2-3 must not silently load a World 1 map");
-    finishPlayerDeath(g);
-    for(local f=0;f<166;f+=1) updateDeathReload(g);
-    requireSelfTest(isWorld22Water(g) && g.checkpointPage==5 && !g.player.big &&
-        !g.player.fire && g.lives==2,"death on the surface exit returns to water checkpoint");
+    for(local f=0;hasNext && isWorld22(g) && f<400;f+=1) simulateFixed(g,FIXED_DT);
+    if(hasNext) requireSelfTest(g.world==2 && g.level==3 && !g.player.dead &&
+        g.score==settledScore && g.coins==settledCoins && g.lives==3 &&
+        g.player.big==(power>0) && g.player.fire==(power==2),
+        "registered 2-3 must load after settlement with progress and powers intact");
+    else requireSelfTest(g.state=="levelComplete" && isWorld22(g),
+        "unregistered 2-3 must remain at its settlement boundary");
+    // A separate surface-exit fixture keeps this death test in 2-2 even after
+    // the campaign dispatcher supports the next registered stage.
+    local exitDeath=createGame();startLevel(exitDeath,2,2);buildWorld12(exitDeath,"exit");
+    exitDeath.cameraX=2816;exitDeath.player.big=power>0;exitDeath.player.fire=power==2;
+    finishPlayerDeath(exitDeath);
+    for(local f=0;f<166;f+=1) updateDeathReload(exitDeath);
+    requireSelfTest(isWorld22Water(exitDeath) && exitDeath.checkpointPage==5 && !exitDeath.player.big &&
+        !exitDeath.player.fire && exitDeath.lives==2,"death on the surface exit returns to water checkpoint");
 }
 local blocked=createGame();startWorld22Water(blocked);blocked.input.right=true;
 foreach(y in [80,100,145,180]) {
@@ -130,4 +142,5 @@ local restart=createGame();startLevel(restart,2,2);restart.input.resetQueued=tru
 simulateFixed(restart,FIXED_DT);restart.input.resetQueued=false;
 requireSelfTest(isWorld22(restart) && restart.state=="world12Intro" && restart.player.x==40,
     "reset during introduction remains in World 2-2");
+dofile("tools/regression/world22_interactions.nut");
 print("WORLD22_REGRESSION_OK frames="+count+"\n");

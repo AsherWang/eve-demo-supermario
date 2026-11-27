@@ -1,0 +1,238 @@
+{
+  "schema": "world22-route-diagnostic-v1",
+  "movie": "tests/parity/movies/world-2-2-normal-route.json",
+  "movie_sha256": "f17020848f4d35c83730c26415b0aab1873a0ca440850ae1cb74d21c0955a2aa",
+  "strict_parity_accepted": false,
+  "host": {
+    "frames": 3436,
+    "entrance_frame": 0,
+    "water_frame": 294,
+    "side_pipe_frame": 2377,
+    "surface_exit_frame": 2660,
+    "flag_frame": 2810,
+    "settlement_frame": 3435,
+    "coins": 6,
+    "score": 18550,
+    "lives": 3,
+    "water_pages": 12,
+    "whirlpools": 3
+  },
+  "reference": {
+    "origin_frame": 66,
+    "state_rows": 3436,
+    "capture_frames": 3436,
+    "selected_motion": {
+      "passed": false,
+      "difference_count": 11833,
+      "first_differences": [
+        {
+          "frame": 0,
+          "field": "player.x_speed_raw",
+          "reference": 1,
+          "actual": 0
+        },
+        {
+          "frame": 1,
+          "field": "player.x",
+          "reference": 40,
+          "actual": 41
+        },
+        {
+          "frame": 1,
+          "field": "player.x_speed_raw",
+          "reference": 1,
+          "actual": 0
+        },
+        {
+          "frame": 2,
+          "field": "player.x",
+          "reference": 40,
+          "actual": 42
+        },
+        {
+          "frame": 2,
+          "field": "player.x_speed_raw",
+          "reference": 2,
+          "actual": 0
+        },
+        {
+          "frame": 3,
+          "field": "player.x",
+          "reference": 40,
+          "actual": 43
+        },
+        {
+          "frame": 3,
+          "field": "player.x_speed_raw",
+          "reference": 2,
+          "actual": 0
+        },
+        {
+          "frame": 4,
+          "field": "player.x",
+          "reference": 40,
+          "actual": 44
+        },
+        {
+          "frame": 4,
+          "field": "player.x_speed_raw",
+          "reference": 3,
+          "actual": 0
+        },
+        {
+          "frame": 5,
+          "field": "player.x",
+          "reference": 40,
+          "actual": 45
+        },
+        {
+          "frame": 5,
+          "field": "player.x_speed_raw",
+          "reference": 4,
+          "actual": 0
+        },
+        {
+          "frame": 6,
+          "field": "player.x",
+          "reference": 41,
+          "actual": 46
+        },
+        {
+          "frame": 6,
+          "field": "player.x_speed_raw",
+          "reference": 4,
+          "actual": 0
+        },
+        {
+          "frame": 7,
+          "field": "player.x",
+          "reference": 41,
+          "actual": 47
+        },
+        {
+          "frame": 7,
+          "field": "player.x_speed_raw",
+          "reference": 5,
+          "actual": 0
+        },
+        {
+          "frame": 8,
+          "field": "player.x",
+          "reference": 41,
+          "actual": 48
+        },
+        {
+          "frame": 8,
+          "field": "player.x_speed_raw",
+          "reference": 5,
+          "actual": 0
+        },
+        {
+          "frame": 9,
+          "field": "player.x",
+          "reference": 42,
+          "actual": 49
+        },
+        {
+          "frame": 9,
+          "field": "player.x_speed_raw",
+          "reference": 6,
+          "actual": 0
+        },
+        {
+          "frame": 10,
+          "field": "player.x",
+          "reference": 42,
+          "actual": 50
+        },
+        {
+          "frame": 10,
+          "field": "player.x_speed_raw",
+          "reference": 7,
+          "actual": 0
+        },
+        {
+          "frame": 11,
+          "field": "player.x",
+          "reference": 42,
+          "actual": 51
+        },
+        {
+          "frame": 11,
+          "field": "player.x_speed_raw",
+          "reference": 7,
+          "actual": 0
+        },
+        {
+          "frame": 12,
+          "field": "player.x",
+          "reference": 43,
+          "actual": 52
+        },
+        {
+          "frame": 12,
+          "field": "player.x_speed_raw",
+          "reference": 8,
+          "actual": 0
+        },
+        {
+          "frame": 13,
+          "field": "player.x",
+          "reference": 43,
+          "actual": 53
+        },
+        {
+          "frame": 13,
+          "field": "player.x_speed_raw",
+          "reference": 8,
+          "actual": 0
+        },
+        {
+          "frame": 14,
+          "field": "player.x",
+          "reference": 44,
+          "actual": 54
+        },
+        {
+          "frame": 14,
+          "field": "player.x_speed_raw",
+          "reference": 9,
+          "actual": 0
+        },
+        {
+          "frame": 15,
+          "field": "player.x",
+          "reference": 45,
+          "actual": 55
+        }
+      ]
+    },
+    "water_control_frame": 393,
+    "death_engine_frame": 2953,
+    "life_loss_frame": 3189,
+    "final_lives": 2,
+    "final_x": 93
+  },
+  "evidence_root": "local-parity/world22-route",
+  "limitations": [
+    "Host reaches 2-2 settlement; 2-3 transition requires parent integration.",
+    "Normal entrance/loading timing differs from ROM before swimming starts.",
+    "No strict frame/state/event/APU/audio acceptance claim.",
+    "Original capture is a continuous run, not a restored-state replay proof."
+  ],
+  "native": {
+    "frames": 3436,
+    "state_rows": 3436,
+    "headless_states_identical": true,
+    "silent_visual_only": true,
+    "evidence": "local-parity/world22-route/native4"
+  },
+  "frames": {
+    "passed": false,
+    "compared_frames": 3436,
+    "failed_frames": 3436,
+    "missing_frames": 0,
+    "channel_tolerance": 0,
+    "max_mismatched_pixels": 0
+  }
+}

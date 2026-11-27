@@ -1,10 +1,11 @@
-"""Run the water-motion and checkpoint diagnostics; not whole-level acceptance."""
+"""Run water diagnostics and the fixed whole-course host route; not strict parity."""
 from __future__ import annotations
 import argparse
 import json
 import subprocess
 from pathlib import Path
 from tool_paths import tool_path
+from run_world22_route import run as run_route, DEFAULT_MOVIE
 
 ROOT=Path(__file__).resolve().parents[1]
 
@@ -20,11 +21,13 @@ def main() -> int:
     manifest=json.loads((ROOT/'tests/fixtures/world22_motion.json').read_text(encoding='utf-8'))
     expected_frames=sum(case['frames'] for case in manifest['cases'])
     passed=result.returncode==0 and f'WORLD22_REGRESSION_OK frames={expected_frames}\n' in text
-    report=dict(passed=passed,exit_code=result.returncode,
-        scope='selected player/enemy movement registers, checkpoint, contact and segmented entry/exit flow diagnostics; full image/audio/campaign acceptance remains pending')
+    route=run_route(DEFAULT_MOVIE,args.output/'whole-route')
+    report=dict(passed=passed and route['passed'],exit_code=result.returncode,
+        motion_frames=expected_frames,whole_route=route['result'],strict_parity_accepted=False,
+        scope='selected movement, checkpoint/contact/interactions and continuous normal-entrance-to-settlement gameplay; six strict parity gates and next-stage transition remain pending')
     (args.output/'summary.json').write_text(json.dumps(report,indent=2)+'\n',encoding='utf-8')
     print(text);print(json.dumps(report))
-    return 0 if passed else 1
+    return 0 if report['passed'] else 1
 
 
 if __name__=='__main__':

@@ -4,7 +4,7 @@ import argparse
 import hashlib
 import json
 from pathlib import Path
-from extract_smb_assets import find_once, compose_metatile, compose_sprite, METATILE_COUNTS, ENEMY_PALETTES
+from extract_smb_assets import find_once, compose_metatile, compose_sprite, tile_image, METATILE_COUNTS, ENEMY_PALETTES
 from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -135,6 +135,8 @@ def extract_assets(raw: bytes, output: Path) -> dict:
         path = output / name
         image.save(path)
         files.append(dict(path=name, sha256=hashlib.sha256(path.read_bytes()).hexdigest()))
+    # DrawBubble: sprite CHR $74, attribute palette 2.
+    save(tile_image(chr_data, 0x74, palettes[6], 0, True), "bubble.png")
     for group, count in enumerate(METATILE_COUNTS):
         for index in range(count):
             save(compose_metatile(chr_data, prg[cursor:cursor+4], palettes[group]),
@@ -147,11 +149,15 @@ def extract_assets(raw: bytes, output: Path) -> dict:
             palettes[4+ENEMY_PALETTES[index]], 3, mirror_right=name.startswith("bloober"))
         save(image, name+".png")
         save(image.transpose(Image.Transpose.FLIP_LEFT_RIGHT), name+"-flipped.png")
+        facing = image if name.startswith("bloober") else image.transpose(Image.Transpose.FLIP_LEFT_RIGHT)
+        save(facing.transpose(Image.Transpose.FLIP_TOP_BOTTOM), name+"-dead.png")
     for frame in range(2):
         index=12+frame
         image=compose_sprite(chr_data, prg[graphics+index*6:graphics+(index+1)*6], palettes[6], 3)
         save(image, f"red-cheep-{frame}.png")
         save(image.transpose(Image.Transpose.FLIP_LEFT_RIGHT), f"red-cheep-{frame}-flipped.png")
+        save(image.transpose(Image.Transpose.FLIP_LEFT_RIGHT).transpose(Image.Transpose.FLIP_TOP_BOTTOM),
+             f"red-cheep-{frame}-dead.png")
     player = find_once(prg, bytes(range(16)), "player graphics")
     for size, base in [("big",0),("small",96)]:
         for frame in range(3):

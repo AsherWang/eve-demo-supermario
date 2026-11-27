@@ -25,7 +25,10 @@ function loadWorld22Assets() {
             loadTexture("assets/world22/mario-"+size+"-swim-"+i+"-left.png")]);
         swim[size] <- frames;
     }
-    assets.world22 <- {metatiles=tiles,swim=swim,fish=[
+    assets.world22 <- {metatiles=tiles,swim=swim,bubble=loadTexture("assets/world22/bubble.png"),deadFish=[
+        [loadTexture("assets/world22/cheep-0-dead.png"),loadTexture("assets/world22/cheep-1-dead.png")],
+        [loadTexture("assets/world22/red-cheep-0-dead.png"),loadTexture("assets/world22/red-cheep-1-dead.png")]],
+        deadBloopers=[loadTexture("assets/world22/bloober-0-dead.png"),loadTexture("assets/world22/bloober-1-dead.png")],fish=[
         [loadTexture("assets/world22/cheep-0-flipped.png"),loadTexture("assets/world22/cheep-1-flipped.png")],
         [loadTexture("assets/world22/red-cheep-0-flipped.png"),loadTexture("assets/world22/red-cheep-1-flipped.png")]],bloopers=[
         loadTexture("assets/world22/bloober-0.png"),loadTexture("assets/world22/bloober-1.png")]};
@@ -77,13 +80,15 @@ function updateWorld22Whirlpools(g) {
     }
 }
 
-function startWorld22Water(g, page=0) {
+function startWorld22Water(g, page=0, recordMusic=true) {
     g.world=2;g.level=2;g.stage="water";g.area="water";
     g.areaWidth=ROM_WORLD_2_2_METATILES.len();g.romBackgroundCollision=true;
     clearAreaObjects(g);g.plants=[];g.platforms=[];g.enterablePipes=[];
     g.sidePipeX=189;g.world12SidePipeBottomRow <- 8;g.cameraX=page*256.0;g.displayCameraX=g.cameraX;
     g.world22 <- {whirlpools=world22WhirlpoolData()};
     initializeWorld22Enemies(g);
+    g.world22.bubbles <- [];g.world22.bubbleTimer <- 0;
+    for(local i=0;i<3;i+=1) g.world22.bubbles.append({x=0.0,y=248,force=0});
     g.savedMain=null;g.flagX=100000.0;g.castleX=100000.0;
     for(local x=0;x<g.areaWidth;x+=1) for(local r=0;r<13;r+=1) {
         local meta=ROM_WORLD_2_2_METATILES[x][r];
@@ -99,14 +104,15 @@ function startWorld22Water(g, page=0) {
     g.state="playing";g.stateTimer=0.0;g.checkpointPage=page;
     g.time=400;g.displayTime=400;g.gameTimerControl=23;
     g.hurryActive=false;
-    g.soundEvents.clear(); // Water music is pending the stage audio integration.
-    g.soundEvents.append("silence_music");
+    g.soundEvents.clear();
+    g.soundEvents.append("resume_music");
+    if(recordMusic) parityRecordEvent(g,"music","water");
 }
 
 function initializeWorld22SwimProbe(g) {
     // First controllable state in the independently captured ROM fixture.
     // This seeds only the origin; subsequent frames are simulated normally.
-    startWorld22Water(g);
+    startWorld22Water(g,0,false);
     local p=g.player;
     p.y=68.0;p.previousY=p.y;p.nesYSpeed=3;
     p.nesYMoveForce=200;p.nesYDummy=240;
@@ -196,4 +202,32 @@ function tryWorld22Exit(g) {
         p.y<112 || p.y+p.height>144) return false;
     startWorld12Transition(g,"exit","side");
     return true;
+}
+
+// ProcessFireballsAndBubbles: three slots in reverse order, sharing one timer.
+// Reuses the enemy LFSR without advancing it, so bubble animation cannot change
+// enemy allocation or the preserved 1800-frame motion diagnostic.
+function updateWorld22Bubbles(g) {
+    local state=g.world22,p=g.player;
+    if(state.bubbleTimer>0) state.bubbleTimer-=1;
+    for(local slot=2;slot>=0;slot-=1) {
+        local b=state.bubbles[slot],bit=state.random[slot+1]&1;
+        if(b.y==248) {
+            if(state.bubbleTimer>0) continue;
+            // LSR facing direction leaves carry set on the right: ADC adds 9.
+            b.x=p.x+(p.facing>0?9:0);b.y=p.y-(p.big?0:16)+8;
+            state.bubbleTimer=bit?32:64;
+        }
+        local sum=b.force-(bit?80:255);b.force=sum&255;
+        if(sum<0) b.y-=1;
+        if(b.y<32) b.y=248;
+    }
+}
+
+function drawWorld22Bubbles(g) {
+    if(g.player.y-(g.player.big?0:16)>=256) return;
+    for(local slot=2;slot>=0;slot-=1) {
+        local b=g.world22.bubbles[slot];
+        if(b.y!=248) worldTexture(g,assets.world22.bubble,b.x,b.y+1,8,8);
+    }
 }

@@ -1,10 +1,123 @@
 # World 2-2 开发与验证
 
-更新日期：2026-11-26。
+Updated: 2026-11-28.
 
-## 当前状态
+## Continuous host route and water interactions
 
-已接入水下移动/地形/金币/漩涡/敌人，以及 2-1 结算→2-2 地面入口→入水→侧管出水→地面旗杆/城堡。关卡已注册到运行时，分段流程测试通过；**还没有从正常入口到出口的成功固定按键整关证据**，不能登记整关完成。完整实际游戏回放工具仍拒绝直接启动 2-2；2-1 末帧的原版加载时序与完整门禁尚需复验。版本仍为 0.0.7。
+**The host now completes a fixed normal-entrance route. Strict whole-level
+parity remains pending.** `tests/parity/movies/world-2-2-normal-route.json`
+contains 3,436 frames. Ordinary `createGame(); startLevel(g,2,2)` supplies the
+entrance; frame zero observes it unchanged. All later gameplay uses controller
+masks and `simulateFixed` only. There are no player, camera, RNG, enemy, or
+state edits, checkpoint starts, teleports, or invulnerability during replay.
+
+| Milestone | Host frame |
+| --- | ---: |
+| Normal surface entrance | 0 |
+| Water control | 294 |
+| Side-pipe entry | 2377 |
+| Surface exit control | 2660 |
+| Flag slide | 2810 |
+| Castle settlement (`levelComplete`) | 3435 |
+
+Small Mario retains three lives, collects six coins, visits all 12 water pages
+and all three whirlpools, encounters Blooper and Cheep-Cheep slots, and finishes
+with 18,550 points. The movie stops at settlement; next-stage transition is
+parent-owned. Segmented tests accept registered 2-3 and preserve progress and
+powers. Surface-exit death is checked on a separate 2-2 game.
+
+### Repeatable validation
+
+- `python tools/run_world22_regressions.py --output local-parity/world22-route/regression`
+  checks the unchanged 1,800-frame motion/enemy fixture, segmented flows,
+  projectile/bubble regressions, and the complete route. Either failure fails
+  the command.
+- `python tools/run_world22_route.py --output local-parity/world22-route/whole-course`
+  writes every state, ordered transitions, milestones, source hashes, and
+  movie hash. Removing all A inputs was verified to fail: Mario remains at
+  x=162, does not cover page 1, and does not settle. Port-two and checkpoint
+  movies are rejected.
+- `python tools/parity/diagnose_world22_route.py --output local-parity/world22-route/original --capture-lock D:/workspace/eve-demos/super-mario/local-parity/gpu-capture.lock --actual local-parity/world22-route/regression/whole-route/state.jsonl`
+  selects the original surface area before initialization, then captures the
+  entire continuous movie without further RAM writes. It writes diagnostic
+  results, not an acceptance manifest or restored-state replay proof.
+- `python tools/parity/capture_world22_route.py --output local-parity/world22-route/native --capture-lock D:/workspace/eve-demos/super-mario/local-parity/gpu-capture.lock`
+  uses an isolated wrapper project with ordinary stage initialization and fixed
+  inputs. It modifies no shared source and skips parity-origin friction/counter
+  patches. It captures silently, so it cannot establish audio acceptance.
+  Both capture tools require fresh output directories, atomically claim the
+  shared lock, and remove only their own token in `finally`. Busy locks exit 75.
+
+Evidence is in `local-parity/world22-route/`, including `regression-final3/`,
+`world1-regressions/`, `negative-no-swim/`, and `original/`.
+`assets/world22/route-diagnostic.json` preserves the movie hash and compact
+observed results. Large raw evidence stays ignored. All 10 pre-existing
+World 1/campaign simulation suites pass.
+
+Final native evidence is `native4/`: 3,436 PNGs and all 3,436 decoded states
+exactly equal the headless replay. Screenshots were reviewed at water midcourse,
+side-pipe entry, and final settlement. The zero-tolerance original frame
+comparison (`frame-comparison-final/`) fails all 3,436 frames, with zero missing
+frames. `native2/` preserves an earlier wrapper omission of sky initialization;
+`native3/` preserves the transient SDK Vulkan `VK_INCOMPLETE` startup failure.
+Neither is substituted for the corrected successful capture.
+
+
+The 43 Python tests pass with the three motion movies restored locally to the
+**exact CRLF bytes** hashed by `world22_motion.json`. A clean LF checkout
+currently fails their hash assertion (42/43 pass). This pre-existing mismatch
+is not hidden by accepting multiple hashes or updating the fixture manifest.
+The fixture trajectories and manifests remain unchanged. Parent integration
+can pin those three existing movie paths to `text eol=crlf` in root
+`.gitattributes`; new route movies use normal repository LF.
+
+### Water-specific additions
+
+- Fireballs now check the five water enemy slots after shared projectile motion
+  and terrain collision, before water enemy motion. Alternate-frame contact
+  skips dead/offscreen enemies, explodes the projectile, awards 200 points once,
+  and emits the existing kick sound event. Defeated swimmers use the source's
+  -1 water launch speed, two-pixel lift, $0f gravity, and vertical death graphics.
+  Tests cover all three enemy types, repeated hits, harmless defeated contact,
+  and eventual slot cleanup. Full OAM/death trajectories are not claimed exact.
+- Three bubbles share the original 32/64-frame timer and $ff/$50 fractional
+  rise amounts. Reverse slot order, mouth origin, surface retirement, transform
+  freeze, and area reset are covered. They read the existing random register
+  without advancing it. CHR $74/palette 2 and death sprites are reproducibly
+  extracted by `tools/extract_world22.py`; runtime has no ROM dependency.
+- `startWorld22Water` queues `resume_music` and records `water` at actual entry
+  or reload. Only the existing water-origin probe passes `recordMusic=false`
+  to avoid duplicate origin music events. Parent owns water tracks, shared
+  `resumeMusic`, star expiry, and removal of preview `stopMusic()`.
+
+These changes preserve the 1,800-frame selected-motion fixture and the new
+successful route. No shared runtime, audio assets/tools, release/version, or
+acceptance registry is committed by this worker.
+
+### Original diagnostics and remaining failures
+
+Original capture contains **3,436 states and 3,436 PNGs**, from normal entrance
+engine task 7 detected at bootstrap frame 66. Selected player x/y/speed/grounded
+comparison reports **11,833 differences**: speed differs at frame 0 and position
+at frame 1. Host entrance walks one pixel/frame; the original accelerates.
+Original water control starts at **393**, host at **294**. With identical
+inputs, the ROM stalls near x=1234, enters death at **2953**, loses a life at
+**3189**, and ends at x=93 with two lives. It does not complete the course.
+The exact short swim fixtures do not establish normal-entrance timing.
+
+Required next work: reconcile entrance/loading timing; find a successful shared
+original/host route; compare complete frames, enemy/OAM, events, APU writes and
+device audio; prove restored/continuous reference agreement; validate next-stage
+transition and review the branch inventory. Strict acceptance is not claimed.
+
+For shared reference routing, import `build_world22_entrance_origin_lua` and
+choose it only for 2-2 movies with `origin == "normal-entrance"`; keep
+`build_world22_origin_lua(checkpoint_page)` for old swim probes. Normal native
+replay must initialize with `startLevel(g,2,2)` and skip 2-1/water-probe origin
+initializers. Shared `parityAdvanceOneFrame` patches frame-zero friction and
+counter; the dedicated native diagnostic deliberately keeps frame zero
+untouched, matching the headless route. Shared runner support needs an explicit
+normal-entrance mode, not a bypass of the strict stage guard.
 
 ## 正常出入水流程（2026-11-27）
 
