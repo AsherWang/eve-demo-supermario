@@ -1,11 +1,11 @@
 {
   "schema": "world24-evidence-index-v1",
   "scope": "Diagnostic evidence index only; strict whole-level acceptance pending. Local artifacts are ignored and must be independently checked.",
-  "stage_source_sha256": "42ca40d0fd164f5a4dbedc990d3b2fdb419ce9c2465329a50345495c6bb1c26f",
+  "stage_source_sha256": "1c6c8edd69c58a8260ffecf4438bd9e2759549bf786aa40a251146b9725aea8a",
   "records": [
     {
-      "path": "local-parity/world24-gameplay-route-v2-final/summary.json",
-      "sha256": "377bec6622032e809dbaa78e371aa87b2215732e69d0f390216ee3b2bd84d2ff",
+      "path": "local-parity/world24-gameplay-route-v3/summary.json",
+      "sha256": "40ae3903001a234093432a4098182372ce8231591c8168dd8dba055a26b9f083",
       "passed": true,
       "movie_sha256": "5f9b459663c51bea244c586c9f01ae795c458bfcf43d42ff504b51197b7616a2",
       "frames": 1812,
@@ -22,7 +22,7 @@
       }
     },
     {
-      "path": "local-parity/world24-host-final/verification.json",
+      "path": "local-parity/world24-host-v3/verification.json",
       "sha256": "ff3087ddddf79b844b091143f60c952b54bc2a30e16e1f383877f5dbb8a56f6a",
       "schema": "world24-host-route-v1",
       "passed": true,
@@ -72,8 +72,8 @@
       "movie_sha256": "71e117e31349a1e0e8856b87de5816c3331ef12296bf3862bee21db91323a849"
     },
     {
-      "path": "local-parity/world24-original-motion-host/verification.json",
-      "sha256": "d1783636e68f0482ff52ee579d7a13392bad9b93c1f123434044dd3798619f2b",
+      "path": "local-parity/world24-original-motion-host-v3/verification.json",
+      "sha256": "970d8113f93abcc4d6014bccd94a5e7419a0632091b5c8f858bfc3d0e4e6eea6",
       "schema": "world24-host-route-v1",
       "passed": true,
       "movie_sha256": "71e117e31349a1e0e8856b87de5816c3331ef12296bf3862bee21db91323a849",
@@ -86,8 +86,8 @@
       }
     },
     {
-      "path": "local-parity/world24-original-comparison/state-report.json",
-      "sha256": "0cd6f13e9fcf937005f3b4a2bc3402d7897ec9687c5f17405b0b0b95856abebc",
+      "path": "local-parity/world24-original-comparison-v3-reports/state-report.json",
+      "sha256": "ca3147e8d749a1de116bb047f17755e12681825c20e6f4e76417b3ff7aba00da",
       "schema": "smb-state-parity-report-v1",
       "passed": false,
       "compared_frames": 2800,
@@ -183,15 +183,10 @@
           "reference": 8,
           "actual": 0
         },
-        "score": {
-          "frame": 1356,
-          "reference": 600,
-          "actual": 650
-        },
         "time": {
-          "frame": 1356,
-          "reference": 255,
-          "actual": 254
+          "frame": 1973,
+          "reference": 401,
+          "actual": 255
         },
         "rom_state.oper_mode": {
           "frame": 1094,
@@ -211,20 +206,20 @@
       }
     },
     {
-      "path": "local-parity/world24-original-comparison/event-report.json",
-      "sha256": "feb8ac2e5b9c1cf37b528ca860f0ea9d3e86ac908cac0ca22fe2a9b79d05df31",
+      "path": "local-parity/world24-original-comparison-v3-reports/event-report.json",
+      "sha256": "f147fc858e5f01bf9bd97d55727cd43bf44df9cd5a883b1da5b0f2b0a4576d28",
       "schema": "smb-event-parity-report-v1",
       "passed": false
     },
     {
-      "path": "local-parity/world24-original-comparison/apu-report.json",
-      "sha256": "a4bd7b84d332cbd74464b20c30bf3ee3fa9a64a471f83ba123234e32dca5aa35",
+      "path": "local-parity/world24-original-comparison-v3-reports/apu-report.json",
+      "sha256": "9792ee38ac24c5024c799b93c32a23d1f6fde5f8f4c8b74c44f7607fc7fbed39",
       "schema": "smb-apu-write-parity-v1",
       "passed": false,
       "frames": 2800,
       "first_stream_mismatch": 593,
       "first_end_state_mismatch": 593,
-      "exact_write_stream_frames": 1034,
+      "exact_write_stream_frames": 1049,
       "matching_end_state_frames": 593
     }
   ],

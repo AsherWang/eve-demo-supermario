@@ -653,15 +653,9 @@ function updateWorld24Transition(g) {
     if(g.state == "world24Rescue") {
         w.stateFrames += 1;
         p.nesXSpeed = 0; p.vx = 0.0; p.grounded = true;
-        // AwardGameTimerPoints removes one timer unit and adds 50 points per
-        // pass. Keep the original timer-tick cadence while the retainer text
-        // is displayed; no fixed rescue award is invented.
-        if(g.time > 0) {
-            if((g.nesFrameCounter & 0x04) != 0) emitSound(g, "timer_tick");
-            g.time -= 1;
-            g.score += 50;
-            g.queuedScore = g.score;
-        }
+        // NES PrintVictoryMessages does not award timer points. Castle clear
+        // retains the timer/score; AwardGameTimerPoints belongs to flagpole
+        // completion (and other revision profiles), not this ROM's ending.
         // PrintVictoryMessages accumulates four in SecondaryMsgCounter each
         // frame. Its carry advances PrimaryMsgCounter once per 64 frames. For
         // World 1-7, primary value four sets WorldEndTimer and advances to
@@ -868,6 +862,11 @@ function runWorld24SelfTest() {
     lava.player.x=129.0*16.0;lava.player.y=202.0;lava.player.grounded=false;
     updateWorld24Actors(lava);
     requireSelfTest(lava.player.dead,"castle lava must be fatal");
+    local rescue=createGame();startWorld24(rescue);
+    rescue.state="world24Rescue";rescue.time=255;rescue.score=600;
+    for(local frame=0;frame<256;frame+=1) updateWorld24Transition(rescue);
+    requireSelfTest(rescue.time==255 && rescue.score==600,
+        "NES castle messages must preserve remaining time and score");
     local side=createGame();startWorld24(side);
     side.player.x=1359.0;side.player.y=78.0;side.player.nesXSpeed=40;
     side.player.nesYSpeed=-2;

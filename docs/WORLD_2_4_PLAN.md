@@ -39,7 +39,7 @@ Two fixed-input fixtures serve different producer timelines:
   advances input frame zero, and passes with no deaths/life loss. Entrance is
   x40/body-y96, small Mario, three lives. Natural worldComplete first appears
   at output frame1554, x2431/body-y192, still World2/stage4.
-  Evidence: `local-parity/world24-gameplay-route-v2-final/summary.json`.
+  Evidence: `local-parity/world24-gameplay-route-v3/summary.json`.
   Stage runner `--normal-start` also passes (its output starts after the first
   input, hence axe911, victory1047, rescue1171, complete1553).
 - `world-2-4-original-clear.json`: 2800 frames, SHA256
@@ -61,16 +61,17 @@ All newly generated movie/provenance files explicitly use LF newlines.
 
 Focused mechanics tests cover live and fire-defeated Bowser axe completion,
 zero checkpoint at entrance/page6/page8, progress retention, fatal lava,
-small-lift side collision and the central flame hitbox. These use explicit
+small-lift side collision, the central flame hitbox, and unchanged time/score
+during castle messages. These use explicit
 setup and are not route evidence. Five ROM/data integrity tests pass.
 
 Commands (with parent hooks and its independent runner):
 
 ```powershell
 python tests/parity/test_world24_data.py
-python tools/parity/run_world24_simulation.py --normal-start --movie tests/parity/movies/world-2-4-host-route.json --output local-parity/world24-host-final --require-clear --self-test
-python tools/parity/run_gameplay_route.py --movie tests/parity/movies/world-2-4-host-route.json --output local-parity/world24-gameplay-route-v2-final
-python tools/parity/run_world24_simulation.py --movie tests/parity/movies/world-2-4-original-clear.json --output local-parity/world24-original-motion-host --require-clear --self-test
+python tools/parity/run_world24_simulation.py --normal-start --movie tests/parity/movies/world-2-4-host-route.json --output local-parity/world24-host-v3 --require-clear --self-test
+python tools/parity/run_gameplay_route.py --movie tests/parity/movies/world-2-4-host-route.json --output local-parity/world24-gameplay-route-v3
+python tools/parity/run_world24_simulation.py --movie tests/parity/movies/world-2-4-original-clear.json --output local-parity/world24-original-motion-host-v3 --require-clear --self-test
 python tools/parity/verify_world24_reference.py --movie tests/parity/movies/world-2-4-original-clear.json --reference local-parity/world24-original-clear-reference
 ```
 
@@ -79,7 +80,7 @@ python tools/parity/verify_world24_reference.py --movie tests/parity/movies/worl
 Formal acceptance remains pending; no acceptance inventory or tolerance changed.
 `tests/parity/world24_evidence_summary.json` records existing evidence paths and
 hashes, not approval. Full unmodified comparison reports are under
-`local-parity/world24-original-comparison/`:
+`local-parity/world24-original-comparison-v3-reports/`:
 
 - States FAIL across 2800 frames, zero missing. Player x/y first differ at1243;
   other fields, including actors, differ earlier. Host parity serializer needs
@@ -87,7 +88,7 @@ hashes, not approval. Full unmodified comparison reports are under
   changes remain parent-owned. Mode2 must describe the actual ending state.
 - Events FAIL at tolerance0; bridge blast events are one frame early.
 - Modeled host APU FAIL: first write-stream/end-register mismatch593;
-  1034/2800 exact write-stream frames, 593 matching end-register frames.
+  1049/2800 exact write-stream frames, 593 matching end-register frames.
   This uses the shared offline APU model, not a native-output audio capture.
 - Current full native frames and waveform comparison are pending parent capture.
   The stage actual wrapper alone does not establish correct origin: shared main
@@ -102,6 +103,29 @@ are superseded; their old captures do not match the current host movie hash.
 The old partial native capture under `local-parity/world24-strict/actual` is
 incomplete and is not evidence for the updated mechanics. Parent owns current
 native capture; do not queue duplicate graphical runs.
+
+## Ending diagnosis
+
+NES `game/modes.asm:handler_print_victory_messages` does not call
+AwardGameTimerPoints; this profile preserves time and score during castle text.
+The inherited timer-to-score bonus has been removed. The original-clear host
+still clears with the same milestones; the score/time comparison now matches
+until the original initializes 3-1.
+
+The original RAM shows task0/1/2 cycles at1242..1250 while Mario's foot remains
+in the axe row, followed by normal victory walking. `handler_player_victory_walk`
+uses destination page9, disables right input at page9+x$60 (2400), then lets
+friction stop Mario at2429. It independently scrolls 1.5 pixels/frame until
+camera2304, entering message task3 at1433. Current host instead auto-walks to
+2431 and ties camera position to the player, explaining the earlier rescue.
+This requires a faithful axe/block-buffer and victory camera implementation;
+no per-movie waits or coordinate patches were introduced.
+
+The messages reach primary counter4 at1689, dispatch task4 at1690, and the
+ROM's shared 21-frame interval timer expires at1807. Current host uses a fixed
+126-frame end wait; exact remaining timer phase is another known mismatch.
+Parent's serializer should report actual task phases, not force ROM frame
+numbers. These discrepancies are documented, not accepted or suppressed.
 
 ## Geometry extraction
 
