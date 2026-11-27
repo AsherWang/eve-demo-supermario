@@ -7,7 +7,7 @@ from common import tool_path
 def main():
     p=argparse.ArgumentParser();p.add_argument('--output',type=Path,required=True)
     p.add_argument('--beam',type=int,default=40);p.add_argument('--steps',type=int,default=200)
-    p.add_argument('--prefix',type=Path);args=p.parse_args()
+    p.add_argument('--prefix',type=Path);p.add_argument('--normal-start',action='store_true');args=p.parse_args()
     out=args.output.resolve();out.mkdir(parents=True,exist_ok=True)
     prefix=[]
     if args.prefix:
@@ -61,10 +61,12 @@ if(best!=null) {
     print("RESULT "+best.g.state+" x="+best.g.player.x+"\n");
 }
 '''
+    if args.normal_start:
+        code=code.replace('origin.player.parityOriginFriction=true;','').replace('origin.nesFrameCounter=(origin.nesFrameCounter+1)&255;','').replace('MASKS [0,','MASKS [')
     code=code.replace('STEPS',str(args.steps)).replace('BEAM',str(args.beam))
-    script=out/'search.nut';script.write_text(code)
+    script=out/'search.nut';script.write_text(code, newline="\n")
     r=subprocess.run([str(tool_path('eve')),'run','--no-window','-r',str(script)],cwd=ROOT,capture_output=True,text=True,timeout=600)
-    (out/'engine.log').write_text(r.stdout+'\n'+r.stderr)
+    (out/'engine.log').write_text(r.stdout+'\n'+r.stderr, newline="\n")
     print('\n'.join(line for line in r.stdout.splitlines() if not line.startswith('MASKS ')))
     rows=[json.loads(line[6:]) for line in r.stdout.splitlines() if line.startswith('MASKS ')]
     if not rows:raise RuntimeError('No route; inspect engine.log')
@@ -77,5 +79,5 @@ if(best!=null) {
     movie=dict(schema='smb-parity-movie-v1',name='world-2-4-host-route',level_id='2-4',world=2,level=4,frames=len(masks),
         description='Fixed controller candidate from normal small-Mario entrance. Must pass fresh whole-route verification; no strict parity claim.',
         reference_bootstrap=dict(frames=800,inputs=[dict(start=40,end=46,buttons=['start'])]),inputs=sections)
-    (out/'movie.json').write_text(json.dumps(movie,indent=2)+'\n')
+    (out/'movie.json').write_text(json.dumps(movie,indent=2)+'\n',newline='\n')
 if __name__=='__main__':main()

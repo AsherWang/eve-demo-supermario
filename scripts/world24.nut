@@ -127,8 +127,9 @@ function world24ParseCastleObjects(g) {
             bowser = {
                 x = unit * 16.0, y = row * 16.0, width = 32.0, height = 32.0,
                 originX = unit * 16.0, direction = -1, hp = 5, defeated = false,
+                awake=false,slot=-1,rearSlot=-1,
                 falling = false, hidden = false, vy = 0.0, ySpeed = 0.0,
-                fireTimer = 0xDF, feetTimer = 32, faceTimer = 32, feetFrame = 0,
+                fireTimer = 0xDF, feetTimer = 32, feetFrame = 0,
                 bodyControls = 0, movementSpeed = 2, movingDir = 2,
                 maxRange = 0x21, flameTimerCtrl = 0, flameYOffset = 0,
                 jumpTimer=32, verticalY=row*16, verticalSpeed=0, verticalForce=0, verticalDummy=0
@@ -137,13 +138,13 @@ function world24ParseCastleObjects(g) {
             retainer = {x = unit * 16.0, y = 184.0, width = 16.0, height = 24.0};
         } else if(id == 0x0C) {
             // E_CastleArea3 has two normal-mode Podoboos; preserve both.
-            podoboos.append({x = unit * 16.0, y = 258.0, awake=false,
+            podoboos.append({x = unit * 16.0, y = 258.0, awake=false, retired=false,slot=-1,
                 timer=1, verticalY=258, verticalSpeed=0,verticalForce=0,verticalDummy=0,
                 width=16.0,height=16.0});
         } else if(id == 0x2B || id == 0x2C || id == 0x28) {
-            g.platforms.append({id=id, x=unit*16.0+(id==0x28?0.0:12.0), y=row*16.0,
+            g.platforms.append({id=id, spawnX=unit*16.0, x=unit*16.0+(id==0x28?0.0:12.0), y=row*16.0,
                 previousX=unit*16.0, previousY=row*16.0,
-                width=id==0x28?48.0:24.0, awake=false, retired=false,
+                width=id==0x28?32.0:24.0, awake=false, retired=false,slot=-1,
                 fraction=0.0, secondaryCounter=0, primaryCounter=0,
                 speed=id==0x2B?-240.0/256.0:240.0/256.0});
         } else if(id == 0x15) {
@@ -174,7 +175,7 @@ function startWorld24(g) {
         metatiles = ROM_WORLD_2_4_METATILES,
         baseMetatiles = ROM_WORLD_2_4_METATILES,
         firebars = [], bowser = null, retainer = null, podoboos = [],
-        flameSourceX=-1.0, ambientFlameTimer=191, random=[165,0,0,0,0,0,0], interval=20,
+        flameSourceX=-1.0, ambientFlameTimer=0, random=[65,97,227,32,230,167,106], interval=0,
         firebarSlots = array(5,null), firebarSlotHigh = array(5,0),
         projectiles = [], flames = [], bridgeRight = 140,
         axeX = 141.0 * 16.0, stateFrames = 0, clearStarted = false,
@@ -185,6 +186,11 @@ function startWorld24(g) {
     if("world24" in g) g.world24 = resetWorld; else g.world24 <- resetWorld;
     world24BuildCollision(g);
     world24ParseCastleObjects(g);
+    foreach(pod in g.world24.podoboos) if(pod.x<=303.0) {
+        for(local slot=0;slot<5;slot+=1) if(g.world24.firebarSlots[slot]==null) {
+            pod.slot=slot;pod.awake=true;g.world24.firebarSlots[slot]=pod;break;
+        }
+    }
     // InitializeArea entry control $02 places small Mario's body at Y $60
     // (canonical OAM Y $50) on the raised castle entrance.
     resetPlayerForArea(g, 40, 80);
@@ -287,17 +293,17 @@ function world24NextFlameTimer(b) {
     return timer;
 }
 
-function world24SpawnBowserFlame(g) {
-    local b = g.world24.bowser;
-    if(b == null || b.defeated) return;
-    local lane = b.flameYOffset & 0x03;
-    b.flameYOffset = (b.flameYOffset + 1) & 0x03;
-    g.world24.projectiles.append({
-        x = b.x, y = WORLD24_FLAME_Y[lane] - 16.0,
-        width = 24.0, height = 8.0, vx = -0.25, vy = 0.0,
-        targetY = WORLD24_FLAME_Y[lane] - 16.0, active = true
-    });
-    emitSound(g, "bowser_fire");
+function world24SpawnBowserFlame(g, ambient=false) {
+    local w=g.world24,b=w.bowser;
+    if(b==null || b.defeated) return false;
+    local slot=-1;
+    for(local i=0;i<5;i+=1) if(w.firebarSlots[i]==null) {slot=i;break;}
+    if(slot<0) return false;
+    local lane=w.random[slot]&3,target=WORLD24_FLAME_Y[lane].tofloat();
+    local shot={x=ambient?g.cameraX+287.0:b.x-14.0,y=ambient?target:b.y+8.0,
+        width=24.0,height=8.0,vx=-1.25,vy=0.0,targetY=target,active=true,slot=slot,fresh=true};
+    w.projectiles.append(shot);w.firebarSlots[slot]=shot;
+    emitSound(g,"bowser_fire");return true;
 }
 
 function world24HurtBowser(g) {
@@ -374,13 +380,12 @@ function updateWorld24Actors(g) {
         }
     }
 
-    if(w.flameSourceX>=0.0 && w.flameSourceX<parserBoundary &&
-       w.bowser.x>g.cameraX+320.0) {
-        w.ambientFlameTimer-=1;
-        if(w.ambientFlameTimer<=0) {
-            w.ambientFlameTimer=world24NextFlameTimer(w.bowser);
-            world24SpawnBowserFlame(g);
-            w.projectiles[w.projectiles.len()-1].x=g.cameraX+288.0;
+    if(w.flameSourceX>=0.0 && w.flameSourceX<=parserBoundary &&
+       !w.bowser.awake) {
+        if(w.ambientFlameTimer>0) w.ambientFlameTimer-=1;
+        if(w.ambientFlameTimer<=0 && world24SpawnBowserFlame(g,true)) {
+            w.ambientFlameTimer=world24NextFlameTimer(w.bowser)+32;
+            w.projectiles[w.projectiles.len()-1].x=actorCamera+287.0;
         }
     }
     local b = w.bowser;
@@ -389,7 +394,17 @@ function updateWorld24Actors(g) {
             b.y+=b.vy; b.vy+=0.125;
             if(b.y>=240.0) {b.hidden=true;b.falling=false;}
         }
-        if(!b.defeated && b.x < g.cameraX + 320.0) {
+        local justSpawned=false;
+        if(!b.awake && b.originX<=parserBoundary) {
+            local free=[];
+            for(local i=0;i<5;i+=1) if(w.firebarSlots[i]==null) free.append(i);
+            if(free.len()>=2) {
+                b.slot=free[0];b.rearSlot=free[1];b.awake=true;justSpawned=true;
+                w.firebarSlots[b.slot]=b;w.firebarSlots[b.rearSlot]=b;
+            }
+        }
+        if(!b.defeated && b.awake && !justSpawned) {
+            if(b.jumpTimer>0) b.jumpTimer-=1;
             // BowserControl skips feet and horizontal movement while the
             // mouth bit is set. MovingDir controls facing; the signed speed
             // byte controls travel independently, including left-facing
@@ -402,16 +417,17 @@ function updateWorld24Actors(g) {
                 b.bodyControls = world24ToggleBit(b.bodyControls, 0x01);
             }
             if((frame & 0x0F) == 0) b.movingDir = 2;
-            if(b.faceTimer > 0) {
+            if(b.jumpTimer > 0) {
                 if(p.x > b.x) {
                     b.movingDir = 1;
                     b.movementSpeed = 2;
-                    b.faceTimer = 32;
+                    b.jumpTimer = 32;
                     b.fireTimer = 32;
                 }
-                b.faceTimer -= 1;
+
             }
             if((frame & 0x03) == 0) {
+                if(b.x==b.originX) b.maxRange=[33,65,17,49][w.random[b.slot]&3];
                 local delta = b.x - b.originX;
                 b.x += b.movementSpeed;
                 delta = b.x - b.originX;
@@ -421,7 +437,6 @@ function updateWorld24Actors(g) {
             }
             }
             if(b.jumpTimer>0) {
-                b.jumpTimer-=1;
                 if(b.jumpTimer==1) {
                     b.verticalY=b.y.tointeger()-1;
                     b.verticalSpeed=254;b.verticalForce=0;b.verticalDummy=0;
@@ -430,7 +445,7 @@ function updateWorld24Actors(g) {
             } else {
                 world13ImposeGravity(b,15,0,2,false);b.y=b.verticalY.tofloat();
                 if(b.y>=128.0) {b.y=128.0;b.verticalY=128;
-                    b.jumpTimer=[32,48,64,32][w.random[0]&3];}
+                    b.jumpTimer=[33,65,17,49][w.random[b.slot]&3];}
             }
             b.fireTimer -= 1;
             if(b.fireTimer <= 0) {
@@ -441,7 +456,7 @@ function updateWorld24Actors(g) {
                     world24SpawnBowserFlame(g);
                 }
             }
-            if(world24OverlapPlayer(g, b.x + 3.0, b.y + 3.0, 26.0, 29.0)) {
+            if(world24BowserHitsPlayer(g,b)) {
                 hurtPlayer(g, {kind="bowser", x=b.x});
                 if(p.dead) return;
             }
@@ -458,24 +473,36 @@ function updateWorld24Actors(g) {
 
     for(local index = w.projectiles.len() - 1; index >= 0; index -= 1) {
         local shot = w.projectiles[index];
+        if(shot.fresh) {shot.fresh=false;continue;}
         shot.x += shot.vx;
-        if(shot.y < shot.targetY) shot.y += 0.25;
-        else if(shot.y > shot.targetY) shot.y -= 0.25;
-        if(world24OverlapPlayer(g, shot.x, shot.y, shot.width, shot.height)) {
+        if(shot.y < shot.targetY) shot.y += 1.0;
+        else if(shot.y > shot.targetY) shot.y -= 1.0;
+        if(world24FlameHitsPlayer(g,shot)) {
             shot.active = false;
             hurtPlayer(g, {kind="bowser_flame", x=shot.x});
             if(p.dead) return;
         }
         if(shot.x + shot.width < g.cameraX - 32.0) shot.active = false;
-        if(!shot.active) w.projectiles.remove(index);
+        if(!shot.active) {w.firebarSlots[shot.slot]=null;w.projectiles.remove(index);}
     }
 
     foreach(index,pod in w.podoboos) {
-        if(pod.x<g.cameraX-73.0 || pod.x>parserBoundary) continue;
-        if(!pod.awake) {pod.awake=true;continue;}
+        if(pod.retired || pod.x>parserBoundary) continue;
+        if(pod.x<actorCamera-73.0) {
+            pod.retired=true;
+            if(pod.slot>=0) {w.firebarSlots[pod.slot]=null;
+                w.firebarSlotHigh[pod.slot]=pod.verticalSpeed;}
+            continue;
+        }
+        if(!pod.awake) {
+            for(local slot=0;slot<5;slot+=1) if(w.firebarSlots[slot]==null) {
+                pod.slot=slot;pod.awake=true;w.firebarSlots[slot]=pod;break;
+            }
+            continue;
+        }
         if(intervalTick && pod.timer>0) pod.timer-=1;
         if(pod.timer==0) {
-            local random=w.random[(index+1)%7];
+            local random=w.random[(pod.slot+1)%7];
             pod.verticalY=258;pod.verticalSpeed=249;pod.verticalForce=random|128;
             pod.timer=(random&15)|6;
         }
@@ -753,10 +780,22 @@ function updateWorld24DeathReload(g) {
 function updateWorld24Platforms(g) {
     foreach(platform in g.platforms) {
         if(platform.retired) continue;
-        if(platform.x<g.cameraX-73.0) {platform.retired=true;continue;}
+        if(platform.x<g.cameraX-73.0) {
+            platform.retired=true;
+            if(platform.slot>=0) {
+                g.world24.firebarSlots[platform.slot]=null;
+                g.world24.firebarSlotHigh[platform.slot]=platform.id==0x2B?255:0;
+            }
+            continue;
+        }
         if(!platform.awake) {
-            if(platform.x>floor((g.cameraX+303.0)/16.0)*16.0) continue;
-            platform.awake=true;
+            local projected=g.cameraX+(g.player.nesXScroll>0?g.player.nesXScroll:0);
+            if(platform.spawnX>floor((projected+303.0)/16.0)*16.0) continue;
+            for(local slot=0;slot<5;slot+=1) if(g.world24.firebarSlots[slot]==null) {
+                platform.slot=slot;g.world24.firebarSlots[slot]=platform;break;
+            }
+            if(platform.slot<0) continue;
+            platform.awake=true;continue;
         }
         local oldX=platform.x,oldY=platform.y;
         platform.previousX=oldX;platform.previousY=oldY;
@@ -775,7 +814,7 @@ function updateWorld24Platforms(g) {
             platform.fraction+=speed/16.0;
             local dx=floor(platform.fraction);
             platform.fraction-=dx;platform.x+=dx;
-            world13PlatformRider(g,platform,oldX,oldY,platform.x,platform.y);
+            world24PlatformCollision(g,platform,oldX,oldY,platform.x,platform.y);
         } else {
             platform.fraction+=platform.speed;
             local dy=floor(platform.fraction);platform.fraction-=dy;
@@ -785,7 +824,7 @@ function updateWorld24Platforms(g) {
             foreach(offset in [0.0,128.0]) {
                 local before=(oldY+offset)%256.0,after=(platform.y+offset)%256.0;
                 if(abs(after-before)<2.0)
-                    world13PlatformRider(g,platform,oldX,before,platform.x,after);
+                    world24PlatformCollision(g,platform,oldX,before,platform.x,after);
             }
         }
     }
@@ -829,5 +868,61 @@ function runWorld24SelfTest() {
     lava.player.x=129.0*16.0;lava.player.y=202.0;lava.player.grounded=false;
     updateWorld24Actors(lava);
     requireSelfTest(lava.player.dead,"castle lava must be fatal");
+    local side=createGame();startWorld24(side);
+    side.player.x=1359.0;side.player.y=78.0;side.player.nesXSpeed=40;
+    side.player.nesYSpeed=-2;
+    world24PlatformCollision(side,side.platforms[0],1372.0,89.0,1372.0,88.0);
+    requireSelfTest(side.player.x==1358.0 && side.player.nesXSpeed==0,
+        "small lift side must impede movement using the ROM small-player box");
+    local flame={x=2015.0,y=144.0};
+    side.player.x=2002.0;side.player.y=137.0;
+    requireSelfTest(!world24FlameHitsPlayer(side,flame),
+        "flame artwork outside its central ROM hitbox must not hurt Mario");
+    side.player.x=2010.0;
+    requireSelfTest(world24FlameHitsPlayer(side,flame),"central flame hitbox must remain harmful");
     print("World 2-4 mechanics self-test passed.\n");
+}
+
+function world24PlatformCollision(g,platform,oldX,oldY,newX,newY) {
+    local p=g.player;
+    local canonicalY=p.big&&!p.crouching?p.y:p.y-16.0;
+    if(canonicalY<0.0 || canonicalY>=208.0 || p.dead || oldY<32.0) return;
+    local left=p.x+(p.big&&!p.crouching?2.0:3.0),right=p.x+(p.big&&!p.crouching?14.0:13.0);
+    local top=canonicalY+(p.big&&!p.crouching?8.0:20.0),bottom=canonicalY+32.0;
+    local height=platform.id==0x28?13.0:6.0;
+    if(right<oldX || left>oldX+platform.width || bottom<oldY || top>oldY+height) return;
+    local headDifference=oldY+height-top;
+    if(headDifference>=0 && headDifference<4.0 && p.nesYSpeed<0) p.nesYSpeed=1;
+    local feetDifference=bottom-oldY;
+    if(feetDifference>=0.0 && feetDifference<6.0 && p.nesYSpeed>=0) {
+        p.x+=newX-oldX;p.pendingPlatformXScroll+=(newX-oldX).tointeger();
+        p.y=newY-p.height;p.grounded=true;p.entranceFalling=false;
+        p.vy=0.0;p.nesYSpeed=0;p.nesYMoveForce=0;
+        return;
+    }
+    if(right-oldX>=0.0 && right-oldX<8.0) impedePlayerMove(g,p,1);
+    else if(oldX+platform.width-left-1.0>=0.0 && oldX+platform.width-left-1.0<9.0) impedePlayerMove(g,p,2);
+}
+
+function world24FlameHitsPlayer(g,shot) {
+    local p=g.player;
+    if(p.dead) return false;
+    local big=p.big&&!p.crouching,canonicalY=big?p.y:p.y-16.0;
+    local left=p.x+(big?2.0:3.0),right=p.x+(big?14.0:13.0);
+    local top=canonicalY+(big?8.0:20.0),bottom=canonicalY+32.0;
+    // ROM bounding box control $08 is the flame's central four pixels.
+    return right>=shot.x+6.0 && left<=shot.x+10.0 &&
+        bottom>=shot.y+4.0 && top<=shot.y+8.0;
+}
+
+function world24BowserHitsPlayer(g,b) {
+    local p=g.player,big=p.big&&!p.crouching,canonicalY=big?p.y:p.y-16.0;
+    local left=p.x+(big?2.0:3.0),right=p.x+(big?14.0:13.0);
+    local top=canonicalY+(big?8.0:20.0),bottom=canonicalY+32.0;
+    foreach(rear in [false,true]) {
+        local x=b.x+(rear?(b.movingDir==1?-16.0:16.0):0.0);
+        local y=b.y+(rear?8.0:0.0);
+        if(right>=x && left<=x+16.0 && bottom>=y+2.0 && top<=y+21.0) return true;
+    }
+    return false;
 }

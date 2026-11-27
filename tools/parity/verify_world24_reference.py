@@ -25,7 +25,7 @@ def verify(movie_path,folder):
         movie_sha256=sha256_file(movie_path),milestones=milestones,death_frames=deaths,
         final=dict(world=last[0x75f]+1,level=last[0x75c]+1,x=last[0x6d]*256+last[0x86],y=last[0xce],oper_mode=last[0x770],oper_task=last[0x772],lives=last[0x75a]+1),
         limitation='Original-only route audit, not six-gate host acceptance')
-    (folder/'verification.json').write_text(json.dumps(result,indent=2)+'\n')
+    (folder/'verification.json').write_text(json.dumps(result,indent=2)+'\n', newline="\n")
     return result
 if __name__=='__main__':
     p=argparse.ArgumentParser();p.add_argument('--movie',type=Path,required=True);p.add_argument('--reference',type=Path,required=True)

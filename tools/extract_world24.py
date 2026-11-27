@@ -69,7 +69,7 @@ def main() -> None:
         "WORLD24_CASTLE_PALETTE <- [" + ",".join(map(str, prg[palette_at + 3 : palette_at + 35])) + "];",
         "WORLD24_BOWSER_PALETTE <- [" + ",".join(map(str, prg[bowser_palette_at + 3 : bowser_palette_at + 7])) + "];",
     ]
-    (generated / "world24_data.nut").write_text("\n".join(lines) + "\n", encoding="utf-8")
+    (generated / "world24_data.nut").write_text("\n".join(lines) + "\n", encoding="utf-8", newline="\n")
 
     out = ROOT / "assets/world24"
     out.mkdir(parents=True, exist_ok=True)
@@ -144,7 +144,7 @@ def main() -> None:
     if map_path.is_file():
         metadata["map"] = {"columns":160,"source":"ROM RenderAreaGraphics, single forward pass",
             "sha256":file_sha256(map_path),"route_evidence":False}
-    (out / "manifest.json").write_text(json.dumps(metadata, indent=2) + "\n", encoding="utf-8")
+    (out / "manifest.json").write_text(json.dumps(metadata, indent=2) + "\n", encoding="utf-8", newline="\n")
     print(f"world24 area={metadata['streams']['AREA']['cpu_address']} "
           f"enemy={metadata['streams']['ENEMY']['cpu_address']}")
 

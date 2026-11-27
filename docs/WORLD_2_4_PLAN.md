@@ -24,38 +24,84 @@ E stream CPU $9db0, 47 bytes. Shared with 5-4, excluding hard-mode objects.
 The normal stream includes two Podoboos, six short firebars, two small lifts,
 a horizontal bridge platform, a Bowser-flame generator, Bowser and Toad.
 
-## Verified host gameplay (2026-11-28)
+## Verified gameplay and original evidence (2026-11-28)
 
-`tests/parity/movies/world-2-4-host-route.json` contains 1813 fixed-input frames.
-SHA256: `c701ccd97cd8e3f4c2db5dba9abf77a4a8a359849033835b89417e6a36ef3b13`.
-The independent parent `run_gameplay_route.py` passes: normal startLevel(2,4),
-x=40/body-y=96, small Mario, three lives, no death or life loss. First natural
-worldComplete is frame 1549; final x=2431/body-y=192, still world2/stage4.
-Stage diagnostic replay records axe frame912, victory walk1041, retainer1166,
-worldComplete1548 (diagnostic frame0 is the unadvanced entrance).
-Focused mechanics tests cover both fire-defeated and live Bowser axe clear,
-zero checkpoint at entrance/page6/page8, progress retention, and fatal lava.
-They are explicit setup tests and **not** route evidence.
+The updated mechanics use ROM player/platform/flame/Bowser collision boxes,
+32-pixel horizontal platforms, parser-boundary activation, enemy slot reuse,
+Podoboo gravity and interval timers, and Bowser/flame RNG timing. The initial
+seven-byte RNG state is taken from the verified normal castle origin.
 
-Commands (after parent hooks):
+Two fixed-input fixtures serve different producer timelines:
+
+- `world-2-4-host-route.json`: 1812 frames, SHA256
+  `5f9b459663c51bea244c586c9f01ae795c458bfcf43d42ff504b51197b7616a2`.
+  Independent parent `run_gameplay_route.py` calls normal startLevel(2,4),
+  advances input frame zero, and passes with no deaths/life loss. Entrance is
+  x40/body-y96, small Mario, three lives. Natural worldComplete first appears
+  at output frame1554, x2431/body-y192, still World2/stage4.
+  Evidence: `local-parity/world24-gameplay-route-v2-final/summary.json`.
+  Stage runner `--normal-start` also passes (its output starts after the first
+  input, hence axe911, victory1047, rescue1171, complete1553).
+- `world-2-4-original-clear.json`: 2800 frames, SHA256
+  `71e117e31349a1e0e8856b87de5816c3331ef12296bf3862bee21db91323a849`.
+  Original normal entrance through axe1094, retainer1433 and next World3-1
+  at1807, no deaths or life loss. All 2800 PNGs/RAM/APU rows are captured.
+  Continuous cold-boot replay matches saved-origin states and APU writes.
+  Evidence: `local-parity/world24-original-clear-reference/verification.json`
+  and `continuous-video/proof.json` in that directory.
+  Host parity-timeline replay also clears: axe1094, victory1241, rescue1355,
+  bounded worldComplete1737. Player x/y match the original through1242.
+
+The parity producer displays the saved entrance on frame zero before advancing.
+The normal-start producer advances input zero immediately. The original-clear
+fixture is not advertised as passing the independent normal-start host runner;
+use the separate host-route fixture for that test. No route writes player state
+mid-run. Origin construction/geometry fixtures are separate from route replay.
+All newly generated movie/provenance files explicitly use LF newlines.
+
+Focused mechanics tests cover live and fire-defeated Bowser axe completion,
+zero checkpoint at entrance/page6/page8, progress retention, fatal lava,
+small-lift side collision and the central flame hitbox. These use explicit
+setup and are not route evidence. Five ROM/data integrity tests pass.
+
+Commands (with parent hooks and its independent runner):
 
 ```powershell
 python tests/parity/test_world24_data.py
-python tools/parity/run_world24_simulation.py --movie tests/parity/movies/world-2-4-host-route.json --output local-parity/world24-route-host --require-clear --self-test
-python tools/parity/run_gameplay_route.py --movie tests/parity/movies/world-2-4-host-route.json --output local-parity/world24-gameplay-route
+python tools/parity/run_world24_simulation.py --normal-start --movie tests/parity/movies/world-2-4-host-route.json --output local-parity/world24-host-final --require-clear --self-test
+python tools/parity/run_gameplay_route.py --movie tests/parity/movies/world-2-4-host-route.json --output local-parity/world24-gameplay-route-v2-final
+python tools/parity/run_world24_simulation.py --movie tests/parity/movies/world-2-4-original-clear.json --output local-parity/world24-original-motion-host --require-clear --self-test
+python tools/parity/verify_world24_reference.py --movie tests/parity/movies/world-2-4-original-clear.json --reference local-parity/world24-original-clear-reference
 ```
 
-## Original evidence and known failures
+## Strict failures and remaining work
 
-The 32-frame `world-2-4-entrance` diagnostic produced all 32 reference frames,
-with identical continuous-video states and APU writes. It is supplemental.
-The host full route **fails in the original**: missed late pit at about x1764,
-then life lost at frame1063. It must not be labeled a successful original route.
-Full comparison and a separate successful original route are being investigated.
-No acceptance inventory, tolerances, or gate definitions were changed.
-Original transition into 3-1 is unavailable in the host; worldComplete is bounded.
-Actor allocation/RNG phase, Podoboo motion, firebars, Bowser and shared player
-physics/render/audio still require strict per-frame comparison.
+Formal acceptance remains pending; no acceptance inventory or tolerance changed.
+`tests/parity/world24_evidence_summary.json` records existing evidence paths and
+hashes, not approval. Full unmodified comparison reports are under
+`local-parity/world24-original-comparison/`:
+
+- States FAIL across 2800 frames, zero missing. Player x/y first differ at1243;
+  other fields, including actors, differ earlier. Host parity serializer needs
+  World24 actor and victory operation-mode/task dispatch; shared serializer
+  changes remain parent-owned. Mode2 must describe the actual ending state.
+- Events FAIL at tolerance0; bridge blast events are one frame early.
+- Modeled host APU FAIL: first write-stream/end-register mismatch593;
+  1034/2800 exact write-stream frames, 593 matching end-register frames.
+  This uses the shared offline APU model, not a native-output audio capture.
+- Current full native frames and waveform comparison are pending parent capture.
+  The stage actual wrapper alone does not establish correct origin: shared main
+  must dispatch PARITY_START_WORLD=2/PARITY_START_LEVEL=4 to startLevel(2,4),
+  and the resulting first state must be checked before interpreting captures.
+- Original transitions to 3-1 at1807; host preserves World2/stage4 worldComplete
+  because 3-1 is not implemented. This intentionally fails strict transition.
+  Branch review and all six acceptance gates remain required.
+
+The first commit's 1813-frame host movie and its failed original late-pit replay
+are superseded; their old captures do not match the current host movie hash.
+The old partial native capture under `local-parity/world24-strict/actual` is
+incomplete and is not evidence for the updated mechanics. Parent owns current
+native capture; do not queue duplicate graphical runs.
 
 ## Geometry extraction
 

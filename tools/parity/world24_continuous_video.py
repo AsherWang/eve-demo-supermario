@@ -27,7 +27,7 @@ def main() -> int:
     script = output / 'capture.lua'
     origin_lua=build_movie_origin_lua(movie)
     script.write_text(origin_lua + '\n' +
-                      build_capture_lua(output, movie, warmup), encoding='utf-8')
+                      build_capture_lua(output, movie, warmup), encoding='utf-8', newline="\n")
     command = [str(args.mesen_agent.resolve()), str(args.rom.resolve()),
                '--home', str(output / 'mesen-home'), '--frames', str(warmup + movie['frames']),
                '--timeout', '120', '--lua', str(script), '--lua-allow-io']
@@ -70,7 +70,7 @@ def main() -> int:
     }
     report['passed'] = all(report[key] for key in
                            ('states_equal', 'apu_writes_equal', 'capture_frames_complete'))
-    (output / 'proof.json').write_text(json.dumps(report, indent=2) + '\n')
+    (output / 'proof.json').write_text(json.dumps(report, indent=2) + '\n', newline="\n")
     if not report['passed']:
         print(f'Continuous video verification failed: {output / "proof.json"}')
         return 1
@@ -82,7 +82,7 @@ def main() -> int:
         manifest = json.loads(manifest_path.read_text())
         manifest['continuous_video_passed'] = True
         manifest['continuous_video_proof_sha256'] = sha256_file(output / 'proof.json')
-        manifest_path.write_text(json.dumps(manifest, indent=2) + '\n')
+        manifest_path.write_text(json.dumps(manifest, indent=2) + '\n', newline="\n")
     print(f'Continuous video: {movie["frames"]} identical states; comparison APU writes identical')
     return 0
 

@@ -100,15 +100,15 @@ emu.addEventCallback(function()
   end
 end,emu.eventType.endFrame)
 """
-    script=output/'capture-forward.lua';script.write_text(lua,encoding='utf-8')
+    script=output/'capture-forward.lua';script.write_text(lua,encoding='utf-8', newline="\n")
     with world24_capture_lock():
         result=subprocess.run([str(tool_path('mesen')),str(args.rom.resolve()),
             '--frames','2000','--home',str(output/'forward-home'),
             '--input','0:start@40-46','--input','0:right,b@80-1999',
             '--lua',str(script),'--lua-allow-io','--timeout','120'],
             capture_output=True,text=True,encoding='utf-8',timeout=150)
-    (output/'stdout.log').write_text(result.stdout,encoding='utf-8')
-    (output/'stderr.log').write_text(result.stderr,encoding='utf-8')
+    (output/'stdout.log').write_text(result.stdout,encoding='utf-8', newline="\n")
+    (output/'stderr.log').write_text(result.stderr,encoding='utf-8', newline="\n")
     if result.returncode:raise RuntimeError(result.stdout+result.stderr)
     columns={row['x']:row['tiles'] for row in map(json.loads,(output/'columns.jsonl').read_text().splitlines())}
 
@@ -126,7 +126,7 @@ end,emu.eventType.endFrame)
             for x in range(args.columns)
         )
         + "\n];\n",
-        encoding="utf-8",
+        encoding="utf-8", newline="\n",
     )
     print(f"captured {len(columns)} columns; wrote {destination}")
 

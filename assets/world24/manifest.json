@@ -46,7 +46,7 @@
   "map": {
     "columns": 160,
     "source": "ROM RenderAreaGraphics, single forward pass",
-    "sha256": "50356b7efffef8de5a0bc1058541758b0cc5958323478a2c5573b877025376f4",
+    "sha256": "0f156ca2914e8b44ca894678e767e2bb4da9a413ed4542cd1ae1942ef2462221",
     "route_evidence": false
   }
 }

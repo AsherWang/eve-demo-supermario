@@ -15,7 +15,7 @@ def world24_capture_lock():
             time.sleep(1)
     owner = LOCK / 'world24-owner.json'
     try:
-        owner.write_text(json.dumps(dict(stage='2-4', pid=os.getpid(), token=token)))
+        owner.write_text(json.dumps(dict(stage='2-4', pid=os.getpid(), token=token)), newline="\n")
         yield
     finally:
         if owner.is_file() and json.loads(owner.read_text()).get('token') == token:

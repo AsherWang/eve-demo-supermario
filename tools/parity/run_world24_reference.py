@@ -364,7 +364,7 @@ def main() -> int:
     }
     (output / "manifest.json").write_text(
         json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
-    )
+    , newline="\n")
     if completed.returncode != 0 or not summaries or not summaries[-1].get("ok"):
         print(f"reference run failed; inspect {output / 'stderr.log'}", file=sys.stderr)
         return completed.returncode or 1

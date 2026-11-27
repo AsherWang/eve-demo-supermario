@@ -1,0 +1,239 @@
+{
+  "schema": "world24-evidence-index-v1",
+  "scope": "Diagnostic evidence index only; strict whole-level acceptance pending. Local artifacts are ignored and must be independently checked.",
+  "stage_source_sha256": "42ca40d0fd164f5a4dbedc990d3b2fdb419ce9c2465329a50345495c6bb1c26f",
+  "records": [
+    {
+      "path": "local-parity/world24-gameplay-route-v2-final/summary.json",
+      "sha256": "377bec6622032e809dbaa78e371aa87b2215732e69d0f390216ee3b2bd84d2ff",
+      "passed": true,
+      "movie_sha256": "5f9b459663c51bea244c586c9f01ae795c458bfcf43d42ff504b51197b7616a2",
+      "frames": 1812,
+      "first_endpoint": {
+        "frame": 1554,
+        "world": 2,
+        "level": 4,
+        "area": "castle",
+        "state": "worldComplete",
+        "x": 2431,
+        "y": 192,
+        "lives": 3,
+        "dead": false
+      }
+    },
+    {
+      "path": "local-parity/world24-host-final/verification.json",
+      "sha256": "ff3087ddddf79b844b091143f60c952b54bc2a30e16e1f383877f5dbb8a56f6a",
+      "schema": "world24-host-route-v1",
+      "passed": true,
+      "movie_sha256": "5f9b459663c51bea244c586c9f01ae795c458bfcf43d42ff504b51197b7616a2",
+      "frames": 1812,
+      "first_states": {
+        "world24Axe": 911,
+        "world24VictoryWalk": 1047,
+        "world24Rescue": 1171,
+        "worldComplete": 1553
+      }
+    },
+    {
+      "path": "local-parity/world24-original-clear-reference/verification.json",
+      "sha256": "27b3f7bc16ca5f7aedeee9ed96e4f2af3558e04552761556f3d1a82284237d17",
+      "schema": "world24-original-route-v1",
+      "passed": true,
+      "movie_sha256": "71e117e31349a1e0e8856b87de5816c3331ef12296bf3862bee21db91323a849",
+      "milestones": {
+        "axe": 1094,
+        "retainer": 1433,
+        "next_world": 1807
+      },
+      "checks": {
+        "normal_entrance": true,
+        "frames": true,
+        "full_video": true,
+        "movie_hash": true,
+        "no_death_or_life_loss": true,
+        "axe": true,
+        "retainer": true,
+        "next_world": true,
+        "continuous_video": true
+      }
+    },
+    {
+      "path": "local-parity/world24-original-clear-reference/continuous-video/proof.json",
+      "sha256": "61f584c4a884395c2638fcf4578de67d262b2ca87e9a18ee0e0d5645eaacf490",
+      "schema": "smb-continuous-video-proof-v1",
+      "passed": true,
+      "movie_sha256": "71e117e31349a1e0e8856b87de5816c3331ef12296bf3862bee21db91323a849"
+    },
+    {
+      "path": "local-parity/world24-original-clear-reference/manifest.json",
+      "sha256": "d50930318ed85b8b2192cc9900c0240ef0875c0bd064b983238fd2b9ed6270f4",
+      "schema": "smb-parity-artifact-v1",
+      "movie_sha256": "71e117e31349a1e0e8856b87de5816c3331ef12296bf3862bee21db91323a849"
+    },
+    {
+      "path": "local-parity/world24-original-motion-host/verification.json",
+      "sha256": "d1783636e68f0482ff52ee579d7a13392bad9b93c1f123434044dd3798619f2b",
+      "schema": "world24-host-route-v1",
+      "passed": true,
+      "movie_sha256": "71e117e31349a1e0e8856b87de5816c3331ef12296bf3862bee21db91323a849",
+      "frames": 2800,
+      "first_states": {
+        "world24Axe": 1094,
+        "world24VictoryWalk": 1241,
+        "world24Rescue": 1355,
+        "worldComplete": 1737
+      }
+    },
+    {
+      "path": "local-parity/world24-original-comparison/state-report.json",
+      "sha256": "0cd6f13e9fcf937005f3b4a2bc3402d7897ec9687c5f17405b0b0b95856abebc",
+      "schema": "smb-state-parity-report-v1",
+      "passed": false,
+      "compared_frames": 2800,
+      "missing_frames": 0,
+      "field_first_mismatches": {
+        "world": {
+          "frame": 1807,
+          "reference": 3,
+          "actual": 2
+        },
+        "level": {
+          "frame": 1807,
+          "reference": 1,
+          "actual": 4
+        },
+        "frame_counter": {
+          "frame": 1809,
+          "reference": 0,
+          "actual": 170
+        },
+        "player.x": {
+          "frame": 1243,
+          "reference": 2262,
+          "actual": 2264
+        },
+        "player.y": {
+          "frame": 1243,
+          "reference": 101,
+          "actual": 105
+        },
+        "player.x_speed_raw": {
+          "frame": 1341,
+          "reference": 23,
+          "actual": 24
+        },
+        "player.y_speed_raw": {
+          "frame": 1245,
+          "reference": 4,
+          "actual": 0
+        },
+        "player.y_move_force": {
+          "frame": 1243,
+          "reference": 0,
+          "actual": 112
+        },
+        "player.y_move_dummy": {
+          "frame": 1244,
+          "reference": 176,
+          "actual": 32
+        },
+        "player.x_acceleration_fraction": {
+          "frame": 1243,
+          "reference": 124,
+          "actual": 20
+        },
+        "player.x_position_fraction": {
+          "frame": 1243,
+          "reference": 192,
+          "actual": 64
+        },
+        "player.state_raw": {
+          "frame": 1245,
+          "reference": 1,
+          "actual": 0
+        },
+        "player.grounded": {
+          "frame": 1245,
+          "reference": false,
+          "actual": true
+        },
+        "camera_x": {
+          "frame": 964,
+          "reference": 2027,
+          "actual": 2029
+        },
+        "color_rotation_offset": {
+          "frame": 1808,
+          "reference": 0,
+          "actual": 5
+        },
+        "vram_scheduler.scroll_thirty_two": {
+          "frame": 964,
+          "reference": 11,
+          "actual": 13
+        },
+        "vram_scheduler.area_parser_task": {
+          "frame": 991,
+          "reference": 0,
+          "actual": 7
+        },
+        "vram_scheduler.buffer_addr_ctrl": {
+          "frame": 895,
+          "reference": 8,
+          "actual": 0
+        },
+        "score": {
+          "frame": 1356,
+          "reference": 600,
+          "actual": 650
+        },
+        "time": {
+          "frame": 1356,
+          "reference": 255,
+          "actual": 254
+        },
+        "rom_state.oper_mode": {
+          "frame": 1094,
+          "reference": 2,
+          "actual": 1
+        },
+        "rom_state.oper_mode_task": {
+          "frame": 1094,
+          "reference": 0,
+          "actual": 3
+        },
+        "rom_state.game_engine_subroutine": {
+          "frame": 1809,
+          "reference": 0,
+          "actual": 8
+        }
+      }
+    },
+    {
+      "path": "local-parity/world24-original-comparison/event-report.json",
+      "sha256": "feb8ac2e5b9c1cf37b528ca860f0ea9d3e86ac908cac0ca22fe2a9b79d05df31",
+      "schema": "smb-event-parity-report-v1",
+      "passed": false
+    },
+    {
+      "path": "local-parity/world24-original-comparison/apu-report.json",
+      "sha256": "a4bd7b84d332cbd74464b20c30bf3ee3fa9a64a471f83ba123234e32dca5aa35",
+      "schema": "smb-apu-write-parity-v1",
+      "passed": false,
+      "frames": 2800,
+      "first_stream_mismatch": 593,
+      "first_end_state_mismatch": 593,
+      "exact_write_stream_frames": 1034,
+      "matching_end_state_frames": 593
+    }
+  ],
+  "remaining_gates": [
+    "all-frame native pixel comparison",
+    "state parity (including victory serializer and 3-1 transition)",
+    "event timing",
+    "APU writes",
+    "native audio waveform",
+    "artifact and branch review"
+  ]
+}
