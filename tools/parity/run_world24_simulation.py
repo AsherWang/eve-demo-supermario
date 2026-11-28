@@ -31,7 +31,11 @@ for(local f=0;f<masks.len();f+=1) {
     print("CASTLE {\"frame\":"+f+",\"world\":"+g.world+",\"stage\":"+g.level+
         ",\"state\":\""+g.state+"\",\"bridge_offset\":"+g.world24.bridgeOffset+
         ",\"rescued\":"+parityBool(g.world24.rescued)+",\"message\":"+g.world24.primaryMsgCounter+
-        ",\"bowser_hidden\":"+parityBool(g.world24.bowser.hidden)+"}\n");
+        ",\"bowser_hidden\":"+parityBool(g.world24.bowser.hidden)+
+        ",\"bowser_x\":"+g.world24.bowser.x+",\"bowser_y\":"+g.world24.bowser.y+
+        ",\"bowser_slot\":"+g.world24.bowser.slot+",\"feet_timer\":"+g.world24.bowser.feetTimer+
+        ",\"body_controls\":"+g.world24.bowser.bodyControls+",\"interval\":"+g.world24.interval+
+        ",\"victory_task\":"+("victoryTask" in g.world24?g.world24.victoryTask:-1)+"}\n");
 }
 print("SIMULATION_COMPLETE\n");
 '''

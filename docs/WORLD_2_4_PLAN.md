@@ -6,6 +6,40 @@
 
 Playable implementation with verified host route; strict acceptance remains pending. Branch `codex/world24-development`.
 
+## Active strict-parity follow-up
+
+After merging main1973b3f, source-based ending fixes reproduce axe1094,
+SetupVictoryMode1241, message-task1433 and end timer expiry1807. Player x/y,
+speeds/fractions, grounded state and camera match through the castle ending.
+The unchanged normal-entry movie still clears without deaths. Evidence:
+`local-parity/world24-ending-pass4/` and `world24-ending-pass3-normal/`.
+The historical ending mismatches below are superseded; strict acceptance and
+the real3-1 transition remain pending.
+
+Axe contact skips enemy processing. Left-foot metatile selection retains the
+right-foot block-buffer pointer for erasure, explaining repeat task0/1/2 contacts.
+Bowser gravity uses the ROM force>=128 clamp, preserves dummy fractions, and
+does not snap landing Y to128. Collapse emits blast plus brick-shatter. Prior
+fire defeat bypasses bridge removal. Message completion uses the live21-frame
+interval divider. No route-frame waits or coordinate patches are used.
+
+Parent integration:
+
+- `world24RomMode(g)` returns `{oper_mode, oper_mode_task,
+  game_engine_subroutine}` or null for shared death/load serialization. Tasks0..4
+  are live collapse/setup/walk/messages/finish phases. Keep ordinary player fields.
+- After parser-task decrement call
+  `if(isWorld24(g)) parseWorld24AreaColumn(g,completedTask);`.
+- Add `!(isWorld24(g) && g.world24.scrollLocked)` to normal camera scrolling.
+  Stage parses the ROM column149 scroll-lock command, not a movie timestamp.
+- Stage victory walking calls the existing VRAM scheduler after its independent
+  camera step. Its early-return path consumes the prior VRAM selection.
+- Parent audio canonicalizes castle_clear and bowser_fire. Stage no longer
+  emits an explicit duplicate music/end_castle event.
+- FinishWorld requires a real3-1 loading path: reset area/level, advance world,
+  request area pointer/timer, then normal entrance/map/actors. worldComplete
+  fallback still does not satisfy strict transition acceptance.
+
 ## Integration contract
 
 Load `scripts/world24.nut` after world13; call `loadWorld24Assets()` after shared assets.

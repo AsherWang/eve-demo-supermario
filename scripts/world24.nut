@@ -127,7 +127,7 @@ function world24ParseCastleObjects(g) {
             bowser = {
                 x = unit * 16.0, y = row * 16.0, width = 32.0, height = 32.0,
                 originX = unit * 16.0, direction = -1, hp = 5, defeated = false,
-                awake=false,slot=-1,rearSlot=-1,
+                awake=false,slot=-1,rearSlot=-1,fireDefeated=false,
                 falling = false, hidden = false, vy = 0.0, ySpeed = 0.0,
                 fireTimer = 0xDF, feetTimer = 32, feetFrame = 0,
                 bodyControls = 0, movementSpeed = 2, movingDir = 2,
@@ -181,9 +181,19 @@ function startWorld24(g) {
         axeX = 141.0 * 16.0, stateFrames = 0, clearStarted = false,
         rescued = false, completeFrames = 0, axeSparkle = 0,
         bridgeOffset = 0, axeGone = false, chainGone = false,
-        primaryMsgCounter = 0, secondaryMsgCounter = 0, worldEndFrames = 0
+        primaryMsgCounter = 0, secondaryMsgCounter = 0, worldEndFrames = 0,
+        victoryTask=0, destinationPage=0, scrollFraction=0, worldEndTimer=0,
+        scrollLocked=false, parserColumn=24, clearedFootCells={}, scrollLockColumns=[]
     };
     if("world24" in g) g.world24 = resetWorld; else g.world24 <- resetWorld;
+    local areaPage=0;
+    for(local i=2;i+1<ROM_WORLD_2_4_AREA.len();i+=2) {
+        local a=ROM_WORLD_2_4_AREA[i],b=ROM_WORLD_2_4_AREA[i+1];
+        if((b&128)!=0) areaPage+=1;
+        if((a&15)==13 && (b&64)==0) areaPage=b&31;
+        if((a&15)==13 && ((b&127)==70 || (b&127)==71))
+            g.world24.scrollLockColumns.append(areaPage*16+(a>>4));
+    }
     world24BuildCollision(g);
     world24ParseCastleObjects(g);
     foreach(pod in g.world24.podoboos) if(pod.x<=303.0) {
@@ -311,7 +321,7 @@ function world24HurtBowser(g) {
     if(b == null || b.defeated) return;
     b.hp -= 1;
     if(b.hp <= 0) {
-        b.defeated = true; b.falling = true; b.vy = -2.0;
+        b.defeated = true; b.fireDefeated=true; b.falling = true; b.vy = -2.0;
         emitSound(g, "bowser_fall");
         parityRecordEvent(g, "gameplay", "bowser_defeated");
     }
@@ -330,6 +340,7 @@ function updateWorld24Actors(g) {
     w.interval-=1;
     local intervalTick=w.interval<0;
     if(intervalTick) w.interval=20;
+    if(world24CheckAxeContact(g)) return;
     local actorCamera=g.cameraX;
     if(p.nesXScroll>0 && !p.scrollSideCollisionTimer) {
         local position=p.previousX-g.cameraX;
@@ -439,12 +450,12 @@ function updateWorld24Actors(g) {
             if(b.jumpTimer>0) {
                 if(b.jumpTimer==1) {
                     b.verticalY=b.y.tointeger()-1;
-                    b.verticalSpeed=254;b.verticalForce=0;b.verticalDummy=0;
+                    b.verticalSpeed=254;b.verticalForce=0;
                     b.y=b.verticalY.tofloat();
                 }
             } else {
-                world13ImposeGravity(b,15,0,2,false);b.y=b.verticalY.tofloat();
-                if(b.y>=128.0) {b.y=128.0;b.verticalY=128;
+                world24ImposeGravity(b,15,2);b.y=b.verticalY.tofloat();
+                if(b.y>=128.0) {
                     b.jumpTimer=[33,65,17,49][w.random[b.slot]&3];}
             }
             b.fireTimer -= 1;
@@ -506,32 +517,12 @@ function updateWorld24Actors(g) {
             pod.verticalY=258;pod.verticalSpeed=249;pod.verticalForce=random|128;
             pod.timer=(random&15)|6;
         }
-        world13ImposeGravity(pod,28,0,3,false);pod.y=pod.verticalY.tofloat();
+        world24ImposeGravity(pod,28,3);pod.y=pod.verticalY.tofloat();
         if(pod.y<240.0 && world24OverlapPlayer(g,pod.x,pod.y,pod.width,pod.height)) {
             hurtPlayer(g,{kind="podoboo",x=pod.x});if(p.dead) return;
         }
     }
     updateWorld24Platforms(g);
-
-    // ChkFootMTile handles $c5 only on a downward foot probe. A body AABB
-    // also catches Mario passing beside the axe, prematurely starting the
-    // bridge collapse while he is still above the bridge.
-    local axeFootRow=floor((p.y+p.height)/16.0).tointeger()-2;
-    local touchedAxe=false;
-    if(p.nesYSpeed>=0 && axeFootRow>=0 && axeFootRow<13)
-        foreach(offset in [3.0,12.0]) {
-            local column=floor((p.x+offset)/16.0).tointeger();
-            if(column>=0 && column<g.areaWidth &&
-               w.metatiles[column][axeFootRow]==0xC5) touchedAxe=true;
-        }
-    if(touchedAxe) {
-        g.state = "world24Axe";
-        g.stateTimer = 0.0;
-        w.stateFrames = 0;
-        p.nesXSpeed = 0x18; p.vx=p.nesXSpeed/16.0*NES_FRAME_RATE;
-        parityRecordEvent(g, "gameplay", "axe_touched");
-        return;
-    }
 
     // ROM metatiles $86/$87 are lava. Falling through their body is fatal.
     local column = floor((p.x + p.width * 0.5) / TILE_SIZE).tointeger();
@@ -562,6 +553,7 @@ function world24RemoveBridgeSection(g) {
         w.bridgeRight = column - 1;
     }
     emitSound(g, "blast");
+    emitSound(g, "break");
     w.bridgeOffset += 1;
     return true;
 }
@@ -574,79 +566,75 @@ function updateWorld24Transition(g) {
         return true;
     }
     local w = g.world24, p = g.player;
+    local ending=["world24Axe","world24VictoryWalk","world24Rescue","world24EndWorld","worldComplete"].find(g.state)!=null;
+    if(ending) {
+        // Shared gameplay's NMI bookkeeping is below the castle early return.
+        // Consume the previous pass's selected VRAM packet before this task.
+        if(g.colorPhasePending && g.vramBufferAddrCtrl!=6) {
+            g.displayColorPhase=g.pendingColorPhase;g.colorPhasePending=false;
+        }
+        g.vramBufferAddrCtrl=0;
+        w.interval-=1;
+        if(w.interval<0) {
+            w.interval=20;
+            if(w.worldEndTimer>0) w.worldEndTimer-=1;
+        }
+    }
     if(g.state == "world24Axe") {
-        w.stateFrames += 1;
-        local b = w.bowser;
-        if(b == null || b.defeated) {
-            if((w.stateFrames & 3)==1) world24RemoveBridgeSection(g);
+        w.stateFrames+=1;
+        local b=w.bowser;
+        if(w.victoryTask==1) {
+            // SetupVictoryMode is its own pass after BridgeCollapse.
+            w.destinationPage=floor((g.cameraX+255.0)/256.0).tointeger()+1;
+            emitSound(g,"castle_clear");w.clearStarted=true;
+            w.victoryTask=2;g.state="world24VictoryWalk";w.stateFrames=0;
+            return true;
         }
-        if(b != null && !b.defeated) {
-            b.feetTimer -= 1;
-            if(b.feetTimer <= 0) {
-                b.feetTimer = 4;
-                b.bodyControls = world24ToggleBit(b.bodyControls, 0x01);
-                world24RemoveBridgeSection(g);
-            }
+        if(b==null || b.hidden || b.fireDefeated || (b.defeated && !b.falling) || (b.defeated && b.y>=224.0)) {
+            if(b!=null) {b.hidden=true;b.falling=false;}
+            w.victoryTask=1;
+            emitSound(g,"silence_music");parityRecordEvent(g,"music","silence");
+            w.firebarSlots=array(5,null);w.projectiles=[];
+            foreach(bar in w.firebars) bar.retired=true;
+            foreach(pod in w.podoboos) {pod.retired=true;pod.awake=false;}
+            return true;
         }
-        if(b != null && b.defeated && !b.hidden) {
-            // BridgeCollapse -> MoveEnemySlowVert: force $0f, maximum speed $02.
-            b.vy += 15.0 / 256.0;
-            if(b.vy > 2.0) b.vy = 2.0;
-            b.y += b.vy;
-            if(b.y >= 224.0 && w.bridgeOffset>=15) {
-                b.hidden = true;
-                b.falling = false;
-                if(!w.clearStarted) {
-                    w.clearStarted = true;
-                    // VictoryMode task 1 (SetupVictoryMode) is reached only
-                    // after defeated Bowser falls below the $e0 threshold.
-                    emitSound(g, "castle_clear");
-                    parityRecordEvent(g, "music", "end_castle");
-                }
-                g.state = "world24VictoryWalk";
-                w.stateFrames = 0;
-            }
+        if(b.defeated) {
+            world24ImposeGravity(b,15,2);b.y=b.verticalY.tofloat();
+            return true;
         }
-        if((b == null || b.hidden) && w.bridgeOffset >= 15) {
-            if(!w.clearStarted) {
-                w.clearStarted = true;
-                emitSound(g, "castle_clear");
-                parityRecordEvent(g, "music", "end_castle");
+        b.feetTimer-=1;
+        if(b.feetTimer==0) {
+            b.feetTimer=4;b.bodyControls=world24ToggleBit(b.bodyControls,1);
+            world24RemoveBridgeSection(g);
+            if(w.bridgeOffset==15) {
+                b.defeated=true;b.falling=true;
+                b.verticalY=b.y.tointeger();b.verticalSpeed=0;b.verticalForce=0;
+                emitSound(g,"bowser_fall");parityRecordEvent(g,"sound","bowser_fall");
             }
-            if(w.stateFrames >= 64) {
-                g.state = "world24VictoryWalk";
-                w.stateFrames = 0;
-            }
-        }
-        if(w.bridgeOffset == 15 && b != null && !b.defeated) {
-            // The final BridgeCollapseData entry changes Bowser to state $40
-            // and queues Sfx_BowserFall in the same frame.
-            b.defeated = true;
-            b.falling = true;
-            b.vy = 0.0;
-            b.ySpeed = 0.0;
-            emitSound(g, "bowser_fall");
-            parityRecordEvent(g, "sound", "bowser_fall");
         }
         return true;
     }
     if(g.state == "world24VictoryWalk") {
-        w.stateFrames += 1;
-        local b = w.bowser;
-        p.facing = 1;
-        autoControlPlayerEndLevel(g, FIXED_DT);
-        // VictoryMode scrolls to the retainer's page, then stops scrolling.
-        local maximum = floor(w.retainer.x / 256.0) * 256.0 + 1.0;
-        g.cameraX = clampValue(p.x - 120.0, 0.0, maximum);
-        g.displayCameraX = g.cameraX;
-        local stopX = w.retainer.x - 17.0;
-        if(p.x >= stopX && p.grounded) {
-            p.x = stopX; p.nesXSpeed = 0; p.vx = 0.0;
-            p.previousX = p.x; p.previousY = p.y;
-            w.rescued = true;
-            g.state = "world24Rescue";
-            w.stateFrames = 0;
-            parityRecordEvent(g, "gameplay", "mushroom_retainer_saved");
+        w.stateFrames+=1;
+        local walking=floor(p.x/256.0).tointeger()!=w.destinationPage || (p.x.tointeger()&255)<96;
+        local savedInput=g.input;
+        g.input=clone savedInput;
+        g.input.left=false;g.input.right=walking;g.input.run=false;g.input.runDown=false;
+        g.input.jumpDown=false;g.input.jumpQueued=false;g.input.fireQueued=false;
+        updatePlayer(g,FIXED_DT);g.input=savedInput;
+        world24CheckAxeContact(g);
+        local scrolling=floor(g.cameraX/256.0).tointeger()!=w.destinationPage;
+        g.displayCameraX=g.cameraX;g.previousScrollAmount=0;
+        if(scrolling) {
+            w.scrollFraction+=128;
+            local amount=1+(w.scrollFraction>>8);w.scrollFraction=w.scrollFraction&255;
+            g.cameraX+=amount;g.previousScrollAmount=amount;
+            updateVramAreaParserScheduler(g);
+        }
+        if(g.state=="world24VictoryWalk" && !walking && !scrolling) {
+            w.rescued=true;w.victoryTask=3;g.state="world24Rescue";w.stateFrames=0;
+            parityRecordEvent(g,"gameplay","mushroom_retainer_saved");
         }
         return true;
     }
@@ -660,26 +648,21 @@ function updateWorld24Transition(g) {
         // frame. Its carry advances PrimaryMsgCounter once per 64 frames. For
         // World 1-7, primary value four sets WorldEndTimer and advances to
         // PlayerEndWorld.
-        w.secondaryMsgCounter += 4;
-        if(w.secondaryMsgCounter > 0xFF) {
-            w.secondaryMsgCounter = w.secondaryMsgCounter & 0xFF;
-            w.primaryMsgCounter += 1;
-        }
-        if(w.primaryMsgCounter >= 4) {
-            w.primaryMsgCounter = 4;
-            // WorldEndTimer is in the interval-timer bank, which advances
-            // once per 21 rendered frames in the shared timer implementation.
-            w.worldEndFrames = 6 * 21;
-            g.state = "world24EndWorld";
-            w.stateFrames = 0;
+        // Primary=4 is dispatched on the following pass, with secondary zero.
+        if(w.secondaryMsgCounter==0 && w.primaryMsgCounter>=4) {
+            w.worldEndTimer=6;w.victoryTask=4;g.state="world24EndWorld";w.stateFrames=0;
+        } else {
+            w.secondaryMsgCounter+=4;
+            if(w.secondaryMsgCounter>255) {
+                w.secondaryMsgCounter=w.secondaryMsgCounter&255;w.primaryMsgCounter+=1;
+            }
         }
         return true;
     }
     if(g.state == "world24EndWorld") {
         w.stateFrames += 1;
         p.nesXSpeed = 0; p.vx = 0.0; p.grounded = true;
-        if(w.worldEndFrames > 0) w.worldEndFrames -= 1;
-        if(w.worldEndFrames <= 0) {
+        if(w.worldEndTimer == 0) {
             parityRecordEvent(g, "gameplay", "world24_complete");
             g.state="worldComplete";
             w.completeFrames=0; // 3-1 is unavailable; retain World 2-4 identity.
@@ -847,6 +830,7 @@ function runWorld24SelfTest() {
     }
     foreach(fireDefeat in [false,true]) {
         local clear=createGame();startWorld24(clear);
+        clear.cameraX=2027.0;clear.displayCameraX=2027.0;
         if(fireDefeat) for(local i=0;i<5;i+=1) world24HurtBowser(clear);
         clear.player.x=2256.0;clear.player.y=114.0;clear.player.nesYSpeed=1;
         updateWorld24Actors(clear);
@@ -854,7 +838,7 @@ function runWorld24SelfTest() {
         for(local f=0;f<2200 && clear.state!="worldComplete";f+=1)
             simulateFixed(clear,FIXED_DT);
         requireSelfTest(clear.world==2 && clear.level==4 && clear.state=="worldComplete" &&
-            clear.world24.bridgeOffset==15 && clear.world24.rescued &&
+            (fireDefeat?clear.world24.bridgeOffset==0:clear.world24.bridgeOffset==15) && clear.world24.rescued &&
             clear.world24.primaryMsgCounter==4 && clear.world24.bowser.hidden,
             "2-4 axe clear and prior fire defeat must finish in truthful bounded endpoint");
     }
@@ -924,4 +908,52 @@ function world24BowserHitsPlayer(g,b) {
         if(right>=x && left<=x+16.0 && bottom>=y+2.0 && top<=y+21.0) return true;
     }
     return false;
+}
+
+// Serializer contract: live runtime phase only, never route-frame lookup.
+function world24RomMode(g) {
+    if(g.state=="playing") return {oper_mode=1,oper_mode_task=3,game_engine_subroutine=g.player.dead?11:8};
+    if(["world24Axe","world24VictoryWalk","world24Rescue","world24EndWorld","worldComplete"].find(g.state)!=null)
+        return {oper_mode=2,oper_mode_task=g.world24.victoryTask,game_engine_subroutine=8};
+    return null; // Shared serializer retains its existing death/load branches.
+}
+
+function world24ImposeGravity(actor,amount,maxSpeed) {
+    local sum=actor.verticalDummy+actor.verticalForce;
+    actor.verticalDummy=sum&255;
+    actor.verticalY+=world13SignedByte(actor.verticalSpeed)+(sum>>8);
+    sum=actor.verticalForce+amount;
+    actor.verticalForce=sum&255;actor.verticalSpeed=(actor.verticalSpeed+(sum>>8))&255;
+    // CMP maximum / BMI; then CMP $80 / BCC before clamping.
+    if(((actor.verticalSpeed-maxSpeed)&128)==0 && actor.verticalForce>=128) {
+        actor.verticalSpeed=maxSpeed;actor.verticalForce=0;
+    }
+}
+
+function world24CheckAxeContact(g) {
+    local w=g.world24,p=g.player;
+    local row=floor((p.y+p.height)/16.0).tointeger()-2;
+    if(p.nesYSpeed<0 || row<0 || row>=13) return false;
+    local left=floor((p.x+3.0)/16.0).tointeger(),right=floor((p.x+12.0)/16.0).tointeger();
+    if(left<0 || right>=g.areaWidth) return false;
+    local leftKey=left*13+row,rightKey=right*13+row;
+    local a=leftKey in w.clearedFootCells?0:w.metatiles[left][row];
+    local b=rightKey in w.clearedFootCells?0:w.metatiles[right][row];
+    if((a!=0?a:b)!=0xC5) return false;
+    // PlayerBGCollision saves the left metatile but the right probe owns $06/$07.
+    // EraseCoinMetatile therefore clears the right cell, even on a left-foot axe.
+    w.clearedFootCells[rightKey] <- true;
+    g.vramBufferAddrCtrl=6;
+    g.state="world24Axe";w.victoryTask=0;w.stateFrames=0;
+    p.nesXSpeed=24;p.vx=p.nesXSpeed/16.0*NES_FRAME_RATE;
+    parityRecordEvent(g,"gameplay","axe_touched");
+    return true;
+}
+
+function parseWorld24AreaColumn(g,task) {
+    if(task==7) g.world24.parserColumn=floor(g.cameraX/32.0).tointeger()*2+22;
+    if(task!=7 && task!=3) return;
+    local column=g.world24.parserColumn+(task==3?1:0);
+    if(g.world24.scrollLockColumns.find(column)!=null)
+        g.world24.scrollLocked=!g.world24.scrollLocked;
 }
