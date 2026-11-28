@@ -62,9 +62,9 @@ def load_movie(path: Path) -> dict[str, Any]:
 def require_supported_stage(movie: dict[str, Any]) -> tuple[int, int]:
     world,stage=movie.get('world',1),movie.get('level',1)
     if type(world) is not int or type(stage) is not int or not (
-        world==1 and stage in (1,2,3,4) or world==2 and stage==1
+        world==1 and stage in (1,2,3,4) or world==2 and stage in (1,3,4)
     ):
-        raise ValueError(f'Unsupported replay stage {world}-{stage}; supported: World 1 and 2-1')
+        raise ValueError(f'Unsupported replay stage {world}-{stage}; supported: World 1 and 2-1/2-3/2-4')
     return world,stage
 
 

@@ -125,4 +125,6 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    from world23_capture_lock import capture_lock
+    with capture_lock('strict-six-gate-case'):
+        raise SystemExit(main())

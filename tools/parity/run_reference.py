@@ -216,6 +216,12 @@ def build_movie_origin_lua(movie: dict) -> str:
         return build_world22_origin_lua(movie.get("checkpoint_page", 0))
     require_supported_stage(movie)
     if movie.get("world", 1) == 2:
+        if movie['level'] == 3:
+            from world23_reference import build_world23_origin_lua
+            return build_world23_origin_lua(movie.get('checkpoint_page', 0))
+        if movie['level'] == 4:
+            from world24_reference import build_world24_origin_lua
+            return build_world24_origin_lua(movie.get('checkpoint_page', 0))
         return build_world21_origin_lua(movie.get("checkpoint_page", 0))
     return build_origin_lua(movie.get("level", 1))
 

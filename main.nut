@@ -88,6 +88,8 @@ eve_init = function() {
             if("PARITY_CHECKPOINT_PAGE" in getroottable() && PARITY_CHECKPOINT_PAGE>0)
                 initializeWorld21Checkpoint(game,PARITY_CHECKPOINT_PAGE,(game.nesFrameCounter+255)&255);
         }
+        if(stage==3 && !("PARITY_NORMAL_ENTRY" in getroottable() && PARITY_NORMAL_ENTRY))
+            initializeWorld23Parity(game);
     }
     if(config.previewScenario=="world23-route") startLevel(game,2,3);
     if(config.previewScenario=="world24-route") startLevel(game,2,4);
