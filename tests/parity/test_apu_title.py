@@ -26,6 +26,28 @@ class TitleSoundTest(unittest.TestCase):
         model.queue_event({"type": "music", "name": "water", "frame": 0}, None)
         self.assertEqual(model.r(0xFB), 0)
 
+    def test_castle_events_reach_their_original_sound_queues(self):
+        for kind, name, address, value in [('audio', 'bowser_flame', 0xFD, 2),
+                                         ('audio', 'bowser_fall', 0xFE, 0x80),
+                                         ('music', 'end_castle', 0xFC, 8)]:
+            model = self.model()
+            model.queue_event(dict(type=kind, name=name, frame=10), None)
+            self.assertEqual(model.r(address), value)
+
+    def test_flame_duration_and_final_preceding_envelope_byte(self):
+        model = self.model()
+        model.flame_envelopes = bytes(range(33))
+        model.s(0xFD, 2)
+        model.handle_noise_sfx()
+        self.assertEqual(model.writes, [(0x400C, 32), (0x400E, 15), (0x400F, 24)])
+        model.s(0xFD, 0)
+        for _ in range(62):
+            model.handle_noise_sfx()
+        model.writes = []
+        model.handle_noise_sfx()
+        self.assertEqual(model.writes, [(0x400C, 0), (0x400E, 15), (0x400F, 24), (0x400C, 240)])
+        self.assertEqual(model.r(0xF3), 0)
+
     def test_title_disables_channels_without_consuming_queues_or_advancing_music(self):
         model = self.model()
         before = bytes(model.ram)

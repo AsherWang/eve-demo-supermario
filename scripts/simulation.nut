@@ -2811,7 +2811,10 @@ function updateCourseClear(g, dt) {
                 // $0c. Its six interval-bank reloads land on frames 1702,
                 // 1723, 1744, 1765, 1786 and 1807; task 5 is visible on the
                 // following pass at 1808.
-                g.clearDelayFrames = g.level == 3 ? 118 : 6 * 21;
+                // The end-level timer is six ticks of the shared 21-frame bank.
+                // World 2-3 can reach the castle at any divider phase.
+                g.clearDelayFrames = isWorld23(g) ? 5*21+g.intervalTimerControl+1 :
+                    (g.level == 3 ? 118 : 6 * 21);
                 g.state = "postClearDelay";
             }
         }
@@ -2829,7 +2832,10 @@ function updateCourseClear(g, dt) {
             });
             g.fireworkSpawnFrames = 32;
         } else if (g.fireworksRemaining == 0 && g.fireworks.len() == 0) {
-            g.clearDelayFrames = g.level == 3 ? 118 : 6 * 21;
+            // The end-level timer is six ticks of the shared 21-frame bank.
+                // World 2-3 can reach the castle at any divider phase.
+                g.clearDelayFrames = isWorld23(g) ? 5*21+g.intervalTimerControl+1 :
+                    (g.level == 3 ? 118 : 6 * 21);
             g.state = "postClearDelay";
         }
     } else if (g.state == "postClearDelay") {
@@ -3059,7 +3065,7 @@ function updateDeathReload(g) {
     }
 }
 
-function beginNextWorld1StageLoad(g, dt) {
+function beginNextStageLoad(g, dt) {
     // PlayerEndLevel task 5 increments LevelNumber and returns after
     // ChgAreaMode. The current player, camera and frame counter remain
     // observable for this pass; the loader begins on the next frame.
@@ -3078,7 +3084,7 @@ function beginNextWorld1StageLoad(g, dt) {
     parityRecordEvent(g, "music", "silence");
 }
 
-function updateNextWorld1StageLoad(g) {
+function updateNextStageLoad(g) {
     g.vramBufferAddrCtrl = 0;
     if (g.stageLoadFrames == 0) {
         // ChgAreaMode has selected OperMode_Task 0 but the screen is still
@@ -3087,6 +3093,7 @@ function updateNextWorld1StageLoad(g) {
         g.cameraX = 0.0;
         g.displayCameraX = 0.0;
         g.previousScrollAmount = 0.0;
+        g.vramScrollThirtyTwo = 0;
         g.player.nesYDummy = 0;
         g.player.nesXForce = 0;
         g.player.nesXMoveForce = 0;
@@ -3101,7 +3108,7 @@ function updateNextWorld1StageLoad(g) {
         // InitializeArea replaces the player object with zeroed RAM before the
         // entrance routine places it on the new stage. Keep the level data
         // loaded now so the draw path remains valid during the loading screen.
-        startWorld1Stage(g, g.level);
+        startLevel(g, g.world, g.level);
         g.soundEvents.clear();
         g.state = "nextStageLoad";
         g.stageLoadFrames = 2;
@@ -3149,7 +3156,7 @@ function updateNextWorld1StageLoad(g) {
         local stage = g.level;
         g.player.big = g.loadingPlayerBig;
         g.player.fire = g.loadingPlayerFire;
-        startWorld1Stage(g, stage);
+        startLevel(g, g.world, stage);
         g.soundEvents.clear();
         g.nesFrameCounter = frameCounter;
         g.colorRotateOffset = 0;
@@ -3207,12 +3214,13 @@ function simulateFixed(g, dt) {
     g.simTime += dt;
     if(g.state=="titleLoad" || g.state=="titleScreen" || g.state=="newGameLoad") {updateTitleFlow(g);return;}
     if (g.state == "nextStageLoad") {
-        updateNextWorld1StageLoad(g);
+        updateNextStageLoad(g);
         return;
     }
     if (g.stageLoadFrames == 166) g.stageLoadFrames = 167;
     if (g.level <= 3 && g.state == "levelComplete") {
         if(g.world==2) {
+            if(g.level==3) {beginNextStageLoad(g,dt);return;}
             if(g.level<4) {startLevel(g,2,g.level+1);return;}
             if(g.input.resetQueued) resetRound(g);
             return; // Keep unimplemented next-world endpoints explicit.
@@ -3220,7 +3228,7 @@ function simulateFixed(g, dt) {
         // Preserve the established 1-1 parity endpoint; newer whole-route
         // movies include the next stage and therefore must cross this edge.
         if(!(g.level==1 && parityIsEnabled())) {
-            if (g.level == 3) beginNextWorld1StageLoad(g, dt);
+            if (g.level == 3) beginNextStageLoad(g, dt);
             else startWorld1Stage(g,g.level+1);
         }
         return;

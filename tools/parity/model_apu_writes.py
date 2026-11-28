@@ -80,6 +80,9 @@ class SmbApuModel:
         self.brick_envelopes = prg[
             self.envelope_offset + 80 : self.envelope_offset + 96
         ]
+        # ROM indexes BowserFlameEnvData-1 with length>>1, including zero
+        # on the final frame. Preserve the preceding water-envelope byte.
+        self.flame_envelopes = prg[self.envelope_offset + 47:self.envelope_offset + 80]
 
     def r(self, address: int) -> int:
         return self.ram[address]
@@ -358,6 +361,18 @@ class SmbApuModel:
             if length == 0:
                 self.write(NOISE, 0xF0)
                 self.s(0xF3, 0)
+        elif selected & 2:
+            if starting:
+                self.s(0x07BF, 0x40)
+            length = self.r(0x07BF)
+            self.write(NOISE, self.flame_envelopes[length >> 1])
+            self.write(NOISE + 2, 0x0F)
+            self.write(NOISE + 3, 0x18)
+            length = (length - 1) & 0xFF
+            self.s(0x07BF, length)
+            if length == 0:
+                self.write(NOISE, 0xF0)
+                self.s(0xF3, 0)
 
     def load_music_header(self, y: int) -> None:
         header = self.header_base + self.prg[self.header_base - 1 + y]
@@ -516,7 +531,8 @@ class SmbApuModel:
                 self.s(0x07B9, length)
                 sustained = (self.r(0x07B1) & 0x6E) or (self.r(0xF4) & 0x0A)
                 if sustained:
-                    self.write(TRI, 0xFF if length >= 0x12 else 0x1F)
+                    self.write(TRI, 0xFF if length >= 0x12 else
+                               (0x0F if self.r(0x07B1) & 0x08 else 0x1F))
             else:
                 self.write(TRI, 0)
 
@@ -598,7 +614,8 @@ class SmbApuModel:
                 "fireball": 0x20,
                 "flag": 0x40,
             }
-            sq2 = {"vine": 0x04, "coin": 0x01, "blast": 0x08, "timer_tick": 0x10, "oneup": 0x40}
+            sq2 = {"vine": 0x04, "coin": 0x01, "blast": 0x08, "timer_tick": 0x10,
+                   "oneup": 0x40, "bowser_fall": 0x80}
             if name == "jump":
                 big = bool(state and state.get("player", {}).get("big"))
                 self.s(0xFF, 0x01 if big else 0x80)
@@ -608,6 +625,8 @@ class SmbApuModel:
                 self.s(0xFE, sq2[name])
             elif name == "break":
                 self.s(0xFD, 0x01)
+            elif name == "bowser_flame":
+                self.s(0xFD, 0x02)
             elif name == "powerup":
                 self.s(0xFE, 0x02 if event.get("variant") == "reveal" else 0x20)
             elif name == "death":
@@ -626,6 +645,10 @@ class SmbApuModel:
             name = event.get("name")
             if name == "silence":
                 self.s(0xFC, 0x80)
+            elif name == "end_castle":
+                self.s(0xFC, 0x08)
+            elif name == "victory":
+                self.s(0xFC, 0x04)
             elif name == "water" and event.get("frame", 0) > 0:
                 self.s(0xFB, 0x02)
             elif name == "underground" and event.get("frame", 0) > 0:

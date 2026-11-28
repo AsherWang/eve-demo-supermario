@@ -37,7 +37,8 @@ function emitSound(g, name, variant = null) {
     if (name == "powerup" && variant == "reveal") clip = "powerup_reveal";
     g.soundEvents.append(clip);
     // Keep semantic replay events stable; the audio variant only selects PCM.
-    parityRecordEvent(g, "audio", name);
+    if(name == "castle_clear") parityRecordEvent(g, "music", "end_castle");
+    else parityRecordEvent(g, "audio", name == "bowser_fire" ? "bowser_flame" : name);
 }
 
 function playSound(name) {

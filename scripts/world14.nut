@@ -516,7 +516,6 @@ function updateWorld14Transition(g) {
                     // VictoryMode task 1 (SetupVictoryMode) is reached only
                     // after defeated Bowser falls below the $e0 threshold.
                     emitSound(g, "castle_clear");
-                    parityRecordEvent(g, "music", "end_castle");
                 }
                 g.state = "world14VictoryWalk";
                 w.stateFrames = 0;
@@ -526,7 +525,6 @@ function updateWorld14Transition(g) {
             if(!w.clearStarted) {
                 w.clearStarted = true;
                 emitSound(g, "castle_clear");
-                parityRecordEvent(g, "music", "end_castle");
             }
             if(w.stateFrames >= 64) {
                 g.state = "world14VictoryWalk";
