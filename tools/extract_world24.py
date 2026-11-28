@@ -89,8 +89,18 @@ def main() -> None:
                 castle_palettes[group],
             ).save(out / f"metatile-{code}.png")
 
+    # Palette rotation affects castle question blocks just like HUD coins.
+    rotation_at=find_once(prg,bytes.fromhex("272727170717"),"ColorRotatePalette")
+    for phase,color in enumerate(prg[rotation_at:rotation_at+6]):
+        palette=list(castle_palettes[3]);palette[1]=color
+        for code in (0xC0,0xC1):
+            offset=sum(METATILE_COUNTS[:3])*4+(code-0xC0)*4
+            compose_metatile(chr_data,metatile_bytes[offset:offset+4],palette).save(out/f"metatile-{code}-phase-{phase}.png")
+
     tile_image(chr_data, 0x5b, castle_palettes[6], 0, True).save(out / "platform.png")
     compose_sprite(chr_data, bytes.fromhex("fcfcd0d0d7d7"), castle_palettes[6], 3, mirror_right=True).crop((0,8,16,24)).save(out / "podoboo.png")
+
+    Image.open(out/"podoboo.png").transpose(Image.Transpose.FLIP_TOP_BOTTOM).save(out/"podoboo-down.png")
 
     # EnemyGraphicsTable stores two 8px columns per row of a 16x24 sprite.
     enemy_gfx = prg[enemy_gfx_at : enemy_gfx_at + 48 * 6]
@@ -124,12 +134,15 @@ def main() -> None:
         tile_image(chr_data, tile, firebar_palette, 0, True).save(
             out / f"firebar-{frame}.png"
         )
+    for frame in range(2):
+        Image.open(out/f"firebar-{frame}.png").transpose(Image.Transpose.ROTATE_180).save(out/f"firebar-{frame}-flipped.png")
     flame = Image.new("RGBA", (24, 8), (0, 0, 0, 0))
     for index, tile in enumerate((0x51, 0x52, 0x53)):
         flame.alpha_composite(
-            tile_image(chr_data, tile, bowser_palette, 0, True), (index * 8, 0)
+            tile_image(chr_data, tile, castle_palettes[6], 0, True), (index * 8, 0)
         )
     flame.save(out / "bowser-flame.png")
+    flame.transpose(Image.Transpose.FLIP_TOP_BOTTOM).save(out/"bowser-flame-flipped.png")
 
     metadata["generated_textures"] = {
         "metatiles": "assets/world24/metatile-*.png",

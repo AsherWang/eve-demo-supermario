@@ -40,7 +40,17 @@ function loadWorld24Assets() {
         foreach(meta in column)
             if(meta != 0 && !(meta in metatiles))
                 metatiles[meta] <- loadTexture("assets/world24/metatile-" + meta + ".png");
+    local questions={};
+    foreach(code in [0xC0,0xC1]) {
+        local phases=[];
+        for(local phase=0;phase<6;phase+=1)
+            phases.append(loadTexture("assets/world24/metatile-"+code+"-phase-"+phase+".png"));
+        questions[code] <- phases;
+    }
     world24Assets = {
+        questions=questions,
+        podobooDown=loadTexture("assets/world24/podoboo-down.png"),
+        firebarFlipped=[loadTexture("assets/world24/firebar-0-flipped.png"),loadTexture("assets/world24/firebar-1-flipped.png")],
         hudCoins = [loadTexture("assets/world24/hud-coin-0.png"),
             loadTexture("assets/world24/hud-coin-1.png"),
             loadTexture("assets/world24/hud-coin-2.png"),
@@ -62,6 +72,7 @@ function loadWorld24Assets() {
         firebar = [loadTexture("assets/world24/firebar-0.png"),
                    loadTexture("assets/world24/firebar-1.png")],
         bowserFlame = loadTexture("assets/world24/bowser-flame.png"),
+        bowserFlameFlipped=loadTexture("assets/world24/bowser-flame-flipped.png"),
         audio = world24AudioAssets,
         manifest = "assets/world24/manifest.json"
     };
@@ -118,7 +129,7 @@ function world24ParseCastleObjects(g) {
                 unit = unit, row = row, id = id,
                 x = unit * 16.0 + 4.0, y = row * 16.0 + 4.0,
                 length = longBar ? 12 : 6,
-                spinLow = 0, spinHigh = 0,
+                spinLow = 0, spinHigh = 0, drawSpinHigh=0,
                 awake = false, retired = false, slot = -1,
                 spinSpeed = WORLD24_FIREBAR_SPEED[id - 0x1B],
                 spinDirection = WORLD24_FIREBAR_DIRECTION[id - 0x1B]
@@ -128,6 +139,7 @@ function world24ParseCastleObjects(g) {
                 x = unit * 16.0, y = row * 16.0, width = 32.0, height = 32.0,
                 originX = unit * 16.0, direction = -1, hp = 5, defeated = false,
                 awake=false,slot=-1,rearSlot=-1,fireDefeated=false,
+                drawX=unit*16.0,drawY=row*16.0,drawMovingDir=2,drawControls=0,
                 falling = false, hidden = false, vy = 0.0, ySpeed = 0.0,
                 fireTimer = 0xDF, feetTimer = 32, feetFrame = 0,
                 bodyControls = 0, movementSpeed = 2, movingDir = 2,
@@ -139,11 +151,11 @@ function world24ParseCastleObjects(g) {
         } else if(id == 0x0C) {
             // E_CastleArea3 has two normal-mode Podoboos; preserve both.
             podoboos.append({x = unit * 16.0, y = 258.0, awake=false, retired=false,slot=-1,
-                timer=1, verticalY=258, verticalSpeed=0,verticalForce=0,verticalDummy=0,
+                timer=1, previousY=258.0, previousSpeed=0,drawY=258.0,drawSpeed=0, verticalY=258, verticalSpeed=0,verticalForce=0,verticalDummy=0,
                 width=16.0,height=16.0});
         } else if(id == 0x2B || id == 0x2C || id == 0x28) {
             g.platforms.append({id=id, spawnX=unit*16.0, x=unit*16.0+(id==0x28?0.0:12.0), y=row*16.0,
-                previousX=unit*16.0, previousY=row*16.0,
+                previousX=unit*16.0, previousY=row*16.0,drawY=row*16.0,
                 width=id==0x28?32.0:24.0, awake=false, retired=false,slot=-1,
                 fraction=0.0, secondaryCounter=0, primaryCounter=0,
                 speed=id==0x2B?-240.0/256.0:240.0/256.0});
@@ -198,7 +210,10 @@ function startWorld24(g) {
     world24ParseCastleObjects(g);
     foreach(pod in g.world24.podoboos) if(pod.x<=303.0) {
         for(local slot=0;slot<5;slot+=1) if(g.world24.firebarSlots[slot]==null) {
-            pod.slot=slot;pod.awake=true;g.world24.firebarSlots[slot]=pod;break;
+            pod.slot=slot;pod.awake=true;g.world24.firebarSlots[slot]=pod;
+            // Two pre-control Podoboo gravity passes retain the dummy/force bytes.
+            world24ImposeGravity(pod,28,3);world24ImposeGravity(pod,28,3);
+            pod.y=pod.verticalY.tofloat();break;
         }
     }
     // InitializeArea entry control $02 places small Mario's body at Y $60
@@ -233,6 +248,7 @@ function world24TileTexture(g, tx, ty, tile) {
         return null;
     }
     if((meta == 0xC1 || meta==0xC0) && tile == TILE_USED) return world24Assets.metatiles[0xC4];
+    if(meta in world24Assets.questions) return world24Assets.questions[meta][g.displayColorPhase];
     return meta in world24Assets.metatiles ? world24Assets.metatiles[meta] : null;
 }
 
@@ -312,6 +328,7 @@ function world24SpawnBowserFlame(g, ambient=false) {
     local lane=w.random[slot]&3,target=WORLD24_FLAME_Y[lane].tofloat();
     local shot={x=ambient?g.cameraX+287.0:b.x-14.0,y=ambient?target:b.y+8.0,
         width=24.0,height=8.0,vx=-1.25,vy=0.0,targetY=target,active=true,slot=slot,fresh=true};
+    shot.drawX <- shot.x;shot.drawY <- shot.y;
     w.projectiles.append(shot);w.firebarSlots[slot]=shot;
     emitSound(g,"bowser_fire");return true;
 }
@@ -331,6 +348,7 @@ function updateWorld24Actors(g) {
     if(!("world24" in g) || g.state != "playing" || g.player.dead) return;
     local w = g.world24, p = g.player;
     local frame = g.nesFrameCounter;
+    world24PrepareActorGraphics(g);
     // Same seven-byte LFSR as the ROM. Exact bootstrap/slot phase remains a parity gate.
     local feedback=((w.random[0]&2)^(w.random[1]&2))!=0?128:0;
     for(local i=0;i<7;i+=1) {
@@ -358,6 +376,7 @@ function updateWorld24Actors(g) {
             w.firebarSlots[bar.slot]=null;bar.retired=true;continue;
         }
         if(!bar.awake) {
+            if((g.vramAreaParserTask&7)==7) continue;
             if(bar.x-4.0>parserBoundary) continue;
             local slot=-1;
             for(local index=0;index<5;index+=1)
@@ -370,7 +389,7 @@ function updateWorld24Actors(g) {
             w.firebarSlots[slot]=bar;
             continue;
         }
-        if(bar.x<actorCamera || bar.x>actorCamera+255.0) continue;
+        if(bar.x<=actorCamera || bar.x>actorCamera+255.0) continue;
         world24TickFirebar(bar);
         w.firebarSlotHigh[bar.slot]=bar.spinHigh;
         for(local index = 0; index < bar.length; index += 1) {
@@ -406,7 +425,7 @@ function updateWorld24Actors(g) {
             if(b.y>=240.0) {b.hidden=true;b.falling=false;}
         }
         local justSpawned=false;
-        if(!b.awake && b.originX<=parserBoundary) {
+        if(!b.awake && b.originX<=parserBoundary && (g.vramAreaParserTask&7)!=7) {
             local free=[];
             for(local i=0;i<5;i+=1) if(w.firebarSlots[i]==null) free.append(i);
             if(free.len()>=2) {
@@ -506,11 +525,13 @@ function updateWorld24Actors(g) {
             continue;
         }
         if(!pod.awake) {
+            if((g.vramAreaParserTask&7)==7) continue;
             for(local slot=0;slot<5;slot+=1) if(w.firebarSlots[slot]==null) {
                 pod.slot=slot;pod.awake=true;w.firebarSlots[slot]=pod;break;
             }
             continue;
         }
+        pod.previousY=pod.y;pod.previousSpeed=pod.verticalSpeed;
         if(intervalTick && pod.timer>0) pod.timer-=1;
         if(pod.timer==0) {
             local random=w.random[(pod.slot+1)%7];
@@ -568,6 +589,7 @@ function updateWorld24Transition(g) {
     local w = g.world24, p = g.player;
     local ending=["world24Axe","world24VictoryWalk","world24Rescue","world24EndWorld","worldComplete"].find(g.state)!=null;
     if(ending) {
+        world24PrepareActorGraphics(g);
         // Shared gameplay's NMI bookkeeping is below the castle early return.
         // Consume the previous pass's selected VRAM packet before this task.
         if(g.colorPhasePending && g.vramBufferAddrCtrl!=6) {
@@ -593,7 +615,7 @@ function updateWorld24Transition(g) {
         if(b==null || b.hidden || b.fireDefeated || (b.defeated && !b.falling) || (b.defeated && b.y>=224.0)) {
             if(b!=null) {b.hidden=true;b.falling=false;}
             w.victoryTask=1;
-            emitSound(g,"silence_music");parityRecordEvent(g,"music","silence");
+            g.soundEvents.append("silence_music");parityRecordEvent(g,"music","silence");
             w.firebarSlots=array(5,null);w.projectiles=[];
             foreach(bar in w.firebars) bar.retired=true;
             foreach(pod in w.podoboos) {pod.retired=true;pod.awake=false;}
@@ -704,31 +726,34 @@ function drawWorld24Actors(g, behind) {
     // behind metatiles clips the last sprite scanline into the floor.
     if(w.retainer != null)
         worldTexture(g, world24Assets.retainer, w.retainer.x, w.retainer.y + 1.0, 16.0, 24.0);
-    local fireTexture = world24Assets.firebar[(frame >> 2) & 1];
-    foreach(bar in w.firebars) {
+    local fireFrame=(g.nesFrameCounter+254)&255;
+    local fireTexture = (fireFrame&8)!=0?world24Assets.firebarFlipped[(fireFrame>>2)&1]:world24Assets.firebar[(fireFrame>>2)&1];
+    if(g.state=="playing") foreach(bar in w.firebars) {
         if(!bar.awake || bar.retired) continue;
+        local drawBar=clone bar;drawBar.spinHigh=bar.drawSpinHigh;
         for(local index = 0; index < bar.length; index += 1) {
-            local point = world24FirebarPoint(bar, index);
-            worldTexture(g, fireTexture, point.x, point.y, 8.0, 8.0);
+            local point = world24FirebarPoint(drawBar, index);
+            worldTexture(g, fireTexture, point.x, point.y+1.0, 8.0, 8.0);
         }
     }
     local b = w.bowser;
     if(b != null && !b.hidden) {
-        local right=b.movingDir==1;
-        local pose=((b.bodyControls & 0x80)!=0?2:0)+(b.bodyControls & 1);
+        local right=b.drawMovingDir==1;
+        local pose=((b.drawControls & 0x80)!=0?2:0)+(b.drawControls & 1);
         // b.x is the front object. The rear is +16 when facing left,
         // -16 when facing right, and always eight pixels below the front.
         local texture=right?world24Assets.bowserRight[pose]:world24Assets.bowserLeft[pose];
-        worldTexture(g,texture,b.x-(right?16.0:0.0),b.y,32.0,32.0);
+        worldTexture(g,texture,b.drawX-(right?16.0:0.0),b.drawY+1.0,32.0,32.0);
     }
-    foreach(shot in w.projectiles)
-        worldTexture(g, world24Assets.bowserFlame, shot.x, shot.y, 24.0, 8.0);
-    foreach(pod in w.podoboos) if(pod.awake && pod.y<240.0)
-        worldTexture(g, world24Assets.podoboo, pod.x, pod.y, 16.0, 16.0);
-    foreach(platform in g.platforms) {
+    if(g.state=="playing") foreach(shot in w.projectiles)
+        worldTexture(g,(fireFrame&2)!=0?world24Assets.bowserFlameFlipped:world24Assets.bowserFlame,shot.drawX,shot.drawY+1.0,24.0,8.0);
+    if(g.state=="playing") foreach(pod in w.podoboos) if(pod.awake && !pod.retired && pod.drawY<240.0)
+        worldTexture(g,pod.drawSpeed<128?world24Assets.podobooDown:world24Assets.podoboo,
+            pod.x,pod.drawY+9.0,16.0,16.0);
+    if(g.state=="playing") foreach(platform in g.platforms) {
         if(!platform.awake || platform.retired) continue;
         local ys=platform.id==0x28?[platform.previousY]:
-            [platform.previousY,(platform.previousY+128.0)%256.0];
+            [platform.drawY,(platform.drawY+128.0)%256.0];
         foreach(y in ys) if(y>=32.0) for(local x=0.0;x<platform.width;x+=8.0)
             worldTexture(g,world24Assets.platform,platform.previousX+x,y+1.0,8.0,8.0);
     }
@@ -770,6 +795,7 @@ function updateWorld24Platforms(g) {
             continue;
         }
         if(!platform.awake) {
+            if((g.vramAreaParserTask&7)==7) continue;
             local projected=g.cameraX+(g.player.nesXScroll>0?g.player.nesXScroll:0);
             if(platform.spawnX>floor((projected+303.0)/16.0)*16.0) continue;
             for(local slot=0;slot<5;slot+=1) if(g.world24.firebarSlots[slot]==null) {
@@ -963,4 +989,15 @@ function parseWorld24AreaColumn(g,task) {
     if(column==g.world24.axeX/16.0) g.vramBufferAddrCtrl=8;
     if(g.world24.scrollLockColumns.find(column)!=null)
         g.world24.scrollLocked=!g.world24.scrollLocked;
+}
+
+function world24PrepareActorGraphics(g) {
+    local w=g.world24,b=w.bowser;
+    // The PPU consumes the preceding OAM page. Normal enemies prepare graphics
+    // before movement; firebars/flames/Bowser prepare after movement.
+    foreach(bar in w.firebars) bar.drawSpinHigh=bar.spinHigh;
+    if(b!=null) {b.drawX=b.x;b.drawY=b.y;b.drawMovingDir=b.movingDir;b.drawControls=b.bodyControls;}
+    foreach(pod in w.podoboos) {pod.drawY=pod.previousY;pod.drawSpeed=pod.previousSpeed;}
+    foreach(shot in w.projectiles) {shot.drawX=shot.x;shot.drawY=shot.y;}
+    foreach(platform in g.platforms) platform.drawY=platform.previousY;
 }
