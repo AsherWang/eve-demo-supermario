@@ -120,6 +120,15 @@ def main() -> None:
     for frame, index in enumerate((12,13)):
         image = compose_sprite(chr_data, prg[enemy_graphics+index*6:enemy_graphics+(index+1)*6], sprite_palettes[2], 3)
         compose_sprite(chr_data, prg[enemy_graphics+index*6:enemy_graphics+(index+1)*6], sprite_palettes[1], 3).transpose(Image.Transpose.FLIP_LEFT_RIGHT).save(out / f"green-fish-{frame}.png")
+        # EnemyGfxHandler flips each tile vertically and swaps rows 1/2
+        # for Cheeps; the blank first row stays at its original Y.
+        for name, facing in ((f"fish-{frame}-right", image),
+                             (f"fish-{frame}-left", image.transpose(Image.Transpose.FLIP_LEFT_RIGHT)),
+                             (f"green-fish-{frame}", compose_sprite(chr_data, prg[enemy_graphics+index*6:enemy_graphics+(index+1)*6], sprite_palettes[1], 3).transpose(Image.Transpose.FLIP_LEFT_RIGHT))):
+            dead = Image.new("RGBA", (16, 24))
+            dead.paste(facing.crop((0, 0, 16, 8)).transpose(Image.Transpose.FLIP_TOP_BOTTOM), (0, 0))
+            dead.paste(facing.crop((0, 8, 16, 24)).transpose(Image.Transpose.FLIP_TOP_BOTTOM), (0, 8))
+            dead.save(out / (name + "-dead.png"))
         image.save(out / f"fish-{frame}-right.png")
         image.transpose(Image.Transpose.FLIP_LEFT_RIGHT).save(out / f"fish-{frame}-left.png")
 

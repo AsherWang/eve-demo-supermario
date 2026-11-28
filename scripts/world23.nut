@@ -23,7 +23,7 @@ function world23LevelDescriptor() {
 function loadWorld23Assets() {
     if(assets==null) loadAssets();
     if("world23" in assets) return;
-    local tiles={},coins=[],questions=[],left=[],right=[],green=[];
+    local tiles={},coins=[],questions=[],left=[],right=[],green=[],deadLeft=[],deadRight=[],deadGreen=[];
     foreach(column in ROM_WORLD_2_3_METATILES) foreach(meta in column)
         if(meta!=0 && !(meta in tiles)) tiles[meta]<-loadTexture("assets/world23/metatile-"+meta+".png");
     for(local i=0;i<6;i+=1) {
@@ -34,8 +34,11 @@ function loadWorld23Assets() {
         left.append(loadTexture("assets/world23/fish-"+i+"-left.png"));
         right.append(loadTexture("assets/world23/fish-"+i+"-right.png"));
         green.append(loadTexture("assets/world23/green-fish-"+i+".png"));
+        deadLeft.append(loadTexture("assets/world23/fish-"+i+"-left-dead.png"));
+        deadRight.append(loadTexture("assets/world23/fish-"+i+"-right-dead.png"));
+        deadGreen.append(loadTexture("assets/world23/green-fish-"+i+"-dead.png"));
     }
-    assets.world23 <- {metatiles=tiles,coins=coins,questions=questions,left=left,right=right,green=green};
+    assets.world23 <- {metatiles=tiles,coins=coins,questions=questions,left=left,right=right,green=green,deadLeft=deadLeft,deadRight=deadRight,deadGreen=deadGreen};
 }
 
 function world23FrenzyCommands() {
@@ -120,7 +123,7 @@ function spawnWorld23Fish(g,slot) {
     local offset=[128,48,64,128,48,80,80,112,32,64,128,160,112,64,144,104][offsetIndex];
     local x=floor(p.x).tointeger()+((offsetIndex&2)?offset:-offset);
     s.enemies[slot]={kind="flying_cheep",id=20,slot=slot,x=x,y=248,previousX=x,previousY=248,
-        displayX=x,displayY=248,preparedX=x,preparedY=248,displayFrame=0,preparedFrame=0,
+        displayX=x,displayY=248,preparedX=x,preparedY=248,displayFrame=0,preparedFrame=0,displayDead=false,preparedDead=false,
         speed=speed,direction=direction,nesYSpeed=-5,nesYMoveForce=0,nesYDummy=s.yDummies[slot],
         dead=false,alive=true,age=0};
     s.spawned+=1;
@@ -147,7 +150,7 @@ function consumeWorld23EnemyCommand(g,slot,camera) {
         // at row $f, mostly below the viewport, and still occupies a slot.
         local y=(a&15)*16+8;
         s.enemies[slot]={kind="cheep",id=10,slot=slot,x=x,y=y,previousX=x,previousY=y,
-            displayX=x,displayY=y,preparedX=x,preparedY=y,displayFrame=0,preparedFrame=0,
+            displayX=x,displayY=y,preparedX=x,preparedY=y,displayFrame=0,preparedFrame=0,displayDead=false,preparedDead=false,
             speed=s.random[slot]&16,direction=2,nesYSpeed=0,nesYMoveForce=y,
             nesYDummy=s.yDummies[slot],dead=false,alive=true,age=0};
         return true;
@@ -212,9 +215,10 @@ function updateWorld23Actors(g) {
             if(!e.dead && e.id==20) s.fractions[slot]=(s.fractions[slot]+(e.speed<<4))&255;
             e.alive=false;s.enemies[slot]=null;continue;
         }
-        e.displayX=e.preparedX;e.displayY=e.preparedY;e.displayFrame=e.preparedFrame;
+        e.displayX=e.preparedX;e.displayY=e.preparedY;e.displayFrame=e.preparedFrame;e.displayDead=e.preparedDead;
         e.previousX=e.x;e.previousY=e.y;e.preparedX=e.x;e.preparedY=e.y;
-        e.preparedFrame=(g.nesFrameCounter&8)!=0?0:1;
+        e.preparedDead=e.dead;
+        e.preparedFrame=e.dead || (g.nesFrameCounter&8)!=0?0:1;
         if(!e.dead) {
             foreach(fireball in g.fireballs)
                 if(fireball.active && !fireball.exploding && overlaps(fireball.x,fireball.y,8,8,e.x+3,e.y+14,11,7)) {
@@ -257,8 +261,10 @@ function updateWorld23Actors(g) {
 
 function drawWorld23Actors(g) {
     foreach(e in g.world23.enemies) if(e!=null) {
-        local texture=e.id==10?assets.world23.green[e.displayFrame]:
-            (e.direction==1?assets.world23.right[e.displayFrame]:assets.world23.left[e.displayFrame]);
+        local bank=e.id==10?(e.displayDead?assets.world23.deadGreen:assets.world23.green):
+            (e.direction==1?(e.displayDead?assets.world23.deadRight:assets.world23.right):
+                (e.displayDead?assets.world23.deadLeft:assets.world23.left));
+        local texture=bank[e.displayFrame];
         worldTexture(g,texture,e.displayX,e.displayY+1,16,24);
     }
 }

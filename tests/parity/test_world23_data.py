@@ -37,6 +37,15 @@ class World23DataTests(unittest.TestCase):
                     self.assertTrue((ROOT/f'assets/world23/metatile-{meta}.png').is_file())
                 self.assertIn(0x24,columns[225])
 
+    def test_defeated_fish_tile_rows(self):
+        from PIL import Image
+        for name in ['fish-0-left','fish-0-right','green-fish-0']:
+            live=Image.open(ROOT/'assets/world23'/f'{name}.png').convert('RGBA')
+            dead=Image.open(ROOT/'assets/world23'/f'{name}-dead.png').convert('RGBA')
+            self.assertEqual(dead.crop((0,0,16,8)).getbbox(), None)
+            self.assertEqual(dead.crop((0,8,16,24)).tobytes(),
+                             live.crop((0,8,16,24)).transpose(Image.Transpose.FLIP_TOP_BOTTOM).tobytes())
+
     def test_origin_identity(self):
         source=build_world23_origin_lua()
         for text in ['0x075f,1,ram','0x075c,2,ram','0x0760,3,ram','0x0750,0x27,ram',

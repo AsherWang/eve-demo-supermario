@@ -81,3 +81,16 @@ The reference tool locks `<git-common-dir>/../local-parity/gpu-capture.lock`;
 The CPU adapter supplies dispatch hooks for the pre-integration base and never
 patches player, actor or terrain state during the route. Parent owns production
 shared integration and the independent gameplay runner.
+
+## Follow-up after shared pipeline integration
+
+CPU replay on integrated main still agrees through frame 2101; frame 2102
+incorrectly loads 2-4 immediately. ROM final physics remains in 2-3 on 2102,
+selects 2-4 on 2103, clears scroll/fractions on 2104, initializes on 2105.
+The parent owns staged shared transition and serializer corrections.
+
+Defeated fish now select ROM base animation and vertical flip: the blank top
+row stays in place while the bottom two tile rows swap and flip. Generated
+assets retain both original palettes and horizontal directions. Presentation
+uses the same prepared/display delay as live fish; motion remains unchanged.
+This source-derived correction is not yet an all-frame visual acceptance claim.
