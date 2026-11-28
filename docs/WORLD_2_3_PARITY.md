@@ -115,3 +115,17 @@ CPU diagnostics with temporary shared hooks match first death exit at 1007,
 life loss 1008, initialization 1010, entrance 1177, control 1178. Second-life
 contact still diverges at 1659; shared power-up differences begin at 742 and
 an extra coin appears during death at 837. These are unresolved, not passes.
+
+After merging shared loader commit f0a7554, the original 2132-frame comparison
+passes the entire semantic-state gate (`local-parity/world23-loaded-origin/comparison`).
+The fish gate remains exact for 10660 slot snapshots. The original normal movie
+ends inside authentic loading; additional movie `world-2-3-normal-load-clear.json`
+keeps all 2243 original frames/inputs and appends 180 neutral frames. It reaches
+playable 2-4 at runner frame 2373, lives 3, and ends playing at frame 2423.
+Its canonical SHA is c0b5de363b348cca703640c273ae4b9f32c111d10b00a11532091f8170010831.
+This is a gameplay extension, not a claim of strict acceptance.
+
+Further death diagnosis: all fish registers match after reload through frame
+1658. Divergence at 1659 is shared pit handling: ROM Y-high=2 continues falling,
+while the host starts a death hop and zeroes X speed. No stage actor correction
+is justified by that difference.
