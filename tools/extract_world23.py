@@ -132,6 +132,17 @@ def main() -> None:
         image.save(out / f"fish-{frame}-right.png")
         image.transpose(Image.Transpose.FLIP_LEFT_RIGHT).save(out / f"fish-{frame}-left.png")
 
+    # Native cell textures let the shared OAM drawer hide entire offscreen
+    # columns, as GetXOffscreenBits does, rather than crop a 16px quad.
+    cells_dir = out / "fish-cells"
+    cells_dir.mkdir(exist_ok=True)
+    for path in sorted(out.glob("*fish-*.png")):
+        sprite = Image.open(path).convert("RGBA")
+        for row in range(3):
+            for column in range(2):
+                sprite.crop((column*8,row*8,column*8+8,row*8+8)).save(
+                    cells_dir / f"{path.stem}-{row*2+column}.png")
+
     metadata["graphics"] = {
         "palette_cpu_address": hex(0x8000 + palette_offset),
         "metatile_cpu_address": hex(0x8000 + graphics_offset),

@@ -94,3 +94,24 @@ row stays in place while the bottom two tile rows swap and flip. Generated
 assets retain both original palettes and horizontal directions. Presentation
 uses the same prepared/display delay as live fish; motion remains unchanged.
 This source-derived correction is not yet an all-frame visual acceptance claim.
+
+The 2132-frame parent baseline (`world-2-3-strict-full`, movie SHA
+`7bbf4305b111c50c4f6c68f83ab90972aa6f73ad035b01de2e2c1a2aea347635`)
+has 267 image mismatches: 238 before frame 2102 and 29 during loading.
+Fish now register six native OAM cells and use whole-cell edge clipping plus
+shuffled OAM offsets. Parent must enable the shared collect/mask render path
+for World 2-3. Two local capture attempts failed before replay with Vulkan
+`vkEnumerateInstanceExtensionProperties returned VK_INCOMPLETE(5)`; neither
+is visual validation evidence.
+
+The raw origin interval divider is 1 (both captured traces), corrected from 0.
+Death reload now clears scroll/fractions on pass 2, initializes area on pass 3,
+keeps RNG across area reset, advances it through loading, and uses the live
+21-frame divider for the seven-tick lives screen. Shared requirements:
+- Include World 2-3 in the sprite-Y>=768 death-exit condition.
+- Freeze both timer banks during death and reload passes 0/2, as for World 2-1.
+- Serialize death-load mode boundary using world23.lifeScreenEnd+16.
+CPU diagnostics with temporary shared hooks match first death exit at 1007,
+life loss 1008, initialization 1010, entrance 1177, control 1178. Second-life
+contact still diverges at 1659; shared power-up differences begin at 742 and
+an extra coin appears during death at 837. These are unresolved, not passes.

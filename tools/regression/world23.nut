@@ -32,7 +32,7 @@ requireSelfTest(commands.len()==3 && commands[0].column==26 && commands[0].enabl
 foreach(camera in [0,1791,1792,3200]) {
     local t=createGame();startWorld23(t);t.cameraX=camera;t.score=12300;t.coins=17;
     t.player.big=true;t.player.fire=true;finishPlayerDeath(t);
-    for(local f=0;f<166;f+=1) updateWorld23DeathReload(t);
+    for(local f=0;f<200 && t.state!="playing";f+=1) updateWorld23DeathReload(t);
     local page=camera>=1792?7:0;
     requireSelfTest(isWorld23(t) && t.player.x==page*256+40 && t.cameraX==page*256 &&
         t.lives==2 && t.score==12300 && t.coins==17 && !t.player.big && !t.player.fire,

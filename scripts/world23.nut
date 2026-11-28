@@ -7,7 +7,7 @@ function isWorld23(g) {return g.world==2 && g.level==3;}
 function initializeWorld23Parity(g) {
     // Offline first-control fixture only. Never call during a gameplay route.
     // Verified continuous-boot origin: frame 67, RAM FrameCounter=$1a.
-    g.nesFrameCounter=0x1a;g.intervalTimerControl=0;g.gameTimerControl=23;
+    g.nesFrameCounter=0x1a;g.intervalTimerControl=1;g.gameTimerControl=23;
     g.player.movingDir=0;
     g.world23.random=[200,173,60,102,30,210,239];
 }
@@ -18,6 +18,14 @@ function world23LevelDescriptor() {
         enemies=ROM_WORLD_2_3_ENEMIES,entry={x=40,y=176},
         goal={flagColumn=225,castleColumn=229},checkpoint={page=7,cameraThreshold=1792},
         time=300,music="overworld",branches=[]};
+}
+
+function loadWorld23FishTexture(name) {
+    local texture=loadTexture("assets/world23/"+name+".png"),cells=[];
+    for(local i=0;i<6;i+=1)
+        cells.append(loadTexture("assets/world23/fish-cells/"+name+"-"+i+".png"));
+    oamTextureCells[texture] <- {columns=2,rows=3,cells=cells};
+    return texture;
 }
 
 function loadWorld23Assets() {
@@ -31,12 +39,12 @@ function loadWorld23Assets() {
         questions.append(loadTexture("assets/world23/question-"+i+".png"));
     }
     for(local i=0;i<2;i+=1) {
-        left.append(loadTexture("assets/world23/fish-"+i+"-left.png"));
-        right.append(loadTexture("assets/world23/fish-"+i+"-right.png"));
-        green.append(loadTexture("assets/world23/green-fish-"+i+".png"));
-        deadLeft.append(loadTexture("assets/world23/fish-"+i+"-left-dead.png"));
-        deadRight.append(loadTexture("assets/world23/fish-"+i+"-right-dead.png"));
-        deadGreen.append(loadTexture("assets/world23/green-fish-"+i+"-dead.png"));
+        left.append(loadWorld23FishTexture("fish-"+i+"-left"));
+        right.append(loadWorld23FishTexture("fish-"+i+"-right"));
+        green.append(loadWorld23FishTexture("green-fish-"+i));
+        deadLeft.append(loadWorld23FishTexture("fish-"+i+"-left-dead"));
+        deadRight.append(loadWorld23FishTexture("fish-"+i+"-right-dead"));
+        deadGreen.append(loadWorld23FishTexture("green-fish-"+i+"-dead"));
     }
     assets.world23 <- {metatiles=tiles,coins=coins,questions=questions,left=left,right=right,green=green,deadLeft=deadLeft,deadRight=deadRight,deadGreen=deadGreen};
 }
@@ -62,6 +70,7 @@ function startWorld23(g,page=0) {
     g.romBackgroundCollision=true;g.cameraX=page*256.0;g.displayCameraX=g.cameraX;
     local state={descriptor=d,baseTiles=[],enemies=array(5,null),random=[165,0,0,0,0,0,0],
         fractions=array(5,0),yDummies=array(5,0),timer=0,frenzy=false,commands=world23FrenzyCommands(),commandCursor=0,
+        oamPhase=0,preparedOamPhase=0,displayOamPhase=0,
         spawned=0,defeated=0,enemyCursor=0,enemyPage=0,enemyPageSelected=false};
     if("world23" in g) g.world23=state;else g.world23<-state;
     for(local x=0;x<g.areaWidth;x+=1) for(local row=0;row<13;row+=1) {
@@ -189,6 +198,8 @@ function updateWorld23Actors(g) {
     if(!isWorld23(g)) return;
     local s=g.world23,p=g.player;
     world23AdvanceRandom(s.random);
+    s.displayOamPhase=s.preparedOamPhase;
+    s.oamPhase=(s.oamPhase+1)%3;s.preparedOamPhase=s.oamPhase;
     if(p.dead || p.transformFrames>0) return;
     if(s.timer>0) s.timer-=1;
     local camera=g.cameraX;
@@ -259,13 +270,20 @@ function updateWorld23Actors(g) {
     }
 }
 
+function world23OamOffset(g,slot) {
+    local amounts=[0,0x58,0xa0];
+    local offset=0x30+slot*24+amounts[g.world23.displayOamPhase];
+    return offset>=256?(offset+0x28)&255:offset;
+}
+
 function drawWorld23Actors(g) {
     foreach(e in g.world23.enemies) if(e!=null) {
         local bank=e.id==10?(e.displayDead?assets.world23.deadGreen:assets.world23.green):
             (e.direction==1?(e.displayDead?assets.world23.deadRight:assets.world23.right):
                 (e.displayDead?assets.world23.deadLeft:assets.world23.left));
         local texture=bank[e.displayFrame];
-        worldTexture(g,texture,e.displayX,e.displayY+1,16,24);
+        oamBase=world23OamOffset(g,e.slot);
+        screenOamTexture(texture,e.displayX-visualCameraX(g),e.displayY+1,16,24);
     }
 }
 
@@ -281,12 +299,49 @@ function world23ActorRegistersJson(g) {
 }
 
 function updateWorld23DeathReload(g) {
+    world23AdvanceRandom(g.world23.random);
     g.deathReloadFrames+=1;
-    if(g.deathReloadFrames==1) {
+    local frame=g.deathReloadFrames;
+    if(frame==1) {
         g.checkpointPage=g.cameraX>=1792?7:0;g.lives-=1;
+        parityRecordEvent(g,"music","silence");
         if(g.lives<=0) {g.lives=0;g.state="gameOver";g.player.dead=false;emitSound(g,"game_over");return;}
+    } else if(frame==2) {
+        g.cameraX=0;g.displayCameraX=0;
+        g.player.nesXForce=0;g.player.nesXMoveForce=0;
+        g.player.nesYMoveForce=0;g.player.nesYDummy=0;
+        g.colorRotateOffset=0;g.displayColorPhase=0;
+        g.pendingColorPhase=0;g.colorPhasePending=false;
+        g.vramScrollThirtyTwo=0;g.vramAreaParserTask=0;g.vramBufferAddrCtrl=0;
+    } else if(frame==3) {
+        local page=g.checkpointPage,time=g.time,control=g.gameTimerControl,random=g.world23.random;
+        g.player=createPlayer();startWorld23(g,page);g.world23.random=random;
+        g.player.playerAnimTimerSet=0;
+        g.time=time;g.displayTime=time;g.gameTimerControl=control;
+        g.soundEvents.clear();g.soundEvents.append("silence_music");
+        parityRecordEvent(g,"music","silence");g.state="deathReload";
+        g.player.x=0;g.player.previousX=0;g.player.y=16;g.player.previousY=16;
+        g.player.movingDir=0;g.nesFrameCounter=0;
     }
-    if(g.deathReloadFrames>=166) {
-        local page=g.checkpointPage;g.player=createPlayer();startWorld23(g,page);
+    // DisplayIntermediate: seven ScreenTimer ticks, driven by the live
+    // 21-frame interval divider, followed by twelve parser column sets.
+    if(frame==9) g.world23.lifeScreenEnd <- frame+g.intervalTimerControl+1+6*21;
+    if(frame==4) g.vramBufferAddrCtrl=3;
+    if(!("lifeScreenEnd" in g.world23)) return;
+    local end=g.world23.lifeScreenEnd;
+    if(frame>end && frame<=end+12) g.vramBufferAddrCtrl=6;
+    if(frame==end+13) g.vramBufferAddrCtrl=2;
+    if(frame==end+17) {
+        parityRecordEvent(g,"music","overworld");g.soundEvents.append("resume_music");
+    } else if(frame==end+18) {
+        g.player=createPlayer();
+        resetPlayerForArea(g,g.checkpointPage*256+40,176);
+        g.player.playerAnimTimerSet=0;g.player.movingDir=0;
+        g.time=301;g.hurryActive=false;g.gameTimerControl=0;g.state="deathEntrance";
+    } else if(frame==end+19) {
+        g.state="playing";g.stateTimer=0;
+        g.respawnPrimeDirection=0;g.respawnPrimeRun=false;
+        g.player.parityOriginFriction=true;
+        g.input.jumpDown=false;g.input.runDown=false;
     }
 }
