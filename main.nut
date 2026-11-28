@@ -88,6 +88,8 @@ eve_init = function() {
             if("PARITY_CHECKPOINT_PAGE" in getroottable() && PARITY_CHECKPOINT_PAGE>0)
                 initializeWorld21Checkpoint(game,PARITY_CHECKPOINT_PAGE,(game.nesFrameCounter+255)&255);
         }
+        if(stage==2 && "PARITY_NORMAL_ENTRANCE" in getroottable() && PARITY_NORMAL_ENTRANCE &&
+            !("PARITY_NORMAL_ENTRY" in getroottable() && PARITY_NORMAL_ENTRY)) initializeWorld22Parity(game);
         if(stage==3 && !("PARITY_NORMAL_ENTRY" in getroottable() && PARITY_NORMAL_ENTRY))
             initializeWorld23Parity(game);
     }

@@ -253,6 +253,7 @@ function syncWorld12Player(g) {
 }
 
 function updateWorld12Transition(g) {
+    if(isWorld22(g)) return updateWorld22Transition(g);
     if(isWorld22(g) && g.input.resetQueued &&
         (g.state=="world12Intro" || g.state=="world12Pipe")) {
         resetRound(g);return true;

@@ -19,7 +19,7 @@ def main():
     args = parser.parse_args()
     movie = load_movie(args.movie)
     world, stage = require_supported_stage(movie)
-    if world != 2 or stage not in (3, 4):
+    if world != 2 or stage not in (2, 3, 4):
         parser.error('this diagnostic currently initializes only World 2-3/2-4 reference origins')
     out = args.output.resolve()
     out.mkdir(parents=True, exist_ok=True)
@@ -27,6 +27,8 @@ def main():
 dofile("main.nut");loadTexture=function(path){return path;};loadAssets();
 loadWorld13Assets();loadWorld14Assets();loadWorld23Assets();loadWorld24Assets();
 ''' + squirrel_source(movie, out) + f'\nlocal g=createGame();startLevel(g,{world},{stage});\n'
+    if stage == 2:
+        source += 'initializeWorld22Parity(g);\n'
     if stage == 3:
         source += 'initializeWorld23Parity(g);\n'
     source += '''parityInitialize(g);

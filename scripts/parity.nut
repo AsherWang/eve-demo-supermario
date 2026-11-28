@@ -75,8 +75,10 @@ function parityAdvanceOneFrame(g) {
     if (g.parity.frame == 0 && !("PARITY_NORMAL_ENTRY" in getroottable() && PARITY_NORMAL_ENTRY)) {
         // Mesen's saved origin frame is an observable pre-control state.  Do
         // not consume the first comparison input until the following frame.
-        g.player.parityOriginFriction = true;
-        g.nesFrameCounter = (g.nesFrameCounter + 1) & 0xFF;
+        if(!(isWorld22(g) && "world22Transition" in g)) {
+            g.player.parityOriginFriction = true;
+            g.nesFrameCounter = (g.nesFrameCounter + 1) & 0xFF;
+        }
         g.parity.awaitingCapture = true;
         return;
     }
@@ -245,6 +247,11 @@ function parityStateJson(g, frame) {
     } else if (g.state == "flagSlide") {
         engineSubroutine = 4;
     }
+    local world22Tasks=isWorld22(g) && "world22Transition" in g;
+    if(world22Tasks && g.world22Transition.phase!="done") {
+        operModeTask=g.world22Transition.operTask;
+        engineSubroutine=g.world22Transition.engineTask;
+    }
     local playerStateRaw = 0;
     if(g.state=="areaReload" && g.area=="sky" && g.areaReloadFrames<=1) {
         playerStateRaw=2;
@@ -268,7 +275,7 @@ function parityStateJson(g, frame) {
         ",\"previous_x\":" + p.previousX +
         ",\"previous_y\":" + p.previousY +
         ",\"facing\":" + p.facing +
-        ",\"facing_direction_raw\":" + (p.facing == 1 ? 1 : 2) +
+        ",\"facing_direction_raw\":" + (world22Tasks && p.facing==0?0:(p.facing == 1 ? 1 : 2)) +
         ",\"moving_direction_raw\":" + p.movingDir +
         ",\"running_speed_raw\":" + p.runningSpeed +
         ",\"x_speed_absolute\":" + p.nesXSpeedAbsolute +
@@ -299,7 +306,7 @@ function parityStateJson(g, frame) {
         ",\"camera_x\":" + g.cameraX +
         ",\"display_camera_x\":" + g.displayCameraX +
         ",\"previous_scroll_amount\":" + g.previousScrollAmount +
-        ",\"frame_counter\":" + ((g.nesFrameCounter + 255) & 0xFF) +
+        ",\"frame_counter\":" + ((g.nesFrameCounter + (world22Tasks?0:255)) & 0xFF) +
         ",\"color_rotation_offset\":" + g.colorRotateOffset +
         ",\"vram_scheduler\":{\"scroll_thirty_two\":" + g.vramScrollThirtyTwo +
         ",\"area_parser_task\":" + g.vramAreaParserTask +

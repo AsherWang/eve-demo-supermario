@@ -793,7 +793,7 @@ function handlePlayerBackgroundSides(g, p) {
                 // The +13 side probe reaches it one pixel before movePlayerX
                 // sets sidePipeCollision. Let tryWorld12Pipe consume that
                 // contact instead of nudging Mario out of its entry range.
-                if(side==1 && tx==g.sidePipeX && (p.grounded || (isWorld22Water(g) && p.y>=112 && p.y+p.height<=144)) && g.input.right &&
+                if(side==1 && tx==g.sidePipeX && p.grounded && g.input.right &&
                    ty>=g.world12SidePipeBottomRow-1 &&
                    ty<=g.world12SidePipeBottomRow) return;
                 if(world21AnimatedSpringTile(g,tx,ty)) continue;
@@ -1165,7 +1165,7 @@ function updatePlayer(g, dt) {
         p.vy = p.nesYSpeed * NES_FRAME_RATE;
         // Verified ROM trace: death at comparison frame 191, PlayerLoseLife
         // at frame 399 (208 subsequent death-routine frames).
-        if(isWorld21(g)) {
+        if(isWorld21(g) || isWorld22Water(g)) {
             // ROM event music has 180 frames (rom-music-manifest.json),
             // starts on the next sound pass and must finish before life loss.
             // PlayerControl also requires Y high byte $04: three full screen
@@ -2493,6 +2493,9 @@ function updateEffects(g, dt) {
 }
 
 function updateCamera(g) {
+    if(isWorld22Water(g) && g.world22.scrollLocked) {
+        g.displayCameraX=g.cameraX;g.previousScrollAmount=0;return;
+    }
     if (g.area == "underground" && !(g.level == 2 && g.stage == "underground")) {
         g.cameraX = 0.0;
         g.displayCameraX = 0.0;
@@ -2566,6 +2569,7 @@ function updateVramAreaParserScheduler(g) {
     }
     g.vramAreaParserTask -= 1;
     local completedTask = g.vramAreaParserTask;
+    if(isWorld22Water(g)) parseWorld22AreaColumn(g,completedTask);
     if(isWorld21(g)) parseWorld21PlantColumn(g,completedTask);
     if (completedTask == 6 || completedTask == 5 ||
         completedTask == 2 || completedTask == 1 || completedTask == 0)
