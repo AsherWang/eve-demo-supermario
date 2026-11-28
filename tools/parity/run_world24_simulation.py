@@ -35,7 +35,10 @@ for(local f=0;f<masks.len();f+=1) {
         ",\"bowser_x\":"+g.world24.bowser.x+",\"bowser_y\":"+g.world24.bowser.y+
         ",\"bowser_slot\":"+g.world24.bowser.slot+",\"feet_timer\":"+g.world24.bowser.feetTimer+
         ",\"body_controls\":"+g.world24.bowser.bodyControls+",\"interval\":"+g.world24.interval+
-        ",\"victory_task\":"+("victoryTask" in g.world24?g.world24.victoryTask:-1)+"}\n");
+        ",\"victory_task\":"+("victoryTask" in g.world24?g.world24.victoryTask:-1)+
+        ",\"pod0_y\":"+g.world24.podoboos[0].y+",\"pod0_speed\":"+g.world24.podoboos[0].verticalSpeed+
+        ",\"pod0_force\":"+g.world24.podoboos[0].verticalForce+",\"pod0_dummy\":"+g.world24.podoboos[0].verticalDummy+
+        ",\"bar0_high\":"+g.world24.firebars[0].spinHigh+",\"bar0_low\":"+g.world24.firebars[0].spinLow+"}\n");
 }
 print("SIMULATION_COMPLETE\n");
 '''

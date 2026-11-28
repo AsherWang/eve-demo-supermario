@@ -648,6 +648,10 @@ function updateWorld24Transition(g) {
         // frame. Its carry advances PrimaryMsgCounter once per 64 frames. For
         // World 1-7, primary value four sets WorldEndTimer and advances to
         // PlayerEndWorld.
+        if(w.secondaryMsgCounter==0) {
+            if(w.primaryMsgCounter==0) g.vramBufferAddrCtrl=12;
+            else if(w.primaryMsgCounter==2) g.vramBufferAddrCtrl=14;
+        }
         // Primary=4 is dispatched on the following pass, with secondary zero.
         if(w.secondaryMsgCounter==0 && w.primaryMsgCounter>=4) {
             w.worldEndTimer=6;w.victoryTask=4;g.state="world24EndWorld";w.stateFrames=0;
@@ -944,9 +948,10 @@ function world24CheckAxeContact(g) {
     // EraseCoinMetatile therefore clears the right cell, even on a left-foot axe.
     w.clearedFootCells[rightKey] <- true;
     g.vramBufferAddrCtrl=6;
+    local firstContact=g.state=="playing";
     g.state="world24Axe";w.victoryTask=0;w.stateFrames=0;
     p.nesXSpeed=24;p.vx=p.nesXSpeed/16.0*NES_FRAME_RATE;
-    parityRecordEvent(g,"gameplay","axe_touched");
+    if(firstContact) parityRecordEvent(g,"gameplay","axe_touched");
     return true;
 }
 
@@ -954,6 +959,8 @@ function parseWorld24AreaColumn(g,task) {
     if(task==7) g.world24.parserColumn=floor(g.cameraX/32.0).tointeger()*2+22;
     if(task!=7 && task!=3) return;
     local column=g.world24.parserColumn+(task==3?1:0);
+    // DrawAxe selects the Bowser sprite-palette packet as its column parses.
+    if(column==g.world24.axeX/16.0) g.vramBufferAddrCtrl=8;
     if(g.world24.scrollLockColumns.find(column)!=null)
         g.world24.scrollLocked=!g.world24.scrollLocked;
 }
