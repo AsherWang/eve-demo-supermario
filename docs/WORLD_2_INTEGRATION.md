@@ -71,3 +71,14 @@ python -m unittest discover -s tests/parity
 2. 2-3：原版成功路线独立成立；原版起点的飞鱼 10660 个槽位快照精确匹配，但末尾 2102 帧后的切关及死亡重载、完整音画仍待收敛。
 3. 2-4：原版成功路线独立成立，宿主相同原版起点路线也能通关，但斧头/断桥有一帧差异；1243 帧后胜利行走、独立镜头和消息计时不一致，APU 从约 593 帧起有差异。3-1 仍缺失。
 4. 继续保留失败证据，补全部入口/分支/出口及六项门禁，不以本次可玩交付替代严格验收。
+
+## Strict verification update — 2026-11-28
+
+World2-3: `world-2-3-strict-clear` (2132 frames) passes all six gates with zero
+pixel mismatches. Reviewed original entrance, bridge/fish route, flag1563,
+settlement2102 and transition to2-4 at2103. Inventory reports complete locally.
+Reports: `local-parity/reports/world-2-3-strict-clear/index.html`.
+
+World2-2/2-4 remain pending. Worker usage limits stopped all three agents; their
+committed work and unfinished diffs are retained in the worktrees. Main continues
+integration; historical playable campaign results are not current strict proof.

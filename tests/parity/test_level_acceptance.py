@@ -258,12 +258,13 @@ class LevelAcceptanceTests(unittest.TestCase):
         self.assertEqual(level["status"], "complete")
         self.assertEqual(level["supplemental_cases"], ["short-diagnostic-with-no-artifacts"])
 
-    def test_checked_in_inventory_lists_all_levels_and_none_complete(self) -> None:
+    def test_checked_in_inventory_lists_all_levels(self) -> None:
         repository = Path(__file__).resolve().parents[2]
         report = collect_acceptance(
             repository, repository / "tests" / "parity" / "level_acceptance.json"
         )
-        self.assertEqual(report["summary"], {"total": 32, "complete": 0, "pending": 32})
+        self.assertEqual(report["summary"]["total"], 32)
+        self.assertEqual(report["summary"]["complete"] + report["summary"]["pending"], 32)
         self.assertEqual(
             [level["id"] for level in report["levels"]],
             [f"{world}-{stage}" for world in range(1, 9) for stage in range(1, 5)],

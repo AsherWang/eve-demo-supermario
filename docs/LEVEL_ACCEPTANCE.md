@@ -6,10 +6,11 @@ runtime and does not treat a case name, movie description, or passing summary as
 proof of gameplay semantics.
 
 The checked-in inventory at `tests/parity/level_acceptance.json` lists all 32
-levels. It currently has no required acceptance movies, reviewed
-entrance-to-transition or final-ending records, or reviewed branch matrices, so
-every level remains pending. Existing short diagnostics are supplemental and do
-not block a level once a full route is designated.
+levels. World 2-3 now has the reviewed `world-2-3-strict-clear` route: all 2132
+frames and all six gates pass, with transition at frame2103. Its reviewed area
+branch matrix is empty. The other31 levels remain pending. Evidence is local;
+a fresh checkout without the ignored captures correctly reports missing evidence.
+Existing short diagnostics remain supplemental.
 
 ## Commands
 

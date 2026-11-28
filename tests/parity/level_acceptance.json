@@ -74,11 +74,27 @@
       "id": "2-3",
       "world": 2,
       "stage": 3,
-      "required_cases": [],
+      "required_cases": [
+        "world-2-3-strict-clear"
+      ],
       "supplemental_cases": [],
-      "route_review": null,
+      "route_review": {
+        "case": "world-2-3-strict-clear",
+        "movie_sha256": "bbcfa206ce376ac475dacb48ca0b9c5ad33dfdad13401d8fa6e2113db539af2e",
+        "entrance_frame": 0,
+        "exit_frame": 2103,
+        "endpoint_kind": "transition",
+        "reviewed_by": "Codex",
+        "reviewed_at": "2026-11-28T05:10:00Z",
+        "evidence": "Reviewed full 2132-frame strict comparison and entrance/bridge/fish/flag/castle/loader images. Flag touched at1563; settlement completes2102; world2 stage4 selected2103 and next-stage loading continues through2131. All six gates pass with every image identical; no deaths,17 coins,15550 score. This proves this fixed route, not every possible controller path."
+      },
       "required_branches": [],
-      "branch_review": null
+      "branch_review": {
+        "reviewed_by": "Codex",
+        "reviewed_at": "2026-11-28T05:10:00Z",
+        "evidence": "Reviewed original area/enemy streams and runtime bridge map: no enterable pipe, alternate area or warp destination. The only route exit is the flag/castle transition. Death/retry is supplemental behavior, not an alternate area branch.",
+        "branches": []
+      }
     },
     {
       "id": "2-4",
