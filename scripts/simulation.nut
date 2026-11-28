@@ -3066,6 +3066,12 @@ function updateDeathReload(g) {
 }
 
 function beginNextStageLoad(g, dt) {
+    // NMI consumes the preceding gameplay palette packet before the area-mode
+    // task runs, even though this pass no longer calls the gameplay handler.
+    if (g.colorPhasePending && g.vramBufferAddrCtrl != 6) {
+        g.displayColorPhase = g.pendingColorPhase;
+        g.colorPhasePending = false;
+    }
     // PlayerEndLevel task 5 increments LevelNumber and returns after
     // ChgAreaMode. The current player, camera and frame counter remain
     // observable for this pass; the loader begins on the next frame.

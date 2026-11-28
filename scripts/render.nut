@@ -1182,7 +1182,7 @@ function areaTransitionOverlay(g) {
 }
 
 function renderGame(g) {
-    if(!oamCollecting && isWorld21(g) && g.area=="main" && g.state=="playing") {
+    if(!oamCollecting && (isWorld21(g) || isWorld23(g)) && g.area=="main" && g.state=="playing") {
         try {
             oamEntries={};oamEntries[0] <- {y=25}; // fixed HUD sprite zero
             oamCollecting=true;
