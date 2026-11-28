@@ -91,7 +91,7 @@ class World22DataTests(unittest.TestCase):
         self.assertIn("0x00e7,ram)==0x47",lua)
         self.assertIn("world=2 level=1",build_movie_origin_lua(dict(world=2,level=1)))
         with self.assertRaises(ValueError):
-            build_movie_origin_lua(dict(world=2,level=3))
+            build_movie_origin_lua(dict(world=3,level=1))
 
     def test_unverified_rom_rejected(self):
         with self.assertRaisesRegex(ValueError,"unverified ROM"):
