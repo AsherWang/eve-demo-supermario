@@ -46,6 +46,21 @@ class World23DataTests(unittest.TestCase):
             self.assertEqual(dead.crop((0,8,16,24)).tobytes(),
                              live.crop((0,8,16,24)).transpose(Image.Transpose.FLIP_TOP_BOTTOM).tobytes())
 
+    def test_capture_lock_preserves_other_owner(self):
+        import tempfile
+        from unittest.mock import patch
+        from world23_capture_lock import capture_lock
+        with tempfile.TemporaryDirectory() as folder:
+            lock=Path(folder)/'capture.lock'
+            with patch('world23_capture_lock.lock_directory',return_value=lock):
+                with capture_lock('first',wait_seconds=0):
+                    owner=(lock/'owner.json').read_bytes()
+                    with self.assertRaises(RuntimeError):
+                        with capture_lock('second',wait_seconds=0):
+                            self.fail('contended capture acquired')
+                    self.assertEqual((lock/'owner.json').read_bytes(),owner)
+                self.assertFalse(lock.exists())
+
     def test_origin_identity(self):
         source=build_world23_origin_lua()
         for text in ['0x075f,1,ram','0x075c,2,ram','0x0760,3,ram','0x0750,0x27,ram',

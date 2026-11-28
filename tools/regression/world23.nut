@@ -86,4 +86,18 @@ local shot={x=303,y=134,active=true,exploding=false,explosionFrames=0,vx=4.0,vy=
 fireGame.fireballs.append(shot);updateWorld23Actors(fireGame);
 requireSelfTest(target.dead && shot.exploding && shot.explosionFrames==6,
     "fish fireball contact must retain the shared six-frame explosion");
+local drawGame=createGame();startWorld23(drawGame);spawnWorld23Fish(drawGame,0);
+local drawFish=drawGame.world23.enemies[0];
+drawFish.displayX=-1;drawFish.displayY=80;
+oamEntries={};oamCollecting=true;
+drawWorld23Actors(drawGame);
+oamCollecting=false;
+requireSelfTest(oamEntries.len()==3,"offscreen fish must hide the entire left tile column");
+foreach(key,entry in oamEntries)
+    requireSelfTest(entry.x==7,"visible right fish column must keep its original OAM X");
+foreach(phase in [0,1,2]) {
+    drawGame.world23.displayOamPhase=phase;
+    requireSelfTest(world23OamOffset(drawGame,0)==[48,136,208][phase] &&
+        world23OamOffset(drawGame,5)==[168,40,112][phase],"ROM sprite shuffle must rebase wrapped slots");
+}
 print("WORLD23_REGRESSION_OK\n");
