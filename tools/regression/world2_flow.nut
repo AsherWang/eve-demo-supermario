@@ -28,10 +28,19 @@ foreach(stage in [3,4]) foreach(camera in [1791.0,1792.0,2500.0]) {
         !g.player.big && !g.player.fire && g.lives==2 && g.score==7300 && g.coins==12,
         "World 2 bridge/castle deaths dispatch to their own checkpoint rules");
 }
-local castle=createGame();startLevel(castle,2,4);castle.state="worldComplete";
-simulateFixed(castle,FIXED_DT);
-requireSelfTest(castle.world==2 && castle.level==4 && castle.state=="worldComplete",
-    "unimplemented World 3 must not silently load World 2-1");
-castle.input.resetQueued=true;simulateFixed(castle,FIXED_DT);castle.input.resetQueued=false;
-requireSelfTest(isWorld24(castle) && castle.state=="playing","castle restart stays in 2-4");
+foreach(power in [0,1,2]) {
+    local castle=createGame();startLevel(castle,2,4);
+    castle.player.big=power>0;castle.player.fire=power==2;
+    castle.player.height=power>0?32:16;
+    castle.score=12345;castle.coins=17;castle.lives=2;
+    castle.state="world24EndWorld";castle.world24.worldEndTimer=0;
+    simulateFixed(castle,FIXED_DT);
+    requireSelfTest(castle.world==3 && castle.level==1 && castle.state=="nextStageLoad",
+        "castle completion must start the actual next-world loading sequence");
+    for(local f=0;f<167;f+=1) simulateFixed(castle,FIXED_DT);
+    requireSelfTest(isWorld31(castle) && castle.state=="playing" && castle.time==400 &&
+        castle.player.big==(power>0) && castle.player.fire==(power==2) &&
+        castle.score==12345 && castle.coins==17 && castle.lives==2,
+        "next-world entry preserves progress and all three power states");
+}
 print("WORLD2_FLOW_OK\n");

@@ -396,6 +396,7 @@ function updateWorld12Actors(g) {
     foreach(plant in g.plants) {
         if(!plant.active || (!isWorld21(g) &&
             (plant.x>g.cameraX+304 || plant.x<g.cameraX-32))) continue;
+        if(isWorld22(g)) plant.world22DisplayY <- "displayY" in plant?plant.displayY:plant.y;
         plant.displayY <- "previousY" in plant?plant.previousY:plant.y;
         plant.previousY <- plant.y;
         if(isWorld21(g) && p.dead) continue;
@@ -827,7 +828,11 @@ function drawWorld12Actors(g, behind) {
         foreach(plant in g.plants) {
             if(!plant.active) continue;
             local phase=(g.nesFrameCounter/8)%2;
-            worldTexture(g,assets.world12.plants[phase],floor(plant.x),floor(plant.y)+1,16,24);
+            if(isWorld22(g)) {
+                phase=(((g.nesFrameCounter+255)&8)==0?1:0);
+                local y="world22DisplayY" in plant?plant.world22DisplayY:plant.y;
+                screenOamTexture(assets.world22.plants[phase],plant.x-visualCameraX(g),y+1,16,24);
+            } else worldTexture(g,assets.world12.plants[phase],floor(plant.x),floor(plant.y)+1,16,24);
         }
     } else {
         foreach(platform in g.platforms) {

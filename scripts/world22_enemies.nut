@@ -63,9 +63,9 @@ function initializeWorld22Enemies(g) {
         g.world22.spawnCursor+=1;
 }
 
-function updateWorld22Enemies(g) {
+function updateWorld22Enemies(g, advanceRandom=true) {
     local state=g.world22,p=g.player;
-    world22AdvanceRandom(state.random);
+    if(advanceRandom) world22AdvanceRandom(state.random);
     if(p.dead || p.transformFrames>0) return;
     updateWorld22Bubbles(g);
     updateWorld22FireballHits(g);
@@ -122,7 +122,7 @@ function updateWorld22Enemies(g) {
             // SmallEnemyBoundingBox $09: [3,14,13,20]. Water contact hurts;
             // descending onto a squid must never execute the land stomp path.
             local py=p.y-(p.big?0:16);
-            if(!(frame&1) && e.x>=camera && e.x<camera+256 &&
+            if(g.state=="playing" && !(frame&1) && e.x>=camera && e.x<camera+256 &&
                 overlaps(p.x+(p.big?2:3),py+(p.big?8:20),p.big?13:11,p.big?25:13,
                     e.previousX+3,e.previousY+14,11,7)) {
                 if(p.starTimer>0) defeatWorld22Enemy(g,e);
@@ -141,12 +141,13 @@ function drawWorld22Enemies(g) {
     drawWorld22Bubbles(g);
     for(local slot=4;slot>=0;slot-=1) {
         local e=g.world22.enemies[slot];if(e==null) continue;
+        oamBase=world22OamOffset(g,0x30+slot*24);
         local frame=e.displayFrame;
         local texture=e.kind=="blooper"?assets.world22.bloopers[frame]:
             assets.world22.fish[e.id==11?1:0][frame];
         if(e.dead) texture=e.kind=="blooper"?assets.world22.deadBloopers[frame]:
             assets.world22.deadFish[e.id==11?1:0][frame];
-        worldTexture(g,texture,e.displayX,
+        screenOamTexture(texture,e.displayX-visualCameraX(g),
             e.displayY+(e.kind=="blooper" && frame==1?3:0)+1,16,24);
     }
 }

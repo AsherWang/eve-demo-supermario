@@ -1,0 +1,190 @@
+{
+  "schema": "world2-strict-evidence-v1",
+  "date": "2026-11-28",
+  "cases": [
+    {
+      "case": "world-2-2-strict-clear",
+      "movie_sha256": "846e681bd4f756093cb0a0de6c9f13fd90ea11e988bf3211e92e50aac5e680c9",
+      "frames": 3800,
+      "failed_frames": 0,
+      "checks": {
+        "artifacts": {
+          "passed": true,
+          "exit_code": 0
+        },
+        "frames": {
+          "passed": true,
+          "exit_code": 0
+        },
+        "states": {
+          "passed": true,
+          "exit_code": 0
+        },
+        "events": {
+          "passed": true,
+          "exit_code": 0
+        },
+        "apu": {
+          "passed": true,
+          "exit_code": 0
+        },
+        "audio": {
+          "passed": true,
+          "exit_code": 0
+        }
+      },
+      "reports": "local-parity/reports/world-2-2-strict-clear/index.html"
+    },
+    {
+      "case": "world-2-3-strict-clear",
+      "movie_sha256": "bbcfa206ce376ac475dacb48ca0b9c5ad33dfdad13401d8fa6e2113db539af2e",
+      "frames": 2132,
+      "failed_frames": 0,
+      "checks": {
+        "artifacts": {
+          "passed": true,
+          "exit_code": 0
+        },
+        "frames": {
+          "passed": true,
+          "exit_code": 0
+        },
+        "states": {
+          "passed": true,
+          "exit_code": 0
+        },
+        "events": {
+          "passed": true,
+          "exit_code": 0
+        },
+        "apu": {
+          "passed": true,
+          "exit_code": 0
+        },
+        "audio": {
+          "passed": true,
+          "exit_code": 0
+        }
+      },
+      "reports": "local-parity/reports/world-2-3-strict-clear/index.html"
+    },
+    {
+      "case": "world-2-4-original-clear",
+      "movie_sha256": "71e117e31349a1e0e8856b87de5816c3331ef12296bf3862bee21db91323a849",
+      "frames": 2800,
+      "failed_frames": 0,
+      "checks": {
+        "artifacts": {
+          "passed": true,
+          "exit_code": 0
+        },
+        "frames": {
+          "passed": true,
+          "exit_code": 0
+        },
+        "states": {
+          "passed": true,
+          "exit_code": 0
+        },
+        "events": {
+          "passed": true,
+          "exit_code": 0
+        },
+        "apu": {
+          "passed": true,
+          "exit_code": 0
+        },
+        "audio": {
+          "passed": true,
+          "exit_code": 0
+        }
+      },
+      "reports": "local-parity/reports/world-2-4-original-clear/index.html"
+    }
+  ],
+  "provenance": {
+    "runtime_sources_sha256": "a31e86c2300f1f8420f7d82e29006cd3b156731e97986c0f6f05ecb505964547",
+    "captures": [
+      "22-visual-v11",
+      "23-visual-v2",
+      "24-visual-v10"
+    ],
+    "all_snapshot_sources_match": true,
+    "excluded_generated_adapter": "scripts/generated/parity_movie.nut"
+  },
+  "campaign": {
+    "passed": true,
+    "reasons": [],
+    "frames": 7722,
+    "start": {
+      "frame": 0,
+      "world": 2,
+      "level": 2,
+      "area": "main",
+      "state": "world12Intro",
+      "x": 40,
+      "y": 192,
+      "lives": 3,
+      "dead": false
+    },
+    "end": {
+      "frame": 7722,
+      "world": 3,
+      "level": 1,
+      "area": "main",
+      "state": "playing",
+      "x": 40,
+      "y": 192,
+      "lives": 3,
+      "dead": false
+    },
+    "stages": [
+      [
+        2,
+        2
+      ],
+      [
+        2,
+        3
+      ],
+      [
+        2,
+        4
+      ],
+      [
+        3,
+        1
+      ]
+    ],
+    "death_frames": [],
+    "scope": "continuous normal-entry host gameplay; not original-ROM strict acceptance",
+    "movie_sha256": "6417c88e3ffb211038f804e73c0826b304146b12d42659cc44eda213ce707ab1",
+    "runner_sha256": "82c27cdbc8f11761be8a61f8cd16f1529d89d1504344c7d97ccddf3990d01352",
+    "replay_sha256": "ab9cad75d6bad9f78502d058ec09edab2a9d85252d8e865945b3e1699d7576bf",
+    "exit_code": 0,
+    "runtime_sources_sha256": "a31e86c2300f1f8420f7d82e29006cd3b156731e97986c0f6f05ecb505964547"
+  },
+  "package": {
+    "matching_runtime_files": 2452,
+    "mismatches": [],
+    "exe_sha256": "c466f2cf2473cbdae4899290be210a9646282fb46ac67d1c3057ef11946c2e61",
+    "audio_dll_sha256": "64e3c689113b0ddb7d6edf808c83b13854b533b8535e9ee959b019fa05d81c9b",
+    "start": "2-2 normal entrance",
+    "version": "0.0.7",
+    "startup": [
+      {
+        "Id": 88880,
+        "ProcessName": "eve",
+        "Responding": true,
+        "MainWindowTitle": "Super Mario Bros. - EVEngine"
+      },
+      {
+        "Id": 92020,
+        "ProcessName": "SuperMario",
+        "Responding": true,
+        "MainWindowTitle": ""
+      }
+    ]
+  },
+  "scope": "Reviewed fixed whole routes, not all possible inputs. World 3-1 entry only; full 3-1 acceptance pending."
+}

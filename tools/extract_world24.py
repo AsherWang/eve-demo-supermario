@@ -78,6 +78,7 @@ def main() -> None:
         list(prg[palette_at + 3 + row * 4 : palette_at + 7 + row * 4])
         for row in range(8)
     ]
+    tile_image(chr_data,0xff,castle_palettes[7],0,True).save(out/"sprite-zero.png")
     metatile_bytes = prg[metatile_at : metatile_at + sum(METATILE_COUNTS) * 4]
     for group, count in enumerate(METATILE_COUNTS):
         offset = sum(METATILE_COUNTS[:group]) * 4
@@ -93,7 +94,7 @@ def main() -> None:
     rotation_at=find_once(prg,bytes.fromhex("272727170717"),"ColorRotatePalette")
     for phase,color in enumerate(prg[rotation_at:rotation_at+6]):
         palette=list(castle_palettes[3]);palette[1]=color
-        for code in (0xC0,0xC1):
+        for code in (0xC0,0xC1,0xC2,0xC5):
             offset=sum(METATILE_COUNTS[:3])*4+(code-0xC0)*4
             compose_metatile(chr_data,metatile_bytes[offset:offset+4],palette).save(out/f"metatile-{code}-phase-{phase}.png")
 
@@ -115,6 +116,13 @@ def main() -> None:
         if tiles not in enemy_gfx:
             raise SystemExit(f"Bowser graphics row missing: {name}")
     extract_bowser_sprites(raw, out)
+    for direction in ("left","right"):
+        for pose in range(4):
+            canvas=Image.open(out/f"bowser-{direction}-{pose}.png")
+            front_x=0 if direction=="left" else 16
+            canvas.crop((front_x,0,front_x+16,24)).save(out/f"bowser-front-{direction}-{pose}.png")
+            rear_x=16-front_x
+            canvas.crop((rear_x,8,rear_x+16,32)).save(out/f"bowser-rear-{direction}-{pose}.png")
 
     # Original World 2-4 saves the mushroom retainer/Toad, not the princess.
     # This is the exact six-tile entry at EnemyGraphicsTable $a2. Castle sprite

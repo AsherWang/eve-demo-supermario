@@ -21,6 +21,9 @@ def main():
     sources += sorted((ROOT / 'assets/enemies').glob('goomba*.png'))
     sources += sorted((ROOT / 'assets/enemies').glob('green-koopa-*-*.png'))
     sources += sorted((ROOT / 'assets/enemies').glob('green-shell-[0-9].png'))
+    for stage,patterns in [('world22',('cheep*.png','red-cheep*.png','bloober*.png','mario-*-swim-*.png','bubble.png')),
+                           ('world24',('podoboo*.png','bowser-flame*.png','firebar*.png','bowser-front-*.png','bowser-rear-*.png','platform.png'))]:
+        for pattern in patterns: sources += sorted((ROOT/'assets'/stage).glob(pattern))
     entries = []
     for path in sources:
         sprite = Image.open(path).convert('RGBA')

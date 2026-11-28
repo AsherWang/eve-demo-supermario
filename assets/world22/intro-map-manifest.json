@@ -1,0 +1,22 @@
+{
+  "rom_sha256": "f61548fdf1670cffefcc4f0b7bdcdd9eaba0c226e3b74f8666071496988248de",
+  "parser_cpu_address": "0x88ae",
+  "world": 2,
+  "stage": 2,
+  "area_pointer": 41,
+  "area_data_address": "0xa834",
+  "width": 24,
+  "height": 13,
+  "columns": 24,
+  "capture_mode": "continuous-forward-with-verified-tail",
+  "tail_overlap_columns": [],
+  "fixture_player_above_terrain": true,
+  "runtime_implemented": false,
+  "output": "scripts/generated/world22_intro_map.nut",
+  "output_sha256": "e27723bffa1f55e62393880520e9a18fc51e392d2792726e27b9f4cf63107bde",
+  "capture_script_sha256": "2005d83fae61087e8886e6779d1c059f879b3497c86c3fccc5649ad6c02c7b50",
+  "columns_sha256": "0403fdba1914876ea2f4780f5d923c55835addcb6d0e1f8cb504b6bae7904aec",
+  "tail_columns_sha256": null,
+  "tail_capture_script_sha256": null,
+  "generator_sha256": "3a4a27348f0be97b7fa5f6fe55d118b246e9f5904137f93de7139002b512f838"
+}

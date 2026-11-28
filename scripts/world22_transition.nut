@@ -24,7 +24,7 @@ function world22EntranceControl(g, pipe) {
 }
 
 function initializeWorld22Transition(g) {
-    g.world22Transition <- {phase="intro",behindPipe=false,areaTimer=0,screenTask=12,
+    g.world22Transition <- {phase="intro",hudTimeReady=false,behindPipe=false,areaTimer=0,screenTask=12,
         columns=0,operTask=3,engineTask=7,screenDisabled=false,target="water",playerYHigh=1,
         random=[165,0,0,0,0,0,0]};
     g.player.movingDir=0;g.player.parityOriginFriction=false;
@@ -40,7 +40,12 @@ function updateWorld22Transition(g) {
     if(g.state=="world12Pipe" && g.world22Transition.phase=="done" && g.world12Target=="exit")
         beginWorld22ExitTasks(g);
     local t=g.world22Transition,p=g.player;
+    // The final rising-pipe pass still prepares behind-background OAM,
+    // even though it enables player control for the following pass.
+    t.risePass <- t.phase=="rise";
     local initializeFrame=t.phase=="initialize";
+    local bubblePass=t.phase=="drop";
+    local pipeActorPass=t.phase=="exitPipe";
     local gameplayPass=["intro","exitPipe","setup","rise","drop"].find(t.phase)!=null;
     if(g.state!="world12Intro" && g.state!="world22Load" && g.state!="world22Entrance" &&
         !(g.state=="world12Pipe" && t.phase!="done")) return false;
@@ -66,14 +71,20 @@ function updateWorld22Transition(g) {
         parityRecordEvent(g,"music","silence");
         local remaining=g.time,random=t.random;
         if(t.target=="water") startWorld22Water(g,0,false);
-        else {buildWorld12(g,"exit");g.romBackgroundCollision=false;g.cameraX=2816;g.displayCameraX=2816;}
+        else {
+            buildWorld12(g,"exit");g.romBackgroundCollision=false;g.cameraX=2816;g.displayCameraX=2816;
+            // GroundArea6 pipe objects create Piranhas in worlds after World 1.
+            for(local x=176;x<g.areaWidth;x+=1) for(local y=2;y<13;y+=1)
+                if(getTile(g,x,y)==TILE_PIPE_TOP_LEFT) g.plants.append({x=x*16.0+8,y=y*16.0,baseY=y*16.0,
+                    direction=1,moving=false,timer=0,active=true});
+        }
         g.soundEvents.clear(); // Music begins at SecondaryGameSetup, after the blank loader.
         p=g.player;
         g.world22Transition=t;t.random=random;g.world22.random=random;
         g.time=remaining;g.displayTime=remaining;g.gameTimerControl=0;
         p.x=0;p.y=p.big?0:16;t.playerYHigh=0;p.facing=0;p.grounded=true;p.movingDir=0;
         p.nesYSpeed=0;p.nesYMoveForce=0;p.nesYDummy=0;p.swimGravity=0;
-        g.nesFrameCounter=0;g.colorRotateOffset=0;t.operTask=1;t.engineTask=0;
+        g.nesFrameCounter=0;g.colorRotateOffset=0;g.displayColorPhase=0;t.hudTimeReady=false;t.operTask=1;t.engineTask=0;
         t.phase="screen";t.screenTask=0;t.columns=11;g.state="world22Load";
     } else if(t.phase=="screen") {
         if(t.screenTask==0) g.vramBufferAddrCtrl=3;
@@ -91,9 +102,16 @@ function updateWorld22Transition(g) {
         parityRecordEvent(g,"music",t.target=="water"?"water":"overworld");g.soundEvents.append("resume_music");
     } else if(t.phase=="setup") {
         resetPlayerForArea(g,t.target=="water"?40:11*256+56,t.target=="water"?0:240);
-        t.playerYHigh=1;p=g.player;p.grounded=true;p.movingDir=0;
+        t.playerYHigh=1;p=g.player;p.grounded=true;p.movingDir=0;p.preparedVisible <- false;
         p.swimTimer <- 0;p.swimPreviousA <- false;p.swimGravity <- 0;p.swimWhirlpool <- false;
         p.fallForce=40;t.engineTask=7;t.phase=t.target=="water"?"drop":"rise";g.state="world22Entrance";
+        if(t.target=="water") {
+            local bubble=g.world22.bubbles[0];
+            bubble.x=p.x+9;bubble.y=248;
+            bubble.force=(256-ROM_WORLD_2_2_BUBBLE_ENTRANCE[0])&255;
+            g.world22.bubbleTimer=ROM_WORLD_2_2_BUBBLE_ENTRANCE[1];
+            updateWorld22Bubbles(g,false);
+        }
     } else if(t.phase=="rise") {
         p.y-=1;
         if(p.y-(p.big?0:16)<145) {t.phase="done";t.engineTask=8;g.state="playing";g.gameTimerControl=24;g.time-=1;}
@@ -109,11 +127,12 @@ function updateWorld22Transition(g) {
             p.vy=p.nesYSpeed*NES_FRAME_RATE;
         }
     }
+    if(bubblePass) updateWorld22Bubbles(g);
+    if(pipeActorPass) updateWorld22Enemies(g,false);
     if(gameplayPass && ((g.nesFrameCounter+1)&7)==0) {
         g.pendingColorPhase=g.colorRotateOffset;g.colorPhasePending=true;
         g.colorRotateOffset=(g.colorRotateOffset+1)%6;
     }
-    syncWorld12Player(g);
     if(!initializeFrame) g.nesFrameCounter=(g.nesFrameCounter+1)&255;
     return true;
 }
@@ -124,12 +143,13 @@ function initializeWorld22Parity(g) {
     // Only origin registers are seeded; subsequent tasks use the source rules.
     g.intervalTimerControl=3;
     updateWorld22Transition(g);
+    updatePlayerAnimationState(g);preparePlayerPresentation(g);
     g.world22Transition.random=[145,90,120,204,61,165,222];
 }
 
 function beginWorld22ExitTasks(g) {
     local random=("world22Transition" in g)?g.world22Transition.random:g.world22.random;
-    g.world22Transition <- {phase="exitPipe",behindPipe=true,areaTimer=g.cameraX>=256?52:160,
+    g.world22Transition <- {phase="exitPipe",hudTimeReady=true,behindPipe=true,areaTimer=g.cameraX>=256?52:160,
         screenTask=12,columns=0,operTask=3,engineTask=2,screenDisabled=false,
         target="exit",playerYHigh=1,random=random};
 }

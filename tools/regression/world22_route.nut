@@ -2,7 +2,7 @@
 function runWorld22WholeRoute(masks) {
     local g=createGame();startLevel(g,2,2);parityInitialize(g);
     requireSelfTest(g.state=="world12Intro" && g.stage=="intro" && g.player.x==40 &&
-        g.player.y==192 && g.time==400,"route begins at normal surface entrance");
+        g.player.y==192 && g.time==401,"route begins at normal surface entrance");
     local previous="",pages={},holes={},squid=false,fish=false,water=false,exit=false,flag=false;
     local waterFrames=0,firstWater=-1,sidePipe=-1,firstExit=-1,flagFrame=-1,complete=-1;
     for(local f=0;f<masks.len();f+=1) {

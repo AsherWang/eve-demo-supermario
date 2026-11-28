@@ -32,6 +32,7 @@ dofile("scripts/world22.nut");
 dofile("scripts/world22_enemies.nut");
 dofile("scripts/world23.nut");
 dofile("scripts/world24.nut");
+dofile("scripts/world31.nut");
 dofile("scripts/title.nut");
 dofile("scripts/level_data.nut");
 dofile("scripts/levels.nut");

@@ -237,7 +237,7 @@ function parityStateJson(g, frame) {
     } else if (g.state == "nextStageLoad") {
         operModeTask = g.stageLoadFrames <= 1 ? 0 :
             (g.stageLoadFrames < 163 ? 1 : (g.stageLoadFrames == 163 ? 2 : 3));
-        engineSubroutine = g.stageLoadFrames <= 1 ? 5 :
+        engineSubroutine = g.stageLoadFrames <= 1 ? (("loadingWorldTransition" in g && g.loadingWorldTransition)?8:5) :
             (g.stageLoadFrames == 165 ? 7 : 0);
     } else if (g.state == "endLevel" || g.state == "timeBonus" ||
                g.state == "raiseFlag" || g.state == "fireworks" ||

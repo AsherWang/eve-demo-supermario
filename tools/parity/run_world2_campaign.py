@@ -13,13 +13,13 @@ def validate_campaign(rows, movie):
         stage = (row['world'], row['level'])
         if not stages or stages[-1] != stage:
             stages.append(stage)
-    if stages != [(2, 2), (2, 3), (2, 4)]:
+    if stages != [(2, 2), (2, 3), (2, 4), (3, 1)]:
         reasons.append('incorrect stage sequence')
     deaths = [r['frame'] for r in rows if r['dead'] or r['state'] in ('deathReload', 'gameOver')]
     if deaths or (rows and min(r['lives'] for r in rows) < rows[0]['lives']):
         reasons.append('death or life loss')
-    if not rows or rows[-1]['state'] != 'worldComplete':
-        reasons.append('castle ending not reached')
+    if not rows or (rows[-1]['world'], rows[-1]['level'], rows[-1]['state']) != (3, 1, 'playing'):
+        reasons.append('next-world normal control not reached')
     for stage in (2, 3, 4):
         if not any(r['world'] == 2 and r['level'] == stage and r['state'] == 'playing' for r in rows):
             reasons.append(f'no gameplay in 2-{stage}')

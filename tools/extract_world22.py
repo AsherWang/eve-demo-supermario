@@ -4,7 +4,7 @@ import argparse
 import hashlib
 import json
 from pathlib import Path
-from extract_smb_assets import find_once, compose_metatile, compose_sprite, tile_image, METATILE_COUNTS, ENEMY_PALETTES
+from extract_smb_assets import find_once, compose_metatile, compose_sprite, tile_image, METATILE_COUNTS, ENEMY_PALETTES, decode_tile
 from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -142,6 +142,27 @@ def extract_assets(raw: bytes, output: Path) -> dict:
             save(compose_metatile(chr_data, prg[cursor:cursor+4], palettes[group]),
                  f"metatile-{group*64+index}.png")
             cursor += 4
+    metatiles=find_once(prg,bytes.fromhex("242424242727272724242435"),"metatiles")
+    rotation=find_once(prg,bytes.fromhex("272727170717"),"color rotation")
+    coin_offset=metatiles+sum(METATILE_COUNTS[:3])*4+12
+    for phase,color in enumerate(prg[rotation:rotation+6]):
+        palette=list(palettes[3]);palette[1]=color
+        coin=compose_metatile(chr_data,prg[coin_offset:coin_offset+4],palette)
+        # The water packet supplies $22 as universal backdrop; palette entry
+        # two remains $12. Coin highlights use pattern zero, unlike its blue field.
+        backdrop=Image.new("RGBA",coin.size,(146,144,255,255));backdrop.alpha_composite(coin)
+        save(backdrop,f"coin-{phase}.png")
+        hud=Image.new("RGBA",(8,8))
+        hud.alpha_composite(tile_image(chr_data,0xff,palettes[7],0,True),(0,1))
+        hud.alpha_composite(tile_image(chr_data,0x2e,palette,1,True),(0,0))
+        save(hud,f"hud-coin-{phase}.png")
+        mask=Image.new("RGBA",(8,8));sprite_zero=decode_tile(chr_data,0xff,0)
+        for y in range(8):
+            for x in range(8):
+                if sprite_zero[y*8+x]:
+                    color=hud.getpixel((x,y+1)) if y<7 else (146,144,255,255)
+                    mask.putpixel((x,y),color if color[3] else (146,144,255,255))
+        save(mask,f"hud-sprite0-{phase}.png")
     graphics = find_once(prg, bytes.fromhex("fcfcaaabacadfcfcaeafb0b1"), "enemy graphics")
     for name, index in [("bloober-0",10), ("bloober-1",11),
                         ("cheep-0",12), ("cheep-1",13)]:
@@ -165,6 +186,12 @@ def extract_assets(raw: bytes, output: Path) -> dict:
             image = compose_sprite(chr_data, prg[offset:offset+8], palettes[4], 4)
             save(image, f"mario-{size}-swim-{frame}-right.png")
             save(image.transpose(Image.Transpose.FLIP_LEFT_RIGHT), f"mario-{size}-swim-{frame}-left.png")
+            kick=list(prg[offset:offset+8])
+            if size=="big":kick[6]=0x31
+            elif kick[6]!=prg[player+0x9e]:kick[6]=0x46
+            kicked=compose_sprite(chr_data,bytes(kick),palettes[4],4)
+            save(kicked,f"mario-{size}-swim-kick-{frame}-right.png")
+            save(kicked.transpose(Image.Transpose.FLIP_LEFT_RIGHT),f"mario-{size}-swim-kick-{frame}-left.png")
     return dict(palette_cpu_address=water+0x8000, palettes=palettes, files=files)
 
 
@@ -174,6 +201,13 @@ def main() -> None:
     parser.add_argument("--output-root", type=Path, default=ROOT)
     args = parser.parse_args()
     streams, manifest = extract(args.rom.read_bytes())
+    prg=args.rom.read_bytes()[16:32784]
+    bubble=find_once(prg,bytes.fromhex("ff504020"),"bubble motion/delay tables")
+    # InitializeGame calls SetupBubble directly. The normal entrance leaves
+    # scratch $07=$91, rather than BubbleCheck's usual random-bit index.
+    bootstrap=[prg[bubble+0x91],prg[bubble+2+0x91]]
+    manifest["bubble_entrance"]={"scratch_index":0x91,"force":bootstrap[0],"timer":bootstrap[1],"table_cpu_address":bubble+0x8000}
+    streams["BUBBLE_ENTRANCE"]=bytes(bootstrap)
     dest = args.output_root / "scripts/generated/world22_data.nut"
     dest.parent.mkdir(parents=True, exist_ok=True)
     dest.write_text("// Offline verified World 2-2 area streams; no runtime ROM dependency.\n" +

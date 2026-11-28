@@ -95,9 +95,9 @@ foreach(power in [0,1,2]) {
     local remaining=g.time;
     for(local f=0;f<350 && g.state!="playing";f+=1) simulateFixed(g,FIXED_DT);
     requireSelfTest(isWorld22(g) && g.stage=="exit" && g.area=="main" && g.state=="playing" &&
-        g.cameraX==2816 && g.time==remaining && g.player.big==(power>0) &&
+        g.cameraX==2816 && g.time==remaining-1 && g.player.big==(power>0) &&
         g.player.fire==(power==2) && !g.romBackgroundCollision,
-        "water exit must emerge on shared ground page 11 without resetting the timer or powers");
+        "water exit must emerge on shared ground page 11 with the source entrance timer tick and preserved powers");
     requireSelfTest(g.flagX>g.player.x && g.flagX<g.areaWidth*16,"exit has a reachable flag");
     g.input.right=true;g.input.run=true;
     for(local f=0;f<1800 && g.state!="levelComplete";f+=1) {

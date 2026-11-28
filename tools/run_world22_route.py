@@ -53,7 +53,7 @@ runWorld22WholeRoute(''' + json.dumps(masks) + ');\n', encoding='utf-8')
     passed = (result.returncode == 0 and len(summaries) == 1 and len(rows) == len(masks)
               and [row['frame'] for row in rows] == list(range(len(masks))))
     report = dict(passed=passed, strict_parity_accepted=False,
-                  scope='continuous host gameplay only; original frames/states/events/APU/audio gates and next-stage transition pending',
+                  scope='continuous host gameplay only; original frames/states/events/APU/audio gates are reported separately',
                   movie_sha256=hashlib.sha256(movie_path.read_bytes()).hexdigest(),
                   exit_code=result.returncode, state_rows=len(rows), route_events=events,
                   result=summaries[0] if summaries else None, source_sha256=hashes)

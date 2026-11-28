@@ -41,7 +41,7 @@ class World24DataTests(unittest.TestCase):
         s=(ROOT/'scripts/world24.nut').read_text()
         self.assertNotIn('startLevel(g,2,1)',s)
         self.assertNotIn('g.world=1;',s)
-        self.assertIn('g.state="worldComplete"',s)
+        self.assertIn('beginWorld31Load(g);',s)
         self.assertIn('g.checkpointPage=0;g.lives-=1;',s)
 
 if __name__=='__main__':unittest.main()

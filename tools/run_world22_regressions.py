@@ -24,7 +24,7 @@ def main() -> int:
     route=run_route(DEFAULT_MOVIE,args.output/'whole-route')
     report=dict(passed=passed and route['passed'],exit_code=result.returncode,
         motion_frames=expected_frames,whole_route=route['result'],strict_parity_accepted=False,
-        scope='selected movement, checkpoint/contact/interactions and continuous normal-entrance-to-settlement gameplay; six strict parity gates and next-stage transition remain pending')
+        scope='selected movement, checkpoint/contact/interactions and continuous normal-entrance-to-settlement gameplay; strict original-ROM acceptance is reported separately')
     (args.output/'summary.json').write_text(json.dumps(report,indent=2)+'\n',encoding='utf-8')
     print(text);print(json.dumps(report))
     return 0 if report['passed'] else 1

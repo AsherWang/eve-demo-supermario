@@ -1055,6 +1055,12 @@
   ],
   "checkpoint_page": 5,
   "checkpoint_table_cpu_address": 37309,
+  "bubble_entrance": {
+    "scratch_index": 145,
+    "force": 249,
+    "timer": 4,
+    "table_cpu_address": 46923
+  },
   "assets": {
     "palette_cpu_address": 36004,
     "palettes": [
@@ -1517,6 +1523,78 @@
         "sha256": "5282a54147ae988d9be352e6134ec490906445c5a8e619476584ff023c89edd1"
       },
       {
+        "path": "coin-0.png",
+        "sha256": "8268570f5ca5d3225a0c76922320bdcec60c5981431ca178ab5ff5af9e5cecb3"
+      },
+      {
+        "path": "hud-coin-0.png",
+        "sha256": "f6d0c6689898110be497a4a452a5ad89d39c0e0297e9f92044c2812a5985e22e"
+      },
+      {
+        "path": "hud-sprite0-0.png",
+        "sha256": "85fbb6258ccde3f073e92948b74bb67f8ea9d491f17875aac1c5fb4848b27086"
+      },
+      {
+        "path": "coin-1.png",
+        "sha256": "8268570f5ca5d3225a0c76922320bdcec60c5981431ca178ab5ff5af9e5cecb3"
+      },
+      {
+        "path": "hud-coin-1.png",
+        "sha256": "f6d0c6689898110be497a4a452a5ad89d39c0e0297e9f92044c2812a5985e22e"
+      },
+      {
+        "path": "hud-sprite0-1.png",
+        "sha256": "85fbb6258ccde3f073e92948b74bb67f8ea9d491f17875aac1c5fb4848b27086"
+      },
+      {
+        "path": "coin-2.png",
+        "sha256": "8268570f5ca5d3225a0c76922320bdcec60c5981431ca178ab5ff5af9e5cecb3"
+      },
+      {
+        "path": "hud-coin-2.png",
+        "sha256": "f6d0c6689898110be497a4a452a5ad89d39c0e0297e9f92044c2812a5985e22e"
+      },
+      {
+        "path": "hud-sprite0-2.png",
+        "sha256": "85fbb6258ccde3f073e92948b74bb67f8ea9d491f17875aac1c5fb4848b27086"
+      },
+      {
+        "path": "coin-3.png",
+        "sha256": "b573bd6abe2d1fdaef0dd0ad2e8b8106ab6092d0c074a1ee57f43c159b8c81f5"
+      },
+      {
+        "path": "hud-coin-3.png",
+        "sha256": "c48f0ac67395d28e8f05d98add9ea412f86b1f4af485a703dc936ec83109a98c"
+      },
+      {
+        "path": "hud-sprite0-3.png",
+        "sha256": "8bf842aa7cb7ce513f459a7d52acbf4d8a1e32ba9634efaea5b6cf1f65c97fad"
+      },
+      {
+        "path": "coin-4.png",
+        "sha256": "3f6542141e5dc5012bc28ddc6d8a83af316c2b1bf12809bc926c23f7431ae9cd"
+      },
+      {
+        "path": "hud-coin-4.png",
+        "sha256": "805343e1b6b566f2af9fa9defd332d2d14dbb2bc745e04ee8b36c8dd95b541cc"
+      },
+      {
+        "path": "hud-sprite0-4.png",
+        "sha256": "12fee504e41ac71428fb6350f81c9da3bfee74dbebf747af80475d535397f02d"
+      },
+      {
+        "path": "coin-5.png",
+        "sha256": "b573bd6abe2d1fdaef0dd0ad2e8b8106ab6092d0c074a1ee57f43c159b8c81f5"
+      },
+      {
+        "path": "hud-coin-5.png",
+        "sha256": "c48f0ac67395d28e8f05d98add9ea412f86b1f4af485a703dc936ec83109a98c"
+      },
+      {
+        "path": "hud-sprite0-5.png",
+        "sha256": "8bf842aa7cb7ce513f459a7d52acbf4d8a1e32ba9634efaea5b6cf1f65c97fad"
+      },
+      {
         "path": "bloober-0.png",
         "sha256": "621f268b03a91356c4047c1dd438cd3dcb33f6ecbdb37099ec4c38ae58baa4d1"
       },
@@ -1597,12 +1675,28 @@
         "sha256": "33fc6dc57ed32906da3e76f5c1239ca969c1080b7d164d7cd8906093757089a9"
       },
       {
+        "path": "mario-big-swim-kick-0-right.png",
+        "sha256": "256c725c5ce33ae26377d1fc405b30a859def8af051ee12cbfbdc93bca76df49"
+      },
+      {
+        "path": "mario-big-swim-kick-0-left.png",
+        "sha256": "1d6f901437c4a588179f70a07616e35e4ebeb9651c882b9194ac8f41e479fb99"
+      },
+      {
         "path": "mario-big-swim-1-right.png",
         "sha256": "7a52eb20b52b484b2408b76a8a61d8725729dc447cde375de01dd1f06253f395"
       },
       {
         "path": "mario-big-swim-1-left.png",
         "sha256": "70d0da4c7c53c4c9028fd5146dbed5cb321b94e9e1ac40f59421c0a8f3c49f4f"
+      },
+      {
+        "path": "mario-big-swim-kick-1-right.png",
+        "sha256": "de2b224cd260f239bf051c21cd04b72c9ed251c45d3200ac7748cd3192ce9aa7"
+      },
+      {
+        "path": "mario-big-swim-kick-1-left.png",
+        "sha256": "238d23935c0ab32cfc252bee166348bfabf7d2332ee204fb3769bafdc9ad45c9"
       },
       {
         "path": "mario-big-swim-2-right.png",
@@ -1613,12 +1707,28 @@
         "sha256": "480b4d1fca65b7023aa7c37925c4671fa712717dfcb49683420dc4608229c8b5"
       },
       {
+        "path": "mario-big-swim-kick-2-right.png",
+        "sha256": "b9672cbdbc2f905751b7b15c7ba2114807c8e286119e70baaab6ebf676cb97cb"
+      },
+      {
+        "path": "mario-big-swim-kick-2-left.png",
+        "sha256": "2813fd63464bdd847ef58c11568dd05ed8c88eed391fc12fa9f1f241e5130675"
+      },
+      {
         "path": "mario-small-swim-0-right.png",
         "sha256": "b89d65b14bd32bcedfeb360c7f4e2b2c76a9ccbdf6189bdefa7450c74ae91ff1"
       },
       {
         "path": "mario-small-swim-0-left.png",
         "sha256": "105d273ee1ee5694284f07ea27ec82beae6156a49ac72e5120ce97d7eb935668"
+      },
+      {
+        "path": "mario-small-swim-kick-0-right.png",
+        "sha256": "c7c861c01fac974cafa43e3b63dedbd4e024dabe38260066eb87daa4a507c9aa"
+      },
+      {
+        "path": "mario-small-swim-kick-0-left.png",
+        "sha256": "3a01cb51df6e5a486b5e67dd033f91e65e92fedb78897b9ad9dc343f2bd5ff9c"
       },
       {
         "path": "mario-small-swim-1-right.png",
@@ -1629,11 +1739,27 @@
         "sha256": "ce0b1410c1b196a2c73e022aef44b1c0a693f34dbd09355a571bea193b4ead92"
       },
       {
+        "path": "mario-small-swim-kick-1-right.png",
+        "sha256": "f9bd07c6ceb61488591c2b4393655728ae8cc6ccbc30524b467c19e9eaeef0e0"
+      },
+      {
+        "path": "mario-small-swim-kick-1-left.png",
+        "sha256": "3d8b2f24c9cd6fcba28029e4ea71c0cccf22f9c32c130a64a427b1c50c636e3b"
+      },
+      {
         "path": "mario-small-swim-2-right.png",
         "sha256": "31a1cea5ece18620bc2a2eef9cabbc0f9ec02e869dd9b8a92ff54f531c768448"
       },
       {
         "path": "mario-small-swim-2-left.png",
+        "sha256": "a3ec8b708cbbfe53b1dd80f627ea9e41f690aba8dc41169d9ab0f2f8cbaa8e99"
+      },
+      {
+        "path": "mario-small-swim-kick-2-right.png",
+        "sha256": "31a1cea5ece18620bc2a2eef9cabbc0f9ec02e869dd9b8a92ff54f531c768448"
+      },
+      {
+        "path": "mario-small-swim-kick-2-left.png",
         "sha256": "a3ec8b708cbbfe53b1dd80f627ea9e41f690aba8dc41169d9ab0f2f8cbaa8e99"
       }
     ]

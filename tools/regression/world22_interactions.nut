@@ -24,6 +24,8 @@ foreach(id in [7,10,11]) {
     requireSelfTest(g.world22.enemies[0]==null,"dead water enemy leaves the slot after sinking");
 }
 local b=createGame();startWorld22Water(b);local rng=clone b.world22.random;
+// InitializeArea clears RAM; this fixture starts with retired slots to test emission.
+foreach(slot in b.world22.bubbles) {requireSelfTest(slot.y==0,"area clears bubble Y");slot.y=248;}
 updateWorld22Bubbles(b);
 requireSelfTest(b.world22.bubbles[2].x==49 && b.world22.bubbles[2].y==39 &&
     b.world22.bubbles[0].y==248 && b.world22.bubbles[1].y==248 && b.world22.bubbleTimer==64,
@@ -35,5 +37,5 @@ b.player.transformFrames=4;local frozen=b.world22.bubbleTimer;
 updateWorld22Enemies(b);
 requireSelfTest(b.world22.bubbleTimer==frozen,"bubble movement freezes during transformation");
 startWorld22Water(b);
-requireSelfTest(b.world22.bubbles[2].y==248 && b.world22.bubbleTimer==0,"area entry resets bubble slots");
+requireSelfTest(b.world22.bubbles[2].y==0 && b.world22.bubbleTimer==0,"area entry resets bubble slots");
 print("WORLD22_INTERACTIONS_OK\n");

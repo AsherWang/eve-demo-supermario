@@ -47,6 +47,10 @@ class ReplayErrorTest(unittest.TestCase):
             root = Path(directory)
             generated = root / "scripts/generated/parity_movie.nut"
             generated.parent.mkdir(parents=True)
+            generated.write_text("original adapter", encoding="utf-8")
+            for name in ("main.nut", "config.nut"):
+                (root/name).write_text("// fixture", encoding="utf-8")
+            (root/"assets").mkdir()
             process = Mock()
             process.poll.return_value = None
 
@@ -63,7 +67,9 @@ class ReplayErrorTest(unittest.TestCase):
                     run_actual.main()
             process.terminate.assert_called_once()
             process.wait.assert_called_once_with(timeout=5)
-            self.assertEqual(generated.read_text(encoding="utf-8"), run_actual.DISABLED_SOURCE)
+            self.assertEqual(generated.read_text(encoding="utf-8"), "original adapter")
+            snapshot=root/"capture/runtime-project/scripts/generated/parity_movie.nut"
+            self.assertEqual(snapshot.read_text(encoding="utf-8"), run_actual.DISABLED_SOURCE)
             self.assertIn("eve_init failed", (root / "capture/process-stdout.log").read_text())
 
     def test_script_failure_is_detected_but_audio_status_is_not(self):

@@ -1306,7 +1306,7 @@ function updateLevelCoins(g) {
             if (floor(coin.x / TILE_SIZE).tointeger() == tx &&
                 floor(coin.y / TILE_SIZE).tointeger() == ty) {
                 coin.active = false;
-                if(g.level==3 || isWorld21(g)) coin.visualErasePending <- true;
+                if(g.level==3 || isWorld21(g) || isWorld24(g) || isWorld22Water(g)) coin.visualErasePending <- true;
                 // EraseCoinMetatile writes through the second VRAM buffer.
                 g.vramBufferAddrCtrl = 6;
                 awardCoin(g);
@@ -2471,7 +2471,8 @@ function updateEffects(g, dt) {
         if(isWorld21(g)) advanceWorld21Block(g);
         // The first block pass queues the background erase in primary VRAM.
         if(isWorld21(g) && g.bump.frame==1) g.bump.backgroundErasePending <- true;
-        if (g.bump.frame > 15) g.bump.active = false;
+        // Castle block OAM finishes before the primary VRAM restoration.
+        if (g.bump.frame > (isWorld24(g)?18:15)) g.bump.active = false;
     }
     updateCoinEffect(g, g.coinEffect, dt);
     for (local effectIndex = g.archivedCoinEffects.len() - 1;
@@ -2874,7 +2875,7 @@ function updateTimer(g) {
     }
 }
 
-function updatePlayerAnimationState(g) {
+function updatePlayerAnimationState(g, allowInput=true) {
     local p = g.player;
 
     if (p.dead) return;
@@ -2947,7 +2948,7 @@ function updatePlayerAnimationState(g) {
     // on the following frame.
     local moving = p.nesXSpeed != 0 || g.state == "pipeSide" ||
         g.state == "autoWalk" ||
-        (g.state == "playing" && (g.input.left || g.input.right));
+        (allowInput && g.state == "playing" && (g.input.left || g.input.right));
     if (!moving) {
         p.animationFrame = -1; // standing
         p.playerAnimCtrl = 0;
@@ -2971,6 +2972,7 @@ function updateFireworks(g, dt) {
         if (g.fireworks[i].frames <= 0) {
             g.fireworks.remove(i);
             g.score += 500;
+            if(isWorld22(g)) g.queuedScore=g.score;
             emitSound(g, "blast");
         }
     }
@@ -3088,6 +3090,7 @@ function beginNextStageLoad(g, dt) {
     // LevelNumber. Perform that final player-physics pass first so the task's
     // visible speed and integration fractions are preserved.
     autoControlPlayerEndLevel(g, dt);
+    g.loadingWorldTransition <- false;
     g.loadingRenderLevel <- g.level;
     g.loadingRenderCameraX <- g.cameraX;
     g.loadingPlayerBig <- g.player.big;
@@ -3110,6 +3113,7 @@ function updateNextStageLoad(g) {
         g.displayCameraX = 0.0;
         g.previousScrollAmount = 0.0;
         g.vramScrollThirtyTwo = 0;
+        if("loadingWorldTransition" in g && g.loadingWorldTransition) g.vramAreaParserTask=0;
         g.player.nesYDummy = 0;
         g.player.nesXForce = 0;
         g.player.nesXMoveForce = 0;
@@ -3144,11 +3148,15 @@ function updateNextStageLoad(g) {
         // parityRecordState exposes the pre-increment FrameCounter as
         // (nesFrameCounter - 1) & $ff. One therefore reports zero here.
         g.nesFrameCounter = 1;
-        g.time = 0;
-        g.displayTime = 0;
+        g.time = ("loadingWorldTransition" in g && g.loadingWorldTransition)?g.loadingRemainingTime:0;
+        g.displayTime = g.time;
         g.colorRotateOffset = 0;
         parityRecordEvent(g, "music", "silence");
         return;
+    }
+    if("loadingWorldTransition" in g && g.loadingWorldTransition &&
+        g.stageLoadFrames==3 && !g.loadingWaited) {
+        g.loadingWaited=true;g.nesFrameCounter=(g.nesFrameCounter+1)&255;return;
     }
     g.stageLoadFrames += 1;
     g.nesFrameCounter = (g.nesFrameCounter + 1) & 0xFF;
@@ -3161,6 +3169,7 @@ function updateNextStageLoad(g) {
         g.vramBufferAddrCtrl = 6;
     else if (g.stageLoadFrames == 160)
         g.vramBufferAddrCtrl = g.level==4?4:2;
+    if (g.stageLoadFrames == 161 && isWorld31(g)) g.vramBufferAddrCtrl=10; // Snow palette packet.
     if (g.stageLoadFrames == 164) {
         parityRecordEvent(g, "music", g.level==4?"castle":"overworld");
         g.soundEvents.append("resume_music");
@@ -3181,14 +3190,14 @@ function updateNextStageLoad(g) {
         g.colorPhasePending = false;
         g.state = "nextStageLoad";
         g.stageLoadFrames = 165;
-        g.time = 301;
-        g.displayTime = 301;
+        g.time = g.world==3?401:301;
+        g.displayTime = g.time;
         return;
     }
     if (g.stageLoadFrames == 166) {
         g.state = "playing";
-        g.time = 300;
-        g.displayTime = 300;
+        g.time = g.world==3?400:300;
+        g.displayTime = g.time;
         g.gameTimerControl = 24;
     }
 }
@@ -3215,6 +3224,14 @@ function preparePlayerPresentation(g) {
         g.player.preparedBehindBackground <- behind;
         if("pipeExitPresentationPending" in g.player) delete g.player.pipeExitPresentationPending;
     }
+    if(isWorld22(g) && "world22Transition" in g) {
+        local t=g.world22Transition;
+        local behind=t.behindPipe || t.phase=="rise" || ("risePass" in t && t.risePass);
+        g.player.displayBehindBackground <- "preparedBehindBackground" in g.player?g.player.preparedBehindBackground:behind;
+        g.player.preparedBehindBackground <- behind;
+        g.player.displayVisible <- !("preparedVisible" in g.player) || g.player.preparedVisible;
+        g.player.preparedVisible <- true;
+    }
     g.player.displayAnimationFrame = g.player.preparedAnimationFrame;
     g.player.queuedAnimationFrame = g.player.preparedAnimationFrame;
     g.player.preparedAnimationFrame = isWorld21(g) && g.player.dead?-7:g.player.animationFrame;
@@ -3227,6 +3244,9 @@ function preparePlayerPresentation(g) {
 }
 
 function simulateFixed(g, dt) {
+    if(isWorld22(g)) {
+        g.displayFireworks <- [];foreach(burst in g.fireworks) g.displayFireworks.append(clone burst);
+    }
     g.simTime += dt;
     if(g.state=="titleLoad" || g.state=="titleScreen" || g.state=="newGameLoad") {updateTitleFlow(g);return;}
     if (g.state == "nextStageLoad") {
@@ -3249,7 +3269,13 @@ function simulateFixed(g, dt) {
         }
         return;
     }
-    if (g.level == 2 && updateWorld12Transition(g)) return;
+    if (g.level == 2 && updateWorld12Transition(g)) {
+        if(isWorld22(g)) {
+            if(g.player.playerAnimTimer>0) g.player.playerAnimTimer-=1;
+            updatePlayerAnimationState(g,false);preparePlayerPresentation(g);
+        }
+        return;
+    }
     if (g.level == 4 && (isWorld24(g)?updateWorld24Transition(g):updateWorld14Transition(g))) {
         if(g.player.playerAnimTimer>0) g.player.playerAnimTimer-=1;
         updatePlayerAnimationState(g);
@@ -3268,7 +3294,8 @@ function simulateFixed(g, dt) {
     }
     // NMI consumes exactly one selected VRAM buffer.  Preserve the selection
     // made by the preceding gameplay pass before preparing this pass's state.
-    local secondaryBufferWasSelected = g.vramBufferAddrCtrl == 6;
+    if(isWorld24(g) && g.vramBufferAddrCtrl==8) g.colorPhasePending=false;
+    local secondaryBufferWasSelected = g.vramBufferAddrCtrl == 6 || (isWorld24(g) && g.vramBufferAddrCtrl==8);
     if(isWorld21(g)) consumeWorld21BlockRestorations(g,secondaryBufferWasSelected);
     if(isWorld21(g) && !secondaryBufferWasSelected && "backgroundErasePending" in g.bump)
         g.bump.backgroundErasePending=false;
@@ -3367,6 +3394,7 @@ function simulateFixed(g, dt) {
     }
 
     if (g.state == "playing") {
+        if(isWorld22(g) && "world22Transition" in g) g.world22Transition.hudTimeReady=true;
         if(isWorld21(g)) g.world21.hudTimeHidden <- false;
         if (g.respawnPrimeDirection != 0) {
             local currentRun = g.input.run;
@@ -3382,13 +3410,15 @@ function simulateFixed(g, dt) {
             updateFireballs(g, dt);
             updateGoombas(g, dt);
             updateLevelCoins(g);
-            if (g.world==1 && g.level == 2) updateWorld12Actors(g);
+            if ((g.world==1 || (isWorld22(g) && g.area=="main")) && g.level == 2) updateWorld12Actors(g);
             if (isWorld23(g)) updateWorld23Actors(g);
             else if (g.level == 3) updateWorld13Actors(g);
             if (isWorld24(g)) updateWorld24Actors(g);
             else if (g.level == 4) updateWorld14Actors(g);
             if(isWorld21(g)) updateWorld21Actors(g);
             if(isWorld22Water(g)) updateWorld22Enemies(g);
+        } else if(isWorld22Water(g) && g.state=="world12Pipe") {
+            updateWorld22Enemies(g);
         } else if (g.state == "pipeDown" || g.state == "pipeSide") {
             // Pipe-entry player control is a game-engine subroutine; normal
             // enemy objects still run on the transition's first frame.
@@ -3509,7 +3539,7 @@ function simulateFixed(g, dt) {
     // object coordinates separate from the DMA page currently being shown.
     g.displayFlagY = g.preparedFlagY;
     g.preparedFlagY = g.flagY;
-    if(isWorld21(g)) {
+    if(isWorld21(g) || isWorld22(g)) {
         g.displayCastleFlagY = g.preparedCastleFlagY;
         g.preparedCastleFlagY = g.castleFlagY;
     }

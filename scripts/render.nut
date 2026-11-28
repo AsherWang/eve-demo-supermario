@@ -470,9 +470,10 @@ function positiveModulo(value, divisor) {
 }
 
 function drawBackground(g) {
-    if(isWorld22Water(g)) return;
+    if(isWorld22Water(g) || (isWorld22(g) && g.stage=="intro")) return;
     if(isWorld21(g)) {if(g.area=="main") drawWorld13Background(g);return;}
     if(isWorld23(g)) {drawWorld23Background(g);return;}
+    if(isWorld31(g)) {screenRect(0,0,256,240,0,0,0);return;}
     if(isWorld24(g)) {drawWorld24Background(g);return;}
     if(g.level==3) {drawWorld13Background(g);return;}
     if(g.level==4) {drawWorld14Background(g);return;}
@@ -556,6 +557,19 @@ function drawTiles(g) {
                     break;
                 }
             }
+            if(isWorld22(g) && g.stage=="intro") {
+                if(ty>=2 && ty<15 && tx>=0 && tx<ROM_WORLD_2_2_INTRO_METATILES.len()) {
+                    local meta=ROM_WORLD_2_2_INTRO_METATILES[tx][ty-2];
+                    if(meta in assets.world22.introTiles)
+                        worldTexture(g,assets.world22.introTiles[meta],tx*16.0,ty*16.0,16,16);
+                }
+                continue;
+            }
+            if(isWorld31(g)) {
+                local texture=world31TileTexture(g,tx,ty,tile);
+                if(texture!=null) worldTexture(g,texture,tx*16.0,ty*16.0,16,16);
+                continue;
+            }
             if(isWorld22Water(g)) {
                 local texture=world22TileTexture(g,tx,ty);
                 if(texture!=null) worldTexture(g,texture,tx*16.0,ty*16.0,16,16);
@@ -585,7 +599,13 @@ function drawTiles(g) {
                 local texture=isWorld23(g)?world23TileTexture(g,tx,ty,tile):
                     (isWorld24(g)?world24TileTexture(g,tx,ty,tile):
                     (g.level==3?world13TileTexture(g,tx,ty,tile):world14TileTexture(g,tx,ty,tile)));
-                if(texture!=null) worldTexture(g,texture,tx*TILE_SIZE,ty*TILE_SIZE,TILE_SIZE,TILE_SIZE);
+                local offsetY=0.0;
+                if(isWorld24(g) && g.bump.active && g.bump.tx==tx && g.bump.ty==ty && g.bump.frame>1) {
+                    local offsets=[-1,-3,-5,-6,-6,-7,-7,-7,-6,-5,-4,-3,-1,1,0];
+                    local index=g.bump.frame-2;if(index>=offsets.len()) index=offsets.len()-1;
+                    offsetY=offsets[index].tofloat();
+                }
+                if(texture!=null) worldTexture(g,texture,tx*TILE_SIZE,ty*TILE_SIZE+offsetY,TILE_SIZE,TILE_SIZE);
                 continue;
             }
             if (tile == TILE_EMPTY) continue;
@@ -685,8 +705,8 @@ function marioTextureFromSet(g, set) {
 
 function marioTexture(g) {
     local p = g.player;
-    if(isWorld22Water(g) && !p.dead && !p.grounded)
-        return assets.world22.swim[p.big?"big":"small"][p.displayAnimationFrame<=-10?(-10-p.displayAnimationFrame)%3:0][p.displayFacing>0?0:1];
+    if(isWorld22Water(g) && !p.dead && p.displayAnimationFrame<=-10)
+        return (((g.nesFrameCounter+255)&4)==0?assets.world22.swimKick:assets.world22.swim)[p.big?"big":"small"][p.displayAnimationFrame<=-10?(-10-p.displayAnimationFrame)%3:0][p.displayFacing>0?0:1];
     if (isWorld21(g)?p.displayAnimationFrame==-7:p.dead)
         return p.facing > 0 ? assets.mario.deadRight : assets.mario.deadLeft;
     local palettePhase = playerPalettePhase(g);
@@ -706,7 +726,7 @@ function drawPlayer(g) {
     local p = g.player;
     if (g.state == "nextStageLoad" && g.stageLoadFrames == 165) return;
     if(isWorld21(g) && g.state=="areaEntrance" && g.areaEntranceFrames==0) return;
-    if (parityIsEnabled() && g.parity.originPending && g.world==1 && g.level==1) return;
+    if (parityIsEnabled() && g.parity.originPending && ((g.world==1 && g.level==1) || (isWorld22(g) && g.stage=="intro"))) return;
     if ((g.state == "timeBonus" && p.courseClearHidden) || g.state == "raiseFlag" ||
         g.state == "fireworks" || g.state == "postClearDelay" ||
         g.state == "levelComplete" || g.state == "gameOver" || g.state == "warpComplete") return;
@@ -765,7 +785,7 @@ function drawLevelCoins(g) {
     foreach (coin in g.levelCoins) {
         if (!coin.active && !("visualErasePending" in coin && coin.visualErasePending)) continue;
         local phase = g.displayColorPhase;
-        local texture = isWorld23(g)?assets.world23.coins[phase]:
+        local texture = isWorld22Water(g)?assets.world22.coins[phase]:isWorld24(g)?world24Assets.coins[phase]:isWorld23(g)?assets.world23.coins[phase]:
             g.level == 3 || (isWorld21(g) && g.area=="sky") ? assets.world13.coins[phase] :
             assets.items.undergroundCoins[phase];
         worldTexture(g, texture,
@@ -922,27 +942,28 @@ function drawFlag(g) {
     renderOffsetY=0.0;
     // OAM Y is the scanline immediately above a sprite.  EnemyGfxHandler
     // writes the flag at g.flagY, and the PPU exposes its first pixel at +1.
-    if((g.level==3 || isWorld21(g)) && g.flagX-8.0-visualCameraX(g)<240.0)
+    if((g.level==3 || isWorld21(g) || isWorld22(g)) && g.flagX-8.0-visualCameraX(g)<240.0)
         screenOamTexture(assets.scenery.flagpoleFlag,g.flagX-8.0-visualCameraX(g),
             g.displayFlagY+1.0,16.0,16.0,g.flagX-g.cameraX,
             // FlagpoleGfxHandler adds 8 then 12 to relative X for the score
             // baseline. ADC #8 for the third sprite retains that carry.
             g.flagX-8.0-visualCameraX(g)>=236.0?1:0);
-    else if(g.level!=3 && !isWorld21(g)) worldTexture(g, assets.scenery.flagpoleFlag,
+    else if(g.level!=3 && !isWorld21(g) && !isWorld22(g)) worldTexture(g, assets.scenery.flagpoleFlag,
                  g.flagX - 8.0, g.displayFlagY + 1.0, 16.0, 16.0);
 }
 
 function drawFireworks(g) {
-    foreach (burst in g.fireworks) {
+    foreach (burst in (isWorld22(g) && "displayFireworks" in g?g.displayFireworks:g.fireworks)) {
         local frame = floor((24 - burst.frames) / 8).tointeger();
         if (frame < 0) frame = 0;
         if (frame > 2) frame = 2;
         worldTexture(g, assets.items.fireballExplosions[frame],
-                     burst.x, burst.y, 16.0, 16.0);
+                     burst.x-(isWorld22(g)?4:0), burst.y-(isWorld22(g)?3:0), 16.0, 16.0);
     }
 }
 
 function drawCastle(g) {
+    if(isWorld31(g) || (isWorld22(g) && g.stage=="intro")) return;
     if(isWorld21(g)) {
         if(g.castleFlagVisible) worldTexture(g,assets.scenery.castleFlag,
             g.castleX+32,g.displayCastleFlagY+1,16,16);
@@ -958,7 +979,7 @@ function drawCastle(g) {
     // castleFlagY is the ROM OAM coordinate; pixels start one scanline later.
     if (g.castleFlagVisible)
         worldTexture(g, assets.scenery.castleFlag,
-                     x + 32.0, g.castleFlagY + 1.0, 16.0, 16.0);
+                     x + 32.0, (isWorld22(g)?g.displayCastleFlagY:g.castleFlagY) + 1.0, 16.0, 16.0);
     // First five rows of CastleMetatiles ($45-$4b), consumed row-major by
     // CastleObject in World 1-1.  Keeping the ROM's metatile identities here
     // matters: several shapes look interchangeable at a glance but use
@@ -1098,10 +1119,14 @@ function drawHudNumber(value, digits, x, y, blankLeading = false) {
 }
 
 function drawHud(g) {
+    if("loadingHideHud" in g && g.loadingHideHud) {
+        if(isWorld24(g)) screenTexture(world24Assets.spriteZero,88,25,8,8);
+        return;
+    }
     drawHudGlyphs([0x16, 0x0A, 0x1B, 0x12, 0x18], 24.0, 16.0); // MARIO
     drawHudNumber(g.displayScore, 6, 24.0, 24.0);
     local colorPhase = g.displayColorPhase;
-    local hudCoinSet = g.area == "underground" ?
+    local hudCoinSet = isWorld22Water(g)?assets.world22.hudCoins:g.area == "underground" ?
         assets.items.hudCoinsUnderground :
         (g.area == "castle" ? (isWorld24(g)?world24Assets.hudCoins:world14Assets.hudCoins) : assets.items.hudCoins);
     screenTexture(g.state=="gameOverScreen"?
@@ -1114,6 +1139,7 @@ function drawHud(g) {
     drawHudGlyphs([0x1D, 0x12, 0x16, 0x0E], 200.0, 16.0); // TIME
     if (!(parityIsEnabled() && g.parity.originPending) &&
         g.state != "nextStageLoad" && g.stageLoadFrames != 166 &&
+        !(isWorld22(g) && "world22Transition" in g && !g.world22Transition.hudTimeReady) &&
         g.state != "areaExitEntrance" && !(isWorld21(g) &&
             (g.state=="areaEntrance" || ("hudTimeHidden" in g.world21 && g.world21.hudTimeHidden))) && g.state != "gameOverScreen" && g.state != "titleScreen")
         drawHudNumber(g.displayTime, 3, 208.0, 24.0,
@@ -1125,7 +1151,7 @@ function drawHud(g) {
         screenRect(0.0, 0.0, LOGICAL_WIDTH, LOGICAL_HEIGHT, 0.0, 0.0, 0.0);
         drawHudGlyphs([0x10, 0x0A, 0x16, 0x0E, 0x24,
                        0x18, 0x1F, 0x0E, 0x1B], 92.0, 112.0);
-    } else if (g.state == "levelComplete" && g.level != 3) {
+    } else if (g.state == "levelComplete" && g.level != 3 && !isWorld22(g)) {
         drawHudGlyphs([0x20, 0x18, 0x1B, 0x15, 0x0D], 88.0, 96.0);
         drawHudGlyphs([g.world, 0x28, g.level], 112.0, 112.0);
     } else if (g.state == "warpComplete") {
@@ -1182,7 +1208,7 @@ function areaTransitionOverlay(g) {
 }
 
 function renderGame(g) {
-    if(!oamCollecting && (isWorld21(g) || isWorld23(g)) && g.area=="main" && g.state=="playing") {
+    if(!oamCollecting && ((isWorld21(g) || isWorld23(g)) && g.area=="main" && g.state=="playing" || isWorld22Water(g) || isWorld24(g) && (g.state=="playing" || g.state=="world24Axe" || g.state=="world24VictoryWalk"))) {
         try {
             oamEntries={};oamEntries[0] <- {y=25}; // fixed HUD sprite zero
             oamCollecting=true;
@@ -1203,6 +1229,13 @@ function renderGameScene(g) {
     if(!oamCollecting) gfx.clear();
     renderOffsetY=0.0;
     if(g.state=="titleLoad" || g.state=="titleScreen" || g.state=="newGameLoad") {drawTitleFlow(g);return;}
+    if(isWorld22(g) && "world22Transition" in g) {
+        local t=g.world22Transition;
+        if(t.phase=="initialize" || t.phase=="screen" || t.phase=="secondary" || t.phase=="setup") {
+            local sky=t.phase!="screen" || g.nesFrameCounter<=1 || t.screenTask>=(t.target=="water"?11:12);
+            screenRect(0,0,256,240,sky?146.0/255:0,sky?144.0/255:0,sky?1.0:0);return;
+        }
+    }
     if(isWorld21(g) && g.state=="areaReload" && g.areaReloadFrames==0) {
         g.state=g.areaReloadTarget=="underground"?"pipeDown":"pipeSide";
         renderGame(g);g.state="areaReload";
@@ -1222,17 +1255,26 @@ function renderGameScene(g) {
         }
         return;
     }
+    if(g.state=="nextStageLoad" && "loadingWorldTransition" in g && g.loadingWorldTransition && g.stageLoadFrames<=2) {
+        local scene=g.loadingScene;
+        if(g.stageLoadFrames>=1) scene.world24.hideRetainer <- true;
+        scene.loadingHideHud <- g.stageLoadFrames==2;
+        renderGame(scene);return;
+    }
     if (g.state == "nextStageLoad" && g.stageLoadFrames == 0 &&
         "loadingRenderCameraX" in g) {
         // The first loader pass keeps the completed World 1-3 nametable on
         // screen while LevelNumber has already advanced.
+        local savedWorld=g.world;
         local savedLevel = g.level;
         local savedState = g.state;
         local savedCameraX = g.cameraX;
         local savedDisplayCameraX = g.displayCameraX;
         local savedDead = g.player.dead;
         g.level = "loadingRenderLevel" in g?g.loadingRenderLevel:3;
-        g.state = "postClearDelay";
+        local worldTransition="loadingWorldTransition" in g && g.loadingWorldTransition;
+        if(worldTransition) g.world=g.loadingRenderWorld;
+        g.state = worldTransition?"world24EndWorld":"postClearDelay";
         g.cameraX = g.loadingRenderCameraX;
         g.displayCameraX = g.loadingRenderCameraX;
         g.player.dead = true;
@@ -1241,7 +1283,7 @@ function renderGameScene(g) {
         g.displayCameraX = savedDisplayCameraX;
         g.cameraX = savedCameraX;
         g.state = savedState;
-        g.level = savedLevel;
+        g.level = savedLevel;g.world=savedWorld;
         return;
     }
     local world12EntryFrames=g.world12PipeMode=="side"?160:48;
@@ -1294,10 +1336,14 @@ function renderGameScene(g) {
         return;
     }
     if (g.state == "nextStageLoad" && g.stageLoadFrames < 165) {
+        if(isWorld23(g) && "loadingRenderLevel" in g && g.loadingRenderLevel==2 && g.stageLoadFrames>=162) {
+            screenRect(0,0,256,240,146.0/255,144.0/255,1.0);return;
+        }
         if (g.stageLoadFrames <= 3) {
-            screenRect(0.0, 0.0, LOGICAL_WIDTH, LOGICAL_HEIGHT,
+            if(isWorld31(g)) screenRect(0,0,256,240,0,0,0);
+            else screenRect(0.0, 0.0, LOGICAL_WIDTH, LOGICAL_HEIGHT,
                        146.0 / 255.0, 144.0 / 255.0, 1.0);
-        } else if (g.stageLoadFrames <= 8 || g.stageLoadFrames >= 149) {
+        } else if (g.stageLoadFrames <= (isWorld31(g)?7:8) || g.stageLoadFrames >= 149) {
             screenRect(0.0, 0.0, LOGICAL_WIDTH, LOGICAL_HEIGHT,
                        0.0, 0.0, 0.0);
         } else {
@@ -1305,7 +1351,10 @@ function renderGameScene(g) {
         }
         return;
     }
-    if(isWorld22Water(g)) screenRect(0,0,LOGICAL_WIDTH,LOGICAL_HEIGHT,60.0/255,60.0/255,1.0);
+    if(isWorld22Water(g)) {
+        screenRect(0,0,256,36,146.0/255,144.0/255,1.0);
+        screenRect(0,36,256,204,146.0/255,144.0/255,1.0);
+    }
     if (g.area == "underground" || g.area == "castle")
         screenRect(0.0, 0.0, LOGICAL_WIDTH, LOGICAL_HEIGHT, 0.0, 0.0, 0.0);
     renderOffsetY=g.displayBackgroundYOffset;
@@ -1314,7 +1363,7 @@ function renderGameScene(g) {
     renderOffsetY=0.0;
     drawPowerUps(g, true);
     drawFireballs(g);
-    if (g.world==1 && g.level == 2) drawWorld12Actors(g, true);
+    if ((g.world==1 || isWorld22(g)) && g.level == 2) drawWorld12Actors(g, true);
     if (g.world==1 && g.level == 3) drawWorld13Actors(g, true);
     if (isWorld24(g)) drawWorld24Actors(g, true);
     else if (g.level == 4) drawWorld14Actors(g, true);
@@ -1324,10 +1373,12 @@ function renderGameScene(g) {
     // occlude the sprite exactly as the PPU does.
     local playerBehindBackground = g.state == "pipeDown" ||
         g.state == "pipeSide" || g.state == "areaExitEntrance" ||
-        (g.level == 2 && g.state == "world12Pipe");
-    if(isWorld21(g) && "displayBehindBackground" in g.player)
+        (g.level == 2 && g.state == "world12Pipe") ||
+        (isWorld22(g) && "world22Transition" in g &&
+            (g.world22Transition.behindPipe || g.world22Transition.phase=="rise"));
+    if((isWorld21(g) || isWorld22(g)) && "displayBehindBackground" in g.player)
         playerBehindBackground=g.player.displayBehindBackground;
-    local playerHidden = g.state == "areaReload" || (isWorld21(g) && g.state=="deathEntrance");
+    local playerHidden = g.state == "areaReload" || (isWorld21(g) && g.state=="deathEntrance") || ("displayVisible" in g.player && !g.player.displayVisible) || (isWorld24(g) && g.world24.drawAllHidden);
     if (playerBehindBackground && !playerHidden) drawPlayer(g);
     // DrawStarFlag uses OAM attribute $22: opaque castle metatiles
     // cover the rising flag, including the crenellations at its final height.
@@ -1378,5 +1429,6 @@ function renderGameScene(g) {
     if (!playerBehindBackground && !playerHidden) drawPlayer(g);
     if(isWorld21(g) && g.area!="underground")
         screenTexture(assets.world21.spriteZeroMasks[g.displayColorPhase],88,25,8,8);
+    if(isWorld22Water(g)) screenTexture(assets.world22.spriteZeroMasks[g.displayColorPhase],88,25,8,8);
     if(!hudBeforeSprites) drawHud(g);
 }

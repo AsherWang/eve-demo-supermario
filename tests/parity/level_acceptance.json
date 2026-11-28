@@ -64,11 +64,27 @@
       "id": "2-2",
       "world": 2,
       "stage": 2,
-      "required_cases": [],
+      "required_cases": [
+        "world-2-2-strict-clear"
+      ],
       "supplemental_cases": [],
-      "route_review": null,
+      "route_review": {
+        "case": "world-2-2-strict-clear",
+        "movie_sha256": "846e681bd4f756093cb0a0de6c9f13fd90ea11e988bf3211e92e50aac5e680c9",
+        "entrance_frame": 0,
+        "exit_frame": 3597,
+        "endpoint_kind": "transition",
+        "reviewed_by": "Codex",
+        "reviewed_at": "2026-11-28T07:07:11.000370+00:00",
+        "evidence": "Reviewed the full 3800-frame route and entrance, water, three whirlpools, side-pipe exit, surface plant, flag, fireworks and 2-3 loading images. Original entrance reaches water control at393; next-stage selection3597 and normal control3763. Fixed-route proof; no claim for all possible controller paths."
+      },
       "required_branches": [],
-      "branch_review": null
+      "branch_review": {
+        "reviewed_by": "Codex",
+        "reviewed_at": "2026-11-28T07:07:11.000370+00:00",
+        "evidence": "Reviewed all six ROM entrance/water/exit area and enemy streams. Entry and exit pipes are mandatory parts of this single route; no optional bonus area or warp branch.",
+        "branches": []
+      }
     },
     {
       "id": "2-3",
@@ -100,11 +116,27 @@
       "id": "2-4",
       "world": 2,
       "stage": 4,
-      "required_cases": [],
+      "required_cases": [
+        "world-2-4-original-clear"
+      ],
       "supplemental_cases": [],
-      "route_review": null,
+      "route_review": {
+        "case": "world-2-4-original-clear",
+        "movie_sha256": "71e117e31349a1e0e8856b87de5816c3331ef12296bf3862bee21db91323a849",
+        "entrance_frame": 0,
+        "exit_frame": 1807,
+        "endpoint_kind": "transition",
+        "reviewed_by": "Codex",
+        "reviewed_at": "2026-11-28T07:07:11.000370+00:00",
+        "evidence": "Reviewed the full 2800-frame route and castle obstacles, moving lifts, Bowser, axe1094, bridge removal1121..1177, rescue1433, message and transition1807. The route continues through normal 3-1 control1974. Only next-world entry is covered, not whole World 3-1."
+      },
       "required_branches": [],
-      "branch_review": null
+      "branch_review": {
+        "reviewed_by": "Codex",
+        "reviewed_at": "2026-11-28T07:07:11.000370+00:00",
+        "evidence": "Reviewed castle area/enemy streams and runtime map. No optional enterable pipe, bonus room, alternate maze route or warp; axe/bridge/rescue is the mandatory exit.",
+        "branches": []
+      }
     },
     {
       "id": "3-1",

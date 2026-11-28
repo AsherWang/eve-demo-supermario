@@ -102,6 +102,7 @@ class World22DataTests(unittest.TestCase):
         source = (ROOT/"scripts/generated/world22_data.nut").read_text()
         streams = {k: bytes(map(int,v.split(","))) for k,v in
                    re.findall(r"ROM_WORLD_2_2_(\w+) <- \[(.*?)\];",source)}
+        self.assertEqual(streams.pop("BUBBLE_ENTRANCE"), bytes([manifest["bubble_entrance"]["force"], manifest["bubble_entrance"]["timer"]]))
         self.assertEqual(len(streams),6)
         for area,record in manifest["areas"].items():
             for kind,meta in record["streams"].items():

@@ -1,6 +1,7 @@
 // World 2-2 water runtime; whole-level parity acceptance is still pending.
 dofile("scripts/generated/world22_data.nut");
 dofile("scripts/generated/world22_map.nut");
+dofile("scripts/generated/world22_intro_map.nut");
 
 function isWorld22(g) {return g.world==2 && g.level==2;}
 
@@ -15,18 +16,28 @@ function isWorld22Water(g) {return g.world==2 && g.level==2 && g.area=="water";}
 
 function loadWorld22Assets() {
     if("world22" in assets) return;
+    local introTiles={};
+    foreach(column in ROM_WORLD_2_2_INTRO_METATILES) foreach(meta in column)
+        if(meta!=0 && !(meta in introTiles)) introTiles[meta] <- loadTexture("assets/world13/metatile-"+meta+".png");
     local tiles={};
     foreach(column in ROM_WORLD_2_2_METATILES) foreach(meta in column)
         if(!(meta in tiles)) tiles[meta] <- loadTexture("assets/world22/metatile-"+meta+".png");
-    local swim={};
+    local swim={},swimKick={};
     foreach(size in ["small","big"]) {
         local frames=[];
         for(local i=0;i<3;i+=1) frames.append([
             loadTexture("assets/world22/mario-"+size+"-swim-"+i+"-right.png"),
             loadTexture("assets/world22/mario-"+size+"-swim-"+i+"-left.png")]);
         swim[size] <- frames;
+        local kicks=[];
+        for(local i=0;i<3;i+=1) kicks.append([
+            loadTexture("assets/world22/mario-"+size+"-swim-kick-"+i+"-right.png"),
+            loadTexture("assets/world22/mario-"+size+"-swim-kick-"+i+"-left.png")]);
+        swimKick[size] <- kicks;
     }
-    assets.world22 <- {metatiles=tiles,swim=swim,bubble=loadTexture("assets/world22/bubble.png"),deadFish=[
+    local coins=[],masks=[],hudCoins=[];
+    for(local phase=0;phase<6;phase+=1) {coins.append(loadTexture("assets/world22/coin-"+phase+".png"));masks.append(loadTexture("assets/world22/hud-sprite0-"+phase+".png"));hudCoins.append(loadTexture("assets/world22/hud-coin-"+phase+".png"));}
+    assets.world22 <- {plants=[loadTexture("assets/world21/plant-0.png"),loadTexture("assets/world21/plant-1.png")],coins=coins,hudCoins=hudCoins,spriteZeroMasks=masks,introTiles=introTiles,metatiles=tiles,swim=swim,swimKick=swimKick,bubble=loadTexture("assets/world22/bubble.png"),deadFish=[
         [loadTexture("assets/world22/cheep-0-dead.png"),loadTexture("assets/world22/cheep-1-dead.png")],
         [loadTexture("assets/world22/red-cheep-0-dead.png"),loadTexture("assets/world22/red-cheep-1-dead.png")]],
         deadBloopers=[loadTexture("assets/world22/bloober-0-dead.png"),loadTexture("assets/world22/bloober-1-dead.png")],fish=[
@@ -88,8 +99,8 @@ function startWorld22Water(g, page=0, recordMusic=true) {
     g.sidePipeX=189;g.world12SidePipeBottomRow <- 8;g.cameraX=page*256.0;g.displayCameraX=g.cameraX;
     g.world22 <- {whirlpools=world22WhirlpoolData(),scrollLocked=false,scrollColumns={}};
     initializeWorld22Enemies(g);
-    g.world22.bubbles <- [];g.world22.bubbleTimer <- 0;
-    for(local i=0;i<3;i+=1) g.world22.bubbles.append({x=0.0,y=248,force=0});
+    g.world22.bubbles <- [];g.world22.bubbleTimer <- 0;g.world22.oamPhase <- 0;g.world22.displayOamPhase <- 0;
+    for(local i=0;i<3;i+=1) g.world22.bubbles.append({x=0.0,y=0,force=0,drawX=0.0,drawY=248});
     g.savedMain=null;g.flagX=100000.0;g.castleX=100000.0;
     for(local x=0;x<g.areaWidth;x+=1) for(local r=0;r<13;r+=1) {
         local meta=ROM_WORLD_2_2_METATILES[x][r];
@@ -125,9 +136,12 @@ function initializeWorld22SwimProbe(g) {
 function world22TileTexture(g,tx,ty) {
     if(ty<2) return null;
     local meta=ROM_WORLD_2_2_METATILES[tx][ty-2];
-    if(meta==0xc3) foreach(coin in g.levelCoins)
-        if(coin.x==tx*16 && coin.y==ty*16 && !coin.active)
-            return assets.world22.metatiles[0x87];
+    if(meta==0xc3) {
+        foreach(coin in g.levelCoins)
+            if(coin.x==tx*16 && coin.y==ty*16 && !coin.active &&
+                !("visualErasePending" in coin && coin.visualErasePending)) return assets.world22.metatiles[0x87];
+        return assets.world22.coins[g.displayColorPhase];
+    }
     return assets.world22.metatiles[meta];
 }
 
@@ -217,19 +231,21 @@ function tryWorld22Exit(g) {
 // ProcessFireballsAndBubbles: three slots in reverse order, sharing one timer.
 // Reuses the enemy LFSR without advancing it, so bubble animation cannot change
 // enemy allocation or the preserved 1800-frame motion diagnostic.
-function updateWorld22Bubbles(g) {
+function updateWorld22Bubbles(g, tickTimer=true) {
     local state=g.world22,p=g.player;
-    if(state.bubbleTimer>0) state.bubbleTimer-=1;
+    state.displayOamPhase=state.oamPhase;state.oamPhase=(state.oamPhase+1)%3;
+    if(tickTimer && state.bubbleTimer>0) state.bubbleTimer-=1;
     for(local slot=2;slot>=0;slot-=1) {
         local b=state.bubbles[slot],bit=state.random[slot+1]&1;
+        b.drawX=b.x;b.drawY=b.y;
         if(b.y==248) {
             if(state.bubbleTimer>0) continue;
             // LSR facing direction leaves carry set on the right: ADC adds 9.
-            b.x=p.x+(p.facing>0?9:0);b.y=p.y-(p.big?0:16)+8;
+            b.x=p.x+(p.facing>0?9:0);b.y=(p.y-(p.big?0:16)+8).tointeger();
             state.bubbleTimer=bit?32:64;
         }
         local sum=b.force-(bit?80:255);b.force=sum&255;
-        if(sum<0) b.y-=1;
+        if(sum<0) b.y=(b.y-1)&255;
         if(b.y<32) b.y=248;
     }
 }
@@ -238,7 +254,8 @@ function drawWorld22Bubbles(g) {
     if(g.player.y-(g.player.big?0:16)>=256) return;
     for(local slot=2;slot>=0;slot-=1) {
         local b=g.world22.bubbles[slot];
-        if(b.y!=248) worldTexture(g,assets.world22.bubble,b.x,b.y+1,8,8);
+        oamBase=slot==0?0x24:world22OamOffset(g,slot==1?0xf8:0xfc);
+        if(b.drawY!=248) screenOamTexture(assets.world22.bubble,b.drawX-visualCameraX(g),b.drawY+1,8,8);
     }
 }
 
@@ -259,4 +276,9 @@ function parseWorld22AreaColumn(g,task) {
         if(row==13 && (value==0x46 || value==0x47) && page*16+(a>>4)==column)
             g.world22.scrollLocked=!g.world22.scrollLocked;
     }
+}
+
+function world22OamOffset(g,baseOffset) {
+    local offsets=[0,0x58,0xa0];local value=baseOffset+offsets[g.world22.displayOamPhase];
+    return value>=256?(value+0x28)&255:value;
 }

@@ -54,11 +54,11 @@ print("SIMULATION_COMPLETE\n");
     if r.returncode or len(states)!=movie['frames'] or 'SIMULATION_COMPLETE' not in r.stdout:raise RuntimeError('replay failed: '+str(out/'engine.log'))
     deaths=[s['frame'] for s in states if s['player'].get('dead') or s.get('lives')!=3 or s.get('rom_state',{}).get('game_engine_subroutine')==11]
     final=castle[-1]
-    passed=not deaths and final['state']=='worldComplete' and final['rescued'] and final['bridge_offset']==15 and final['message']==4 and final['world']==2 and final['stage']==4
+    passed=not deaths and final['state']=='playing' and final['rescued'] and final['bridge_offset']==15 and final['message']==4 and final['world']==3 and final['stage']==1
     report=dict(schema='world24-host-route-v1',movie_sha256=sha256_file(args.movie),frames=len(states),passed=passed,
-        scope='host fixed-input entrance-to-bounded-endpoint only; strict six gates not checked',
+        scope='host fixed-input entrance-to-next-world-control only; strict six gates not checked',
         death_or_life_loss_frames=deaths,final=final,
-        first_states={name:next((r['frame'] for r in castle if r['state']==name),None) for name in ['world24Axe','world24VictoryWalk','world24Rescue','worldComplete']})
+        first_states={name:next((r['frame'] for r in castle if r['state']==name),None) for name in ['world24Axe','world24VictoryWalk','world24Rescue','nextStageLoad']})
     (out/'verification.json').write_text(json.dumps(report,indent=2)+'\n', newline="\n");print(json.dumps(report,indent=2))
     if args.require_clear and not passed:raise SystemExit(1)
 if __name__=='__main__':main()
