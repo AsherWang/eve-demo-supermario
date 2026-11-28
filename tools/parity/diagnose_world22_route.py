@@ -3,7 +3,8 @@ from __future__ import annotations
 import argparse
 import json
 import re
-import uuid
+import os
+from world23_capture_lock import capture_lock
 from pathlib import Path
 from common import load_movie, mesen_section_input_arguments, sha256_file, tool_path
 from extract_reference_state import decode_line
@@ -18,7 +19,7 @@ def main() -> int:
     parser.add_argument('--movie', type=Path, default=ROOT/'tests/parity/movies/world-2-2-normal-route.json')
     parser.add_argument('--rom', type=Path, default=ROOT/'roms/Super Mario Bros. (World).nes')
     parser.add_argument('--output', type=Path, required=True)
-    parser.add_argument('--capture-lock', type=Path, required=True, help='Shared atomic capture lock directory')
+    parser.add_argument('--capture-lock', type=Path, help='Override shared portable capture lock directory')
     parser.add_argument('--actual', type=Path, help='Host whole-route state.jsonl for selected-state diagnostics')
     args = parser.parse_args()
     movie=load_movie(args.movie)
@@ -29,14 +30,12 @@ def main() -> int:
     out=args.output.resolve();out.mkdir(parents=True,exist_ok=True)
     if any((out/'frames').glob('frame-*.png')):
         parser.error('use a fresh output directory; stale captures must not count')
-    token='world22-completion '+str(uuid.uuid4())
+    if args.capture_lock: os.environ['SMB_GPU_CAPTURE_LOCK']=str(args.capture_lock.resolve())
+    guard=capture_lock('world22 '+out.name)
+    try: guard.__enter__()
+    except RuntimeError as error: print(error);return 75
+    process=None
     try:
-        args.capture_lock.mkdir()
-    except FileExistsError:
-        print('Capture lock held; no capture started. Continue CPU work.');return 75
-    owner=args.capture_lock/'owner-world22.txt'
-    try:
-        owner.write_text(token,encoding='utf-8')
         lua=out/'find-origin.lua';lua.write_text(build_world22_entrance_origin_lua(),encoding='utf-8')
         exe=str(tool_path('mesen'));bootstrap=movie['reference_bootstrap']
         base=[exe,str(args.rom.resolve()),'--home',str(out/'mesen-home'),'--timeout','120']
@@ -76,8 +75,7 @@ def main() -> int:
         if 'selected_motion' in report: print(json.dumps(report['selected_motion']))
         return 0 if report['capture_passed'] else 1
     finally:
-        if owner.is_file() and owner.read_text(encoding='utf-8')==token:
-            owner.unlink();args.capture_lock.rmdir()
+        guard.__exit__(None,None,None)
 
 
 if __name__=='__main__':

@@ -212,3 +212,66 @@ normal-entrance mode, not a bypass of the strict stage guard.
 4. 建立正常入口到出口的成功固定按键整关路线，补死亡、检查点、出口和跨关分支；重新运行 2-1 末帧和完整六项验收。地图探针、采样图和 1800 帧局部运动测试均不能替代整关验证。
 
 版本仍为 0.0.7，32 关正式验收登记保持未完成。
+
+
+## Source task parity progress, 2026-11-28
+
+Strict acceptance remains pending. Source task lifecycle now passes all 394
+independently recorded entrance frames. The old 1800-frame selected movement and
+enemy fixture and water fire-input interaction checks still pass.
+
+Full continuous original capture: `local-parity/world22-strict/candidate4-original`
+(3446 PNGs/RAM states). Input `candidate4.json` SHA256:
+`938108a18f09b7e9247320d82eeba2f835e5e98dd7462208a58c83a46df3a17a`.
+Latest host comparison: `candidate4-scroll-fixed2` in the same evidence directory.
+Both sides reach the castle alive with three lives, three coins and final score
+18300. The movie ends during fireworks before next-stage transition, so it is not
+an acceptance route. Failed earlier planner candidates are not successful evidence.
+
+All 3446 selected player motion, camera, time, lives and coin observations match.
+3498 reported differences remain: counter serializer offset on3446 frames,
+zero-facing serializer on48 loader frames, four one-frame delays in firework score.
+This selected diagnostic does not establish full state/actor/image/event/APU/audio
+parity. No reference substitutions or relaxed thresholds were used.
+
+### Parent integration contract
+
+`initializeWorld22Parity(g)` calls ordinary startLevel and executes the first
+source automatic entrance pass; only origin RNG is seeded. Use solely for strict
+normal-entrance observations, never PARITY_NORMAL_ENTRY ordinary input replay.
+Frame0: x40, canonical y176, xs1, xf48, xm16, counter25, interval2, time401,
+facing/moving1, engine7, operation3. No reference fixture enters runtime.
+
+Required shared edits, intentionally not made by this stage worker:
+
+1. At start of updateWorld12Transition:
+   `if(isWorld22(g)) return updateWorld22Transition(g);`
+2. In main strict World2 stage2 normal-entrance initialization:
+   `initializeWorld22Parity(game);` guarded against PARITY_NORMAL_ENTRY.
+3. In parityAdvanceOneFrame frame0 observation, skip generic friction flag and
+   counter increment for this initializer, which already represents observed RAM.
+4. In parityStateJson, when World22 transition state exists, emit actual counter
+   without subtracting1; preserve facing0; use transition operTask/engineTask while
+   phase is not done. Its playerYHigh records cleared loader RAM. Keep legacy
+   water-only probe serializer behavior intact.
+5. After completedTask assignment in updateVramAreaParserScheduler call:
+   `if(isWorld22Water(g)) parseWorld22AreaColumn(g,completedTask);`
+   At start of updateCamera when water and g.world22.scrollLocked:
+   `g.displayCameraX=g.cameraX;g.previousScrollAmount=0;return;`
+   This reads real row-$0d $46/$47 objects, not a coordinate cap.
+6. Background side-pipe opening must require p.grounded; remove airborne-water
+   alternative. Source checks Player_State0. Stage helper uses the real +13 sample.
+7. Death branch source music/Y-high condition must cover isWorld22Water as well
+   as World21. Legacy208-frame fallback loses life3162 vs original3189 on old input.
+8. Shared fireworks award500 one frame late:3347 vs3346, then32-frame intervals.
+   Final totals agree. Correct source lifetime/award ordering, never frame patches.
+
+Host diagnostic --local-transition-hook installs items1/5 as temporary harness
+wrappers. Shared files are unchanged. Stage capture tools use portable GPU lock.
+Source exit fixes: side-pipe delay$34, no engine2 reload; grounded collision clears
+vertical force before whirlpool integration; loader camera and exit rise match.
+
+Old three water probe movie provenance requires CRLF bytes. Exact local CRLF
+restoration passes8 data tests; original fixture hashes were not changed. Parent
+must resolve shared attributes portability. The old playable movie is preserved
+as historical evidence; source-timing route replacement is still under validation.

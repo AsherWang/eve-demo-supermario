@@ -5,7 +5,9 @@ foreach(id in [7,10,11]) {
     local e=g.world22.enemies[0];requireSelfTest(e!=null,"fireball target spawn");
     e.id=id;e.kind=id==7?"blooper":"cheep";e.x=215;e.y=116;
     g.player.x=200;g.player.y=112;g.player.big=true;g.player.fire=true;g.player.height=32;
-    spawnFireball(g);updateFireballs(g,FIXED_DT);
+    g.input.fireQueued=true;updatePlayer(g,FIXED_DT);g.input.fireQueued=false;
+    requireSelfTest(g.fireballs.len()==1,"water player handler consumes real fire input");
+    updateFireballs(g,FIXED_DT);
     g.nesFrameCounter=0;updateWorld22FireballHits(g);
     requireSelfTest(!e.dead && g.score==0,"fireball contact skips odd processing frames");
     g.nesFrameCounter=1;updateWorld22FireballHits(g);

@@ -8,6 +8,7 @@ function startWorld22(g) {
     loadWorld22Assets();
     startWorld12(g,"intro");
     g.world=2;g.romBackgroundCollision=false;
+    initializeWorld22Transition(g);
 }
 
 function isWorld22Water(g) {return g.world==2 && g.level==2 && g.area=="water";}
@@ -85,7 +86,7 @@ function startWorld22Water(g, page=0, recordMusic=true) {
     g.areaWidth=ROM_WORLD_2_2_METATILES.len();g.romBackgroundCollision=true;
     clearAreaObjects(g);g.plants=[];g.platforms=[];g.enterablePipes=[];
     g.sidePipeX=189;g.world12SidePipeBottomRow <- 8;g.cameraX=page*256.0;g.displayCameraX=g.cameraX;
-    g.world22 <- {whirlpools=world22WhirlpoolData()};
+    g.world22 <- {whirlpools=world22WhirlpoolData(),scrollLocked=false,scrollColumns={}};
     initializeWorld22Enemies(g);
     g.world22.bubbles <- [];g.world22.bubbleTimer <- 0;
     for(local i=0;i<3;i+=1) g.world22.bubbles.append({x=0.0,y=248,force=0});
@@ -149,7 +150,13 @@ function updateWorld22Swimming(g,dt) {
     if(g.input.jumpQueued) beginWorld22Swim(g);
     local direction=(g.input.right?1:0)-(g.input.left?1:0);
     // GetPlayerAnimSpeed runs in the water movement handler, including in air.
-    updateNesHorizontalPhysics(g,p,direction);
+    // GetPlayerAnimSpeed compares raw direction bits: no horizontal input (0)
+    // equals an unset MovingDir (0), even when B alone is held. The shared
+    // signed-direction adapter currently maps unset to left; avoid that false
+    // skid/reset while stationary. No friction is applied in this source path.
+    if(direction==0 && p.movingDir==0 && p.nesXSpeed==0) {
+        p.playerAnimTimerSet=7;p.runningSpeed=0;
+    } else updateNesHorizontalPhysics(g,p,direction);
     if(direction!=0) p.facing=direction;
     local dx=nesHorizontalDelta(p);
     p.nesXScroll=dx;p.vx=dx/dt;
@@ -158,7 +165,7 @@ function updateWorld22Swimming(g,dt) {
     if(p.vx==0 && dx!=0) {p.nesXSpeed=0;p.nesXForce=0;p.nesXMoveForce=0;}
     if(movement!=0) p.movingDir=movement;
     p.vx=p.nesXSpeed*3.75;
-    if(p.grounded && playerHasFootSupport(g,p)) p.vy=0;
+    if(p.grounded && playerHasFootSupport(g,p)) {p.vy=0;p.nesYSpeed=0;p.nesYMoveForce=0;}
     else {
         p.grounded=false;
         if(p.nesYSpeed>=0 || (!(g.input.jumpDown && p.swimPreviousA) &&
@@ -175,6 +182,8 @@ function updateWorld22Swimming(g,dt) {
     if(p.x<=g.cameraX) {p.x=g.cameraX;if(p.nesXSpeed<0) {p.nesXSpeed=0;p.vx=0;}}
     if(p.y>LOGICAL_HEIGHT+32) killPlayer(g);
     handlePlayerBackgroundSides(g,p);
+    if(g.input.fireQueued && p.fire && !p.dead && p.y-(p.big?0:16)<208)
+        spawnFireball(g);
 }
 
 function updateWorld22DeathReload(g) {
@@ -197,10 +206,11 @@ function updateWorld22DeathReload(g) {
 // fit the opening; swimming alongside its upper rock must not enter it.
 function tryWorld22Exit(g) {
     local p=g.player;
-    if(!isWorld22Water(g) || p.dead || !g.input.right) return false;
-    if(p.x+13<g.sidePipeX*16-1 || p.x>=g.sidePipeX*16+16 ||
+    if(!isWorld22Water(g) || p.dead || !p.grounded || !g.input.right) return false;
+    if(p.x+13<g.sidePipeX*16 || p.x>=g.sidePipeX*16+16 ||
         p.y<112 || p.y+p.height>144) return false;
     startWorld12Transition(g,"exit","side");
+    beginWorld22ExitTasks(g);
     return true;
 }
 
@@ -229,5 +239,24 @@ function drawWorld22Bubbles(g) {
     for(local slot=2;slot>=0;slot-=1) {
         local b=g.world22.bubbles[slot];
         if(b.y!=248) worldTexture(g,assets.world22.bubble,b.x,b.y+1,8,8);
+    }
+}
+
+dofile("scripts/world22_transition.nut");
+
+// Row-$0d $46/$47 objects toggle ScrollLock when the area parser consumes
+// their column. The shared scheduler calls this after completing task 7 or 3.
+function parseWorld22AreaColumn(g,task) {
+    if(!isWorld22Water(g) || (task!=7 && task!=3)) return;
+    local column=floor(g.cameraX/32).tointeger()*2+(task==7?22:23);
+    if(column in g.world22.scrollColumns) return;
+    g.world22.scrollColumns[column] <- true;
+    local page=0,data=ROM_WORLD_2_2_WATER_AREA;
+    for(local i=2;i+1<data.len();i+=2) {
+        local a=data[i],b=data[i+1],row=a&15,value=b&127;
+        if(a==253) break;if(b&128) page+=1;
+        if(row==13 && !(value&64)) {page=value&31;continue;}
+        if(row==13 && (value==0x46 || value==0x47) && page*16+(a>>4)==column)
+            g.world22.scrollLocked=!g.world22.scrollLocked;
     }
 }

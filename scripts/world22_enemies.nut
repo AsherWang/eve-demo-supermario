@@ -70,7 +70,7 @@ function updateWorld22Enemies(g) {
     updateWorld22Bubbles(g);
     updateWorld22FireballHits(g);
     local camera=g.cameraX;
-    if(p.nesXScroll>0 && !p.scrollSideCollisionTimer && p.preparedRelX>=80) {
+    if(!state.scrollLocked && p.nesXScroll>0 && !p.scrollSideCollisionTimer && p.preparedRelX>=80) {
         local scroll=p.nesXScroll;if(p.preparedRelX<112 && scroll>=2) scroll-=1;
         camera+=scroll;
     }

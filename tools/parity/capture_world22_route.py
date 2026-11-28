@@ -6,7 +6,8 @@ from pathlib import Path
 import subprocess
 import shutil
 import time
-import uuid
+import os
+from world23_capture_lock import capture_lock
 from common import load_movie, sha256_file, tool_path, expand_input_masks
 
 ROOT=Path(__file__).resolve().parents[2]
@@ -16,19 +17,19 @@ def main() -> int:
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--movie',type=Path,default=ROOT/'tests/parity/movies/world-2-2-normal-route.json')
     parser.add_argument('--output',type=Path,required=True)
-    parser.add_argument('--capture-lock',type=Path,required=True)
+    parser.add_argument('--capture-lock',type=Path)
     args=parser.parse_args();movie=load_movie(args.movie)
     if (movie.get('world'),movie.get('level'),movie.get('origin'))!=(2,2,'normal-entrance'):
         parser.error('requires normal 2-2 entrance')
     out=args.output.resolve();(out/'frames').mkdir(parents=True,exist_ok=True)
     if any((out/'frames').glob('frame-*.png')):
         parser.error('use a fresh output directory; stale captures must not count')
-    token='world22-native '+str(uuid.uuid4())
-    try:args.capture_lock.mkdir()
-    except FileExistsError:print('Capture lock held; no capture started.');return 75
-    owner=args.capture_lock/'owner-world22.txt';process=None
+    if args.capture_lock: os.environ['SMB_GPU_CAPTURE_LOCK']=str(args.capture_lock.resolve())
+    guard=capture_lock('world22 '+out.name)
+    try: guard.__enter__()
+    except RuntimeError as error: print(error);return 75
+    process=None
     try:
-        owner.write_text(token,encoding='utf-8')
         project=out/'project';project.mkdir(exist_ok=True)
         for name in ('scripts','assets'):
             link=project/name
@@ -88,8 +89,7 @@ eve_update=function(dt) {
         return 0 if passed else 1
     finally:
         if process is not None and process.poll() is None:process.terminate();process.wait(timeout=10)
-        if owner.is_file() and owner.read_text(encoding='utf-8')==token:
-            owner.unlink();args.capture_lock.rmdir()
+        guard.__exit__(None,None,None)
 
 
 if __name__=='__main__':raise SystemExit(main())
