@@ -1,5 +1,9 @@
 # World 2-2 开发与验证
 
+## 2026-11-28 主分支集成更新
+
+本关已接入主分支，正常入口整关、跨关和原生逐帧验证以 [World 2 集成记录](WORLD_2_INTEGRATION.md) 为准。下方工作树报告与待集成说明属于历史证据；严格原版六项验收仍未通过。
+
 Updated: 2026-11-28.
 
 ## Continuous host route and water interactions

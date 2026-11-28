@@ -1,5 +1,9 @@
 # World 2-3 bridge course
 
+## 2026-11-28 主分支集成更新
+
+本关已接入主分支，正常入口整关、跨关和原生逐帧验证以 [World 2 集成记录](WORLD_2_INTEGRATION.md) 为准。下方工作树报告与待集成说明属于历史证据；严格原版六项验收仍未通过。
+
 Playable implementation and fixed normal-entry route are complete. Strict acceptance remains pending: the same fixed route fails in the original ROM.
 
 ## Shared integration contract
@@ -17,7 +21,7 @@ Stage-owned files only will be committed. Any temporary shared hooks used for ve
 ## Current validation
 
 `tests/parity/movies/world-2-3-normal-clear.json` has 2243 frames and SHA-256
-`aa7309e39b10819f04bb558ca76a35c30adbf0737829674942f65cb74d610a19`.
+`df405fd199ea8cdeca7e9017480648e8fbd772bbbb1a668d9c73abe767ce1d84` (current committed bytes).
 The parent normal-entry runner passes with three lives, no death, and natural
 `levelComplete` at frame 2213 (runner includes initial state as frame 0).
 The local baseline lacks registered 2-4, so next-stage transition awaits parent integration.

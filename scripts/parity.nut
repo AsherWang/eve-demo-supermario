@@ -72,7 +72,7 @@ function parityAdvanceOneFrame(g) {
     g.parity.eventSequence = 0;
     g.parity.inputMask = mask;
     parityApplyMask(g, mask);
-    if (g.parity.frame == 0) {
+    if (g.parity.frame == 0 && !("PARITY_NORMAL_ENTRY" in getroottable() && PARITY_NORMAL_ENTRY)) {
         // Mesen's saved origin frame is an observable pre-control state.  Do
         // not consume the first comparison input until the following frame.
         g.player.parityOriginFriction = true;

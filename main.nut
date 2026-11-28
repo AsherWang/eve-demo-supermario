@@ -30,6 +30,8 @@ dofile("scripts/world21.nut");
 dofile("scripts/world21_sky.nut");
 dofile("scripts/world22.nut");
 dofile("scripts/world22_enemies.nut");
+dofile("scripts/world23.nut");
+dofile("scripts/world24.nut");
 dofile("scripts/title.nut");
 dofile("scripts/level_data.nut");
 dofile("scripts/levels.nut");
@@ -48,6 +50,8 @@ eve_init = function() {
     loadWorld13Assets();
     loadWorld14Assets();
     loadWorld21Assets();
+    loadWorld23Assets();
+    loadWorld24Assets();
     loadTitleAssets();
     loadAudio();
     if (!("startupSelfTests" in config) || config.startupSelfTests || parityIsEnabled()) {
@@ -67,22 +71,26 @@ eve_init = function() {
         startWorld12(game, ("startArea" in config) ? config.startArea : "intro");
     if ("startLevel" in config && config.startLevel == 3) startWorld1Stage(game,3);
     if ("startLevel" in config && config.startLevel == 4) startWorld1Stage(game,4);
-    if("startWorld" in config && config.startWorld==2) startLevel(game,2,1);
-    if (parityIsEnabled() && "PARITY_START_LEVEL" in getroottable() && PARITY_START_LEVEL == 2)
+    if("startWorld" in config && config.startWorld==2) startLevel(game,2,config.startLevel);
+    if (parityIsEnabled() && (!("PARITY_START_WORLD" in getroottable()) || PARITY_START_WORLD==1) && "PARITY_START_LEVEL" in getroottable() && PARITY_START_LEVEL == 2)
         initializeWorld12Parity(game);
-    if (parityIsEnabled() && "PARITY_START_LEVEL" in getroottable() && PARITY_START_LEVEL == 3) {
+    if (parityIsEnabled() && (!("PARITY_START_WORLD" in getroottable()) || PARITY_START_WORLD==1) && "PARITY_START_LEVEL" in getroottable() && PARITY_START_LEVEL == 3) {
         startWorld1Stage(game,3);
         initializeWorld13Parity(game);
     }
-    if (parityIsEnabled() && "PARITY_START_LEVEL" in getroottable() && PARITY_START_LEVEL == 4)
+    if (parityIsEnabled() && (!("PARITY_START_WORLD" in getroottable()) || PARITY_START_WORLD==1) && "PARITY_START_LEVEL" in getroottable() && PARITY_START_LEVEL == 4)
         startWorld1Stage(game,4);
     if(parityIsEnabled() && "PARITY_START_WORLD" in getroottable() && PARITY_START_WORLD==2) {
-        startLevel(game,2,1);
-        initializeWorld21Parity(game);
-        if("PARITY_CHECKPOINT_PAGE" in getroottable() && PARITY_CHECKPOINT_PAGE>0) {
-            initializeWorld21Checkpoint(game,PARITY_CHECKPOINT_PAGE,(game.nesFrameCounter+255)&255);
+        local stage="PARITY_START_LEVEL" in getroottable()?PARITY_START_LEVEL:1;
+        startLevel(game,2,stage);
+        if(stage==1) {
+            initializeWorld21Parity(game);
+            if("PARITY_CHECKPOINT_PAGE" in getroottable() && PARITY_CHECKPOINT_PAGE>0)
+                initializeWorld21Checkpoint(game,PARITY_CHECKPOINT_PAGE,(game.nesFrameCounter+255)&255);
         }
     }
+    if(config.previewScenario=="world23-route") startLevel(game,2,3);
+    if(config.previewScenario=="world24-route") startLevel(game,2,4);
     if(config.previewScenario=="world22-route") startLevel(game,2,2);
     if(config.previewScenario=="world22-water") {loadWorld22Assets();startWorld22Water(game);}
     parityInitialize(game);

@@ -31,7 +31,9 @@ def main() -> int:
     parser.add_argument("--area", choices=["main", "water", "underground", "castle"],
                         help="Select a runtime area track in a stationary scene; not a transition test")
     parser.add_argument("--sample-seconds", type=float, help="Compare only this prefix of the supplied reference")
+    parser.add_argument("--hurry", action="store_true", help="Select the fast area track; requires --area")
     args = parser.parse_args()
+    if args.hurry and not args.area: parser.error("--hurry requires --area")
     if args.area and (not args.use_game_assets or args.death_respawn):
         parser.error("--area requires --use-game-assets and cannot be combined with --death-respawn")
     if args.sample_seconds is not None and args.sample_seconds <= 0:
@@ -63,6 +65,7 @@ eve_init = function() {
     nativeAudio.beginCapture(config.audioCaptureSeconds);
     nativeAudioCaptureTime = 0.0;
     game.area = """ + json.dumps(args.area) + """;
+    game.hurryActive = """ + ("true" if args.hurry else "false") + """;
     game.state = "preview";
     game.soundEvents.clear();
     resumeMusic();
@@ -111,7 +114,7 @@ eve_update = function(dt) {
               "reference_pcm_sha256": hashlib.sha256(raw).hexdigest(),
               "compared_sample_frames": len(raw) // 4, "startup_offset_frames": offset // 4,
               "sample_exact": equal, "runtime_status": status[-1],
-              "scenario": "World 1-1 death reload music boundary" if args.death_respawn else ("stationary area track: " + args.area if args.area else "opening"),
+              "scenario": "World 1-1 death reload music boundary" if args.death_respawn else ("stationary area track: " + args.area + (" fast" if args.hurry else "") if args.area else "opening"),
               "boundary": "PCM submitted to waveOut; excludes Windows/device processing"}
     (output / "report.json").write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
     print(json.dumps(report, indent=2))

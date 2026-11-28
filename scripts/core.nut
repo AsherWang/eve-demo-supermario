@@ -4,7 +4,7 @@ PIXEL_SCALE <- 3;
 TILE_SIZE <- 16;
 LEVEL_WIDTH <- 212;
 // Storage stride is independent of World 1's logical course width.
-TILE_STRIDE <- 214;
+TILE_STRIDE <- 244; // World 2-3 extends past column 225.
 LEVEL_HEIGHT <- 15;
 GROUND_ROW <- 13;
 // SMB advances gameplay from the NTSC NMI, not a nominal 60.000 Hz clock.

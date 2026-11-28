@@ -399,7 +399,7 @@ function screenRect(x, y, width, height, r, g, b, a = 1.0) {
     y+=renderOffsetY;
     gfx.drawSolidRect(floor(x * PIXEL_SCALE).tofloat(), floor(y * PIXEL_SCALE).tofloat(),
                       floor(width * PIXEL_SCALE).tofloat(), floor(height * PIXEL_SCALE).tofloat(),
-                      r, g, b, a);
+                      r.tofloat(), g.tofloat(), b.tofloat(), a.tofloat());
 }
 
 function visualCameraX(gm) {
@@ -472,6 +472,8 @@ function positiveModulo(value, divisor) {
 function drawBackground(g) {
     if(isWorld22Water(g)) return;
     if(isWorld21(g)) {if(g.area=="main") drawWorld13Background(g);return;}
+    if(isWorld23(g)) {drawWorld23Background(g);return;}
+    if(isWorld24(g)) {drawWorld24Background(g);return;}
     if(g.level==3) {drawWorld13Background(g);return;}
     if(g.level==4) {drawWorld14Background(g);return;}
     if (g.area == "underground") return;
@@ -580,8 +582,9 @@ function drawTiles(g) {
                 continue;
             }
             if(g.level>=3) {
-                local texture=g.level==3?world13TileTexture(g,tx,ty,tile):
-                    world14TileTexture(g,tx,ty,tile);
+                local texture=isWorld23(g)?world23TileTexture(g,tx,ty,tile):
+                    (isWorld24(g)?world24TileTexture(g,tx,ty,tile):
+                    (g.level==3?world13TileTexture(g,tx,ty,tile):world14TileTexture(g,tx,ty,tile)));
                 if(texture!=null) worldTexture(g,texture,tx*TILE_SIZE,ty*TILE_SIZE,TILE_SIZE,TILE_SIZE);
                 continue;
             }
@@ -762,7 +765,8 @@ function drawLevelCoins(g) {
     foreach (coin in g.levelCoins) {
         if (!coin.active && !("visualErasePending" in coin && coin.visualErasePending)) continue;
         local phase = g.displayColorPhase;
-        local texture = g.level == 3 || (isWorld21(g) && g.area=="sky") ? assets.world13.coins[phase] :
+        local texture = isWorld23(g)?assets.world23.coins[phase]:
+            g.level == 3 || (isWorld21(g) && g.area=="sky") ? assets.world13.coins[phase] :
             assets.items.undergroundCoins[phase];
         worldTexture(g, texture,
                      floor(coin.x), floor(coin.y), 16.0, 16.0);
@@ -1099,7 +1103,7 @@ function drawHud(g) {
     local colorPhase = g.displayColorPhase;
     local hudCoinSet = g.area == "underground" ?
         assets.items.hudCoinsUnderground :
-        (g.area == "castle" ? world14Assets.hudCoins : assets.items.hudCoins);
+        (g.area == "castle" ? (isWorld24(g)?world24Assets.hudCoins:world14Assets.hudCoins) : assets.items.hudCoins);
     screenTexture(g.state=="gameOverScreen"?
         assets.items.hudCoinLives:hudCoinSet[colorPhase],
         88.0, 24.0, 8.0, 8.0);
@@ -1311,8 +1315,9 @@ function renderGameScene(g) {
     drawPowerUps(g, true);
     drawFireballs(g);
     if (g.world==1 && g.level == 2) drawWorld12Actors(g, true);
-    if (g.level == 3) drawWorld13Actors(g, true);
-    if (g.level == 4) drawWorld14Actors(g, true);
+    if (g.world==1 && g.level == 3) drawWorld13Actors(g, true);
+    if (isWorld24(g)) drawWorld24Actors(g, true);
+    else if (g.level == 4) drawWorld14Actors(g, true);
     if(isWorld21(g)) drawWorld21Actors(g,true);
     // Pipe/entrance movement sets OAM priority bit 5 for Mario.  Draw him
     // before the background metatiles so non-transparent pipe/ground pixels
@@ -1364,10 +1369,12 @@ function renderGameScene(g) {
                 drawEnemy(g, e);
     drawEffects(g);
     if (g.world==1 && g.level == 2) drawWorld12Actors(g, false);
-    if (g.level == 3) drawWorld13Actors(g, false);
-    if (g.level == 4) drawWorld14Actors(g, false);
+    if (g.world==1 && g.level == 3) drawWorld13Actors(g, false);
+    if (isWorld24(g)) drawWorld24Actors(g, false);
+    else if (g.level == 4) drawWorld14Actors(g, false);
     if(isWorld21(g)) drawWorld21Actors(g,false);
     if(isWorld22Water(g)) drawWorld22Enemies(g);
+    if(isWorld23(g)) drawWorld23Actors(g);
     if (!playerBehindBackground && !playerHidden) drawPlayer(g);
     if(isWorld21(g) && g.area!="underground")
         screenTexture(assets.world21.spriteZeroMasks[g.displayColorPhase],88,25,8,8);

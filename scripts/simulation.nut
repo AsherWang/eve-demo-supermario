@@ -2964,6 +2964,8 @@ function updateFireworks(g, dt) {
 function updateDeathReload(g) {
     if(isWorld22(g)) {updateWorld22DeathReload(g);return;}
     if(isWorld21(g)) {updateWorld21DeathReload(g);return;}
+    if(isWorld23(g)) {updateWorld23DeathReload(g);return;}
+    if(isWorld24(g)) {updateWorld24DeathReload(g);return;}
     if(g.level>=3) {updateWorld1StageDeath(g);return;}
     if (g.level == 2) {
         g.deathReloadFrames += 1;
@@ -3211,9 +3213,9 @@ function simulateFixed(g, dt) {
     if (g.stageLoadFrames == 166) g.stageLoadFrames = 167;
     if (g.level <= 3 && g.state == "levelComplete") {
         if(g.world==2) {
-            if(g.level==1) {startLevel(g,2,2);return;}
+            if(g.level<4) {startLevel(g,2,g.level+1);return;}
             if(g.input.resetQueued) resetRound(g);
-            return; // World 2-3 is not implemented; retain the completed-stage boundary.
+            return; // Keep unimplemented next-world endpoints explicit.
         }
         // Preserve the established 1-1 parity endpoint; newer whole-route
         // movies include the next stage and therefore must cross this edge.
@@ -3224,7 +3226,7 @@ function simulateFixed(g, dt) {
         return;
     }
     if (g.level == 2 && updateWorld12Transition(g)) return;
-    if (g.level == 4 && updateWorld14Transition(g)) {
+    if (g.level == 4 && (isWorld24(g)?updateWorld24Transition(g):updateWorld14Transition(g))) {
         if(g.player.playerAnimTimer>0) g.player.playerAnimTimer-=1;
         updatePlayerAnimationState(g);
         preparePlayerPresentation(g);
@@ -3357,8 +3359,10 @@ function simulateFixed(g, dt) {
             updateGoombas(g, dt);
             updateLevelCoins(g);
             if (g.world==1 && g.level == 2) updateWorld12Actors(g);
-            if (g.level == 3) updateWorld13Actors(g);
-            if (g.level == 4) updateWorld14Actors(g);
+            if (isWorld23(g)) updateWorld23Actors(g);
+            else if (g.level == 3) updateWorld13Actors(g);
+            if (isWorld24(g)) updateWorld24Actors(g);
+            else if (g.level == 4) updateWorld14Actors(g);
             if(isWorld21(g)) updateWorld21Actors(g);
             if(isWorld22Water(g)) updateWorld22Enemies(g);
         } else if (g.state == "pipeDown" || g.state == "pipeSide") {

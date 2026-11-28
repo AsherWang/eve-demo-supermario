@@ -16,3 +16,8 @@
 *.wav binary
 *.zip binary
 *.eve binary
+
+# Preserve bytes of the three independently verified legacy motion movies.
+tests/parity/movies/world-2-2-swim-probe.json text eol=crlf
+tests/parity/movies/world-2-2-swim-controls-probe.json text eol=crlf
+tests/parity/movies/world-2-2-whirlpool-probe.json text eol=crlf

@@ -1,5 +1,9 @@
 # World 2-4 implementation and evidence
 
+## 2026-11-28 主分支集成更新
+
+本关已接入主分支，正常入口整关、跨关和原生逐帧验证以 [World 2 集成记录](WORLD_2_INTEGRATION.md) 为准。下方工作树报告与待集成说明属于历史证据；严格原版六项验收仍未通过。
+
 Playable implementation with verified host route; strict acceptance remains pending. Branch `codex/world24-development`.
 
 ## Integration contract

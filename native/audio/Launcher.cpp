@@ -85,6 +85,11 @@ bool revealAfterFirstPresent(const PROCESS_INFORMATION& process, const std::wstr
                     }
                 }
                 ShowWindow(game.handle, SW_SHOW);
+                // A parent may launch this GUI launcher with STARTF_USESHOWWINDOW
+                // and SW_HIDE. Windows overrides our first ShowWindow argument
+                // with that startup flag, even though this is the child window.
+                // A second explicit show is no longer subject to that override.
+                if (!IsWindowVisible(game.handle)) ShowWindow(game.handle, SW_SHOW);
                 SetForegroundWindow(game.handle);
                 revealed = IsWindowVisible(game.handle) != FALSE;
                 break;

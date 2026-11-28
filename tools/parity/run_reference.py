@@ -11,7 +11,7 @@ from pathlib import Path
 
 from common import load_movie, mesen_section_input_arguments, sha256_file, tool_path, require_supported_stage
 from world21_reference import build_world21_origin_lua
-from world22_reference import build_world22_origin_lua
+from world22_reference import build_world22_origin_lua, build_world22_entrance_origin_lua
 
 
 EXPECTED_ROM_SHA256 = "f61548fdf1670cffefcc4f0b7bdcdd9eaba0c226e3b74f8666071496988248de"
@@ -211,6 +211,8 @@ def build_movie_origin_lua(movie: dict) -> str:
     # own strict stage gate and must never silently replay 2-2 as 2-1.
     if (type(movie.get("world")) is int and type(movie.get("level")) is int
             and (movie["world"], movie["level"]) == (2, 2)):
+        if movie.get("origin")=="normal-entrance":
+            return build_world22_entrance_origin_lua()
         return build_world22_origin_lua(movie.get("checkpoint_page", 0))
     require_supported_stage(movie)
     if movie.get("world", 1) == 2:

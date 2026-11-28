@@ -83,6 +83,9 @@ class World22DataTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             require_supported_stage(movie)
         lua = build_movie_origin_lua(movie)
+        entrance=build_movie_origin_lua(dict(world=2,level=2,origin="normal-entrance"))
+        self.assertIn("0x0760,1,ram",entrance)
+        self.assertIn("origin=normal-entrance",entrance)
         self.assertIn("0x0760,2,ram",lua)
         self.assertIn("world=2 level=2",lua)
         self.assertIn("0x00e7,ram)==0x47",lua)
