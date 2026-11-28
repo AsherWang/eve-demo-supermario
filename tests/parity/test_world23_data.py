@@ -76,6 +76,20 @@ class World23DataTests(unittest.TestCase):
         self.assertEqual(record['pairs'],2727)
         self.assertGreater(record['spawns'],5)
 
+    def test_full_capture_preserves_successful_inputs(self):
+        from common import load_movie, expand_input_masks
+        movies=ROOT/'tests/parity/movies'
+        historical=load_movie(movies/'world-2-3-original-clear-candidate.json')
+        strict=load_movie(movies/'world-2-3-strict-clear.json')
+        self.assertEqual(strict['frames'],2132)
+        self.assertNotIn('capture_frames',strict)
+        self.assertEqual(expand_input_masks(strict),expand_input_masks(historical))
+        normal=load_movie(movies/'world-2-3-normal-clear.json')
+        extended=load_movie(movies/'world-2-3-normal-load-clear.json')
+        masks=expand_input_masks(extended)
+        self.assertEqual(masks[:normal['frames']],expand_input_masks(normal))
+        self.assertEqual(masks[normal['frames']:],[0]*180)
+
     def test_successful_original_movie_provenance(self):
         record=json.loads((ROOT/'tests/fixtures/world23_route_evidence.json').read_text())
         movie=ROOT/record['movie']

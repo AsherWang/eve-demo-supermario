@@ -129,3 +129,26 @@ Further death diagnosis: all fish registers match after reload through frame
 1658. Divergence at 1659 is shared pit handling: ROM Y-high=2 continues falling,
 while the host starts a death hop and zeroes X speed. No stage actor correction
 is justified by that difference.
+
+## Full native visual diagnostic after fish fixes
+
+`local-parity/world23-cell-no-layers/comparison/report.json` compares all 2132
+frames to the parent's unchanged full original trace: 2131 exact matches, one
+failure (2104, 24 pixels). All 238 pre-load failures are eliminated. The only
+remaining pixels are HUD coin X=89..92, Y=24..30: reference RGB (153,78,0),
+actual (86,29,0). Shared loader must retain the displayed palette for this pass.
+This capture used the temporary shared `renderGame` OAM collect/mask condition
+`(isWorld21(g) || isWorld23(g))` and no other uncommitted runtime edits.
+The shared file was restored afterward. It used the local diagnostic movie
+hash 7bbf4305b111c50c4f6c68f83ab90972aa6f73ad035b01de2e2c1a2aea347635,
+so final evidence must be regenerated for the tracked strict movie.
+
+Vulkan initialization succeeds with process-local
+`VK_LOADER_LAYERS_DISABLE=~implicit~`; the two default-layer attempts failed
+before replay. Capture held and released the shared owner-token lock.
+
+Final tracked movie: `world-2-3-strict-clear.json`, SHA
+`bbcfa206ce376ac475dacb48ca0b9c5ad33dfdad13401d8fa6e2113db539af2e`.
+Its controller sequence is tested equal to the historical original-success
+candidate, and its absent capture_frames requests all 2132 images. Registry
+and reviewer acceptance remain parent-owned pending six passing native gates.
