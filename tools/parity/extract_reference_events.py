@@ -83,6 +83,21 @@ def is_new_game_transition(previous: bytes | None, current: bytes) -> bool:
             and current[0x075F] == 0 and current[0x075C] == 0)
 
 
+def castle_milestones(previous: bytes | None, current: bytes) -> list[str]:
+    """Decode VictoryMode transitions, including repeated axe collision tasks."""
+    if previous is None or previous[0x075C] != 3:
+        return []
+    before, after = previous[0x0770], current[0x0770]
+    if before == 1 and after == 2:
+        return ['axe_touched']
+    if before == after == 2 and previous[0x0772] == 2 and current[0x0772] == 3:
+        return ['mushroom_retainer_saved']
+    if (before == 2 and previous[0x0772] == 4 and after == 1
+            and current[0x075F] == previous[0x075F] + 1 and current[0x075C] == 0):
+        return [f'world{previous[0x075F]+1}4_complete']
+    return []
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Decode SMBDIS sound queues into semantic reference events.")
     parser.add_argument("--queues", type=Path, required=True)
@@ -207,6 +222,9 @@ def main() -> int:
     previous_subroutine = None
     previous_ram = None
     for frame, ram in ram_trace:
+        for milestone in castle_milestones(previous_ram, ram):
+            synthesized.append(dict(frame=frame, sequence=-1, type='gameplay',
+                                    name=milestone, source='VictoryMode task/world transition'))
         if is_new_game_transition(previous_ram, ram):
             synthesized.append({
                 "frame": frame,

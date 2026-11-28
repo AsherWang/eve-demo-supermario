@@ -9,6 +9,14 @@ foreach(stage in [1,2,3]) foreach(power in [0,1,2]) {
     requireSelfTest(g.world==2 && g.level==stage+1 && g.score==19200 && g.coins==36 &&
         g.lives==2 && g.player.big==(power>0) && g.player.fire==(power==2),
         "World 2 cross-stage flow preserves progress and powers");
+    if(stage==3) {
+        requireSelfTest(g.state=="nextStageLoad","bridge completion must show the real castle loading sequence");
+        for(local frame=0;frame<166;frame+=1) simulateFixed(g,FIXED_DT);
+        requireSelfTest(isWorld24(g) && g.state=="playing" && g.time==300 &&
+            g.player.big==(power>0) && g.player.fire==(power==2) &&
+            g.score==19200 && g.coins==36 && g.lives==2,
+            "castle loading must preserve all three power states and progress until control resumes");
+    }
 }
 foreach(stage in [3,4]) foreach(camera in [1791.0,1792.0,2500.0]) {
     local g=createGame();startLevel(g,2,stage);g.cameraX=camera;
