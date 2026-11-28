@@ -24,7 +24,7 @@ function parityInitialize(g) {
     };
     if (parityIsEnabled()) {
         print("PARITY_BEGIN " + PARITY_MOVIE_NAME + " frames=" + PARITY_FRAME_MASKS.len() + "\n");
-        parityRecordEvent(g, "music", g.area == "castle" ? "castle" :
+        parityRecordEvent(g, "music", isWorld22(g) && g.state=="world12Intro"?"pipe_intro":g.area == "castle" ? "castle" :
             (g.area == "underground" ? "underground" : (g.area=="water"?"water":"overworld")),
             ",\"action\":\"start\",\"phase\":\"intro\"");
     }
@@ -247,6 +247,10 @@ function parityStateJson(g, frame) {
     } else if (g.state == "flagSlide") {
         engineSubroutine = 4;
     }
+    if(isWorld24(g)) {
+        local mode=world24RomMode(g);
+        if(mode!=null) {operMode=mode.oper_mode;operModeTask=mode.oper_mode_task;engineSubroutine=mode.game_engine_subroutine;}
+    }
     local world22Tasks=isWorld22(g) && "world22Transition" in g;
     if(world22Tasks && g.world22Transition.phase!="done") {
         operModeTask=g.world22Transition.operTask;
@@ -306,7 +310,7 @@ function parityStateJson(g, frame) {
         ",\"camera_x\":" + g.cameraX +
         ",\"display_camera_x\":" + g.displayCameraX +
         ",\"previous_scroll_amount\":" + g.previousScrollAmount +
-        ",\"frame_counter\":" + ((g.nesFrameCounter + (world22Tasks?0:255)) & 0xFF) +
+        ",\"frame_counter\":" + ((g.nesFrameCounter + (world22Tasks || (g.state=="nextStageLoad" && g.stageLoadFrames<=1 && "loadingRenderLevel" in g && g.loadingRenderLevel==2)?0:255)) & 0xFF) +
         ",\"color_rotation_offset\":" + g.colorRotateOffset +
         ",\"vram_scheduler\":{\"scroll_thirty_two\":" + g.vramScrollThirtyTwo +
         ",\"area_parser_task\":" + g.vramAreaParserTask +

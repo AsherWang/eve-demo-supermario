@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import subprocess
+import shutil
 import time
 from datetime import datetime, timezone
 from pathlib import Path
@@ -110,10 +111,23 @@ def main() -> int:
     for stale in frames.glob("frame-*.png"):
         stale.unlink()
 
-    generated = args.project.resolve() / "scripts" / "generated" / "parity_movie.nut"
+    # Capture an immutable runtime snapshot: editor writes in the working tree
+    # must not hot-reload the running movie and silently restart frame zero.
+    source_project = args.project.resolve()
+    capture_project = output / "runtime-project"
+    if capture_project.exists():
+        raise RuntimeError("Use a fresh capture directory; runtime snapshot already exists")
+    capture_project.mkdir()
+    for name in ("main.nut", "config.nut"):
+        shutil.copy2(source_project / name, capture_project / name)
+    for name in ("scripts", "assets"):
+        shutil.copytree(source_project / name, capture_project / name)
+    if (source_project / "native/bin").exists():
+        shutil.copytree(source_project / "native/bin", capture_project / "native/bin")
+    generated = capture_project / "scripts" / "generated" / "parity_movie.nut"
     write_generated_source(generated, squirrel_source(movie, output))
     log_path = output / "eve-parity.log"
-    command = [str(args.eve.resolve()), "run", "-l", str(log_path), str(args.project.resolve())]
+    command = [str(args.eve.resolve()), "run", "-l", str(log_path), str(capture_project)]
     process = None
     stdout_log = None
     stderr_log = None
@@ -122,7 +136,7 @@ def main() -> int:
         stderr_log = (output / "process-stderr.log").open("w", encoding="utf-8")
         process = subprocess.Popen(
             command,
-            cwd=args.project.resolve(),
+            cwd=capture_project,
             stdout=stdout_log,
             stderr=stderr_log,
             text=True,
@@ -199,6 +213,8 @@ def main() -> int:
         encoding="utf-8",
     )
     runtime_errors = []
+    if [row["frame"] for row in states] != list(range(movie["frames"])):
+        runtime_errors.append("State trace must contain each movie frame exactly once in order")
     for source in [*trace_sources, output / "process-stderr.log"]:
         if source.is_file():
             runtime_errors.extend(runtime_error_lines(source.read_text(encoding="utf-8", errors="replace")))

@@ -2509,6 +2509,7 @@ function updateCamera(g) {
          (g.state == "endLevel" && !g.endLevelScrollLocked)) &&
         (!p.dead || p.deadTimer == 0.0) &&
         p.nesXScroll > 0 && !p.scrollSideCollisionTimer &&
+        !(isWorld24(g) && g.world24.scrollLocked) &&
         !(isWorld21(g) && g.area=="sky" && p.previousY-(p.big?0:16)>=256)) {
         // Player_Pos_ForScroll is prepared from the preceding frame's player
         // position. ScrollHandler starts at $50; below $70 it removes one
@@ -2570,6 +2571,7 @@ function updateVramAreaParserScheduler(g) {
     g.vramAreaParserTask -= 1;
     local completedTask = g.vramAreaParserTask;
     if(isWorld22Water(g)) parseWorld22AreaColumn(g,completedTask);
+    if(isWorld24(g)) parseWorld24AreaColumn(g,completedTask);
     if(isWorld21(g)) parseWorld21PlantColumn(g,completedTask);
     if (completedTask == 6 || completedTask == 5 ||
         completedTask == 2 || completedTask == 1 || completedTask == 0)
@@ -2790,7 +2792,7 @@ function updateCourseClear(g, dt) {
         // AwardGameTimerPoints subtracts one timer unit and adds 50 every frame.
         if (g.time > 0) {
             // AwardGameTimerPoints requests the timer sound on FrameCounter bit 2.
-            if ((g.nesFrameCounter & 0x04) != 0) emitSound(g, "timer_tick");
+            if (((g.nesFrameCounter+(isWorld22(g)?1:0)) & 0x04) != 0) emitSound(g, "timer_tick");
             g.time -= 1;
             g.score += 50;
             g.queuedScore = g.score;
@@ -2817,12 +2819,13 @@ function updateCourseClear(g, dt) {
                 // following pass at 1808.
                 // The end-level timer is six ticks of the shared 21-frame bank.
                 // World 2-3 can reach the castle at any divider phase.
-                g.clearDelayFrames = isWorld23(g) ? 5*21+g.intervalTimerControl+1 :
+                g.clearDelayFrames = (isWorld22(g) || isWorld23(g)) ? 5*21+g.intervalTimerControl+1 :
                     (g.level == 3 ? 118 : 6 * 21);
                 g.state = "postClearDelay";
             }
         }
     } else if (g.state == "fireworks") {
+        if(isWorld22(g) && g.fireworksRemaining==0 && g.clearDelayFrames>0) g.clearDelayFrames-=1;
         if (g.fireworkSpawnFrames > 0) g.fireworkSpawnFrames -= 1;
         if (g.fireworksRemaining > 0 && g.fireworkSpawnFrames == 0) {
             local xOffsets = [0x00, 0x30, 0x60, 0x60, 0x00, 0x20];
@@ -2832,13 +2835,15 @@ function updateCourseClear(g, dt) {
             g.fireworks.append({
                 x = g.castleX + 32.0 - 48.0 + xOffsets[index],
                 y = yPositions[index].tofloat(),
-                frames = 24
+                frames = isWorld22(g)?23:24
             });
             g.fireworkSpawnFrames = 32;
+            if(isWorld22(g) && g.fireworksRemaining==0)
+                g.clearDelayFrames=5*21+g.intervalTimerControl+1;
         } else if (g.fireworksRemaining == 0 && g.fireworks.len() == 0) {
             // The end-level timer is six ticks of the shared 21-frame bank.
                 // World 2-3 can reach the castle at any divider phase.
-                g.clearDelayFrames = isWorld23(g) ? 5*21+g.intervalTimerControl+1 :
+                if(!isWorld22(g)) g.clearDelayFrames = isWorld23(g) ? 5*21+g.intervalTimerControl+1 :
                     (g.level == 3 ? 118 : 6 * 21);
             g.state = "postClearDelay";
         }
@@ -3083,6 +3088,7 @@ function beginNextStageLoad(g, dt) {
     // LevelNumber. Perform that final player-physics pass first so the task's
     // visible speed and integration fractions are preserved.
     autoControlPlayerEndLevel(g, dt);
+    g.loadingRenderLevel <- g.level;
     g.loadingRenderCameraX <- g.cameraX;
     g.loadingPlayerBig <- g.player.big;
     g.loadingPlayerFire <- g.player.fire;
@@ -3154,9 +3160,9 @@ function updateNextStageLoad(g) {
     if (g.stageLoadFrames >= 148 && g.stageLoadFrames <= 159)
         g.vramBufferAddrCtrl = 6;
     else if (g.stageLoadFrames == 160)
-        g.vramBufferAddrCtrl = 4;
+        g.vramBufferAddrCtrl = g.level==4?4:2;
     if (g.stageLoadFrames == 164) {
-        parityRecordEvent(g, "music", "castle");
+        parityRecordEvent(g, "music", g.level==4?"castle":"overworld");
         g.soundEvents.append("resume_music");
     }
     if (g.stageLoadFrames == 165) {
@@ -3230,7 +3236,7 @@ function simulateFixed(g, dt) {
     if (g.stageLoadFrames == 166) g.stageLoadFrames = 167;
     if (g.level <= 3 && g.state == "levelComplete") {
         if(g.world==2) {
-            if(g.level==3) {beginNextStageLoad(g,dt);return;}
+            if(g.level==2 || g.level==3) {beginNextStageLoad(g,dt);return;}
             if(g.level<4) {startLevel(g,2,g.level+1);return;}
             if(g.input.resetQueued) resetRound(g);
             return; // Keep unimplemented next-world endpoints explicit.
@@ -3516,7 +3522,7 @@ function simulateFixed(g, dt) {
         if(g.time!=timeBeforeVram) g.vramPrimaryBytes+=6;
     }
     if (ranGameEngine && !(isWorld21(g) && g.state=="areaReload" && g.areaReloadFrames==0) &&
-        (g.nesFrameCounter & 0x07) == 0 &&
+        ((g.nesFrameCounter+(isWorld22(g)?1:0)) & 0x07) == 0 &&
         (g.level!=3 || g.vramPrimaryBytes<0x31)) {
         if(g.level==3) g.vramPrimaryBytes+=7;
         g.pendingColorPhase = g.colorRotateOffset;

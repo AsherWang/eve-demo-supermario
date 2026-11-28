@@ -1231,7 +1231,7 @@ function renderGameScene(g) {
         local savedCameraX = g.cameraX;
         local savedDisplayCameraX = g.displayCameraX;
         local savedDead = g.player.dead;
-        g.level = 3;
+        g.level = "loadingRenderLevel" in g?g.loadingRenderLevel:3;
         g.state = "postClearDelay";
         g.cameraX = g.loadingRenderCameraX;
         g.displayCameraX = g.loadingRenderCameraX;

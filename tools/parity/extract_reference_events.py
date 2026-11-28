@@ -107,6 +107,7 @@ def main() -> int:
 
     events = []
     ram_trace = load_ram_trace(args.ram_trace)
+    ram_by_frame = dict(ram_trace)
     first_ram = ram_trace[0][1] if ram_trace else None
     if first_ram is not None:
         area_music = first_ram[0xF4]
@@ -211,7 +212,8 @@ def main() -> int:
                 "name": "powerup_spawn",
                 "source": "GrowPowerUp queue transition",
             })
-        if event["type"] == "audio" and event["name"] == "stomp":
+        if (event["type"] == "audio" and event["name"] == "stomp"
+                and not (event["frame"] in ram_by_frame and ram_by_frame[event["frame"]][0x0704])):
             synthesized.append({
                 "frame": event["frame"],
                 "sequence": event["sequence"],

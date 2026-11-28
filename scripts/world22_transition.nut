@@ -19,7 +19,7 @@ function world22EntranceControl(g, pipe) {
     }
     if(pipe) {
         t.areaTimer-=1;
-        if(t.areaTimer==0) {t.phase="header";t.screenDisabled=true;t.operTask=0;g.state="world22Load";}
+        if(t.areaTimer==0) {if(t.target=="water") parityRecordEvent(g,"music","silence");t.phase="header";t.screenDisabled=true;t.operTask=0;g.state="world22Load";}
     }
 }
 
@@ -41,8 +41,13 @@ function updateWorld22Transition(g) {
         beginWorld22ExitTasks(g);
     local t=g.world22Transition,p=g.player;
     local initializeFrame=t.phase=="initialize";
+    local gameplayPass=["intro","exitPipe","setup","rise","drop"].find(t.phase)!=null;
     if(g.state!="world12Intro" && g.state!="world22Load" && g.state!="world22Entrance" &&
         !(g.state=="world12Pipe" && t.phase!="done")) return false;
+    if(g.colorPhasePending && g.vramBufferAddrCtrl!=6) {
+        g.displayColorPhase=g.pendingColorPhase;g.colorPhasePending=false;
+    }
+    g.vramBufferAddrCtrl=0;
     if(g.input.resetQueued) {resetRound(g);return true;}
     if(t.phase!="initialize") {
         g.intervalTimerControl-=1;if(g.intervalTimerControl<0) g.intervalTimerControl=20;
@@ -54,8 +59,11 @@ function updateWorld22Transition(g) {
     } else if(t.phase=="header") {
         // LoadAreaPointer/GetAreaDataAddresses precedes InitializeArea.
         t.phase="initialize";t.screenTask=0;g.cameraX=0;g.displayCameraX=0;
+        g.vramScrollThirtyTwo=0;g.vramAreaParserTask=0;g.colorRotateOffset=0;
+        g.colorPhasePending=false;g.pendingColorPhase=0;
         p.nesXForce=0;p.nesXMoveForce=0;p.nesYDummy=0;t.behindPipe=false;
     } else if(t.phase=="initialize") {
+        parityRecordEvent(g,"music","silence");
         local remaining=g.time,random=t.random;
         if(t.target=="water") startWorld22Water(g,0,false);
         else {buildWorld12(g,"exit");g.romBackgroundCollision=false;g.cameraX=2816;g.displayCameraX=2816;}
@@ -65,9 +73,12 @@ function updateWorld22Transition(g) {
         g.time=remaining;g.displayTime=remaining;g.gameTimerControl=0;
         p.x=0;p.y=p.big?0:16;t.playerYHigh=0;p.facing=0;p.grounded=true;p.movingDir=0;
         p.nesYSpeed=0;p.nesYMoveForce=0;p.nesYDummy=0;p.swimGravity=0;
-        g.nesFrameCounter=0;t.operTask=1;t.engineTask=0;
+        g.nesFrameCounter=0;g.colorRotateOffset=0;t.operTask=1;t.engineTask=0;
         t.phase="screen";t.screenTask=0;t.columns=11;g.state="world22Load";
     } else if(t.phase=="screen") {
+        if(t.screenTask==0) g.vramBufferAddrCtrl=3;
+        else if(t.screenTask==8) g.vramBufferAddrCtrl=6;
+        else if(t.screenTask==9) g.vramBufferAddrCtrl=t.target=="water"?1:2;
         switch(t.screenTask) {
         case 4:t.screenTask=6;break; // Skip intermediate lives display for pipe areas.
         case 6:t.screenTask=8;break;
@@ -97,6 +108,10 @@ function updateWorld22Transition(g) {
             p.y+=world22VerticalDelta(p,p.swimGravity,4);
             p.vy=p.nesYSpeed*NES_FRAME_RATE;
         }
+    }
+    if(gameplayPass && ((g.nesFrameCounter+1)&7)==0) {
+        g.pendingColorPhase=g.colorRotateOffset;g.colorPhasePending=true;
+        g.colorRotateOffset=(g.colorRotateOffset+1)%6;
     }
     syncWorld12Player(g);
     if(!initializeFrame) g.nesFrameCounter=(g.nesFrameCounter+1)&255;
